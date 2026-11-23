@@ -1,0 +1,44 @@
+<div class="bar">
+  @if (files().length) {
+    <ul class="files">
+      @for (file of files(); track file) {
+        <li class="file">
+          <app-icon name="file" />
+          <span class="file-name">{{ file.name }}</span>
+          <button type="button" class="file-remove" aria-label="Remove file" (click)="removeFile(file)">
+            <app-icon name="close" />
+          </button>
+        </li>
+      }
+    </ul>
+  }
+
+  <div class="row">
+    <label class="attach" aria-label="Attach files">
+      <app-icon name="plus" />
+      <input #picker type="file" multiple hidden (change)="onFilesPicked(picker)" />
+    </label>
+
+    <label class="visually-hidden" for="chat-box">Your question</label>
+    <textarea
+      #box
+      id="chat-box"
+      class="box"
+      rows="1"
+      [placeholder]="placeholder()"
+      [value]="text()"
+      (input)="onInput(box.value)"
+      (keydown)="onKeydown($event)"
+    ></textarea>
+
+    <button
+      type="button"
+      class="send"
+      aria-label="Send"
+      [disabled]="disabled() || (!text().trim() && !files().length)"
+      (click)="submit()"
+    >
+      <app-icon name="send" />
+    </button>
+  </div>
+</div>

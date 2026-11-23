@@ -1,0 +1,65 @@
+// Frosted square-cut card with the QR in the middle.
+// The 14px padding keeps the QR's corners clear of the 21% cuts.
+
+:host {
+  --card-fill: rgb(255 255 255 / 0.6);
+  --card-stroke: rgb(var(--black) / 0.22);
+
+  display: block;
+}
+
+:host-context(body.dark) {
+  --card-fill: rgb(var(--black) / 0.6);
+  --card-stroke: rgb(255 255 255 / 0.18);
+}
+
+.card {
+  --shape-fill: var(--card-fill);
+  --shape-stroke: var(--card-stroke);
+
+  position: relative;
+  display: block;
+  width: calc(var(--qr-size, 76px) + 2 * 14px);
+
+  // Yellow corner marks on the two uncut corners: top-right and bottom-left
+  &::after {
+    --c: rgb(var(--yellow));
+
+    content: '';
+    position: absolute;
+    inset: -4px;
+    pointer-events: none;
+    background:
+      linear-gradient(var(--c), var(--c)) top right / 10px 2px,
+      linear-gradient(var(--c), var(--c)) top right / 2px 10px,
+      linear-gradient(var(--c), var(--c)) bottom left / 10px 2px,
+      linear-gradient(var(--c), var(--c)) bottom left / 2px 10px;
+    background-repeat: no-repeat;
+  }
+
+  &:hover {
+    --shape-stroke: rgb(var(--yellow));
+  }
+
+  // Blurs what sits behind; same outline as square-cut
+  app-shape {
+    width: 100%;
+    backdrop-filter: blur(6px);
+    clip-path: polygon(21% 0, 100% 0, 100% 79%, 79% 100%, 0 100%, 0 21%);
+  }
+}
+
+// Always on white so it scans in both themes
+.qr {
+  display: block;
+  width: var(--qr-size, 76px);
+  aspect-ratio: 1;
+  padding: 6px;
+  background: #ffffff;
+
+  img {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}

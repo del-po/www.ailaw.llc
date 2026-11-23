@@ -1,13 +1,38 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8">
-  <title>WwwAilawLlc</title>
-  <base href="/">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
-</head>
-<body>
-  <app-root></app-root>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <base href="/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>AI Law | Legal Services</title>
+    <meta
+      name="description"
+      content="AI Law is a 24/7 online legal services company in Georgia. The brightest legal talent and the highest-quality legal work, at prices everyone can afford."
+    />
+
+    <!-- Browser bar colour on phones -->
+    <meta name="theme-color" content="#ececec" />
+
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+
+    <!-- Main text font, fetched early to avoid a font swap on load -->
+    <link
+      rel="preload"
+      href="/fonts/rockwell/rockwell-regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+  </head>
+  <body>
+    <!-- Apply the saved theme before the page paints (prevents a light flash in dark mode) -->
+    <script>
+      try {
+        if (localStorage.getItem('theme') === 'dark') document.body.classList.add('dark');
+      } catch (e) {}
+    </script>
+
+    <app-root></app-root>
+  </body>
 </html>

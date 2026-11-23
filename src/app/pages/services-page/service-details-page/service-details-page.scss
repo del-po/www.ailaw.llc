@@ -1,0 +1,316 @@
+@use 'mixins' as *;
+@use 'page' as *;
+
+// ==========================================================
+// Service details
+// ==========================================================
+
+@include page-theme;
+
+.page {
+  @include page-shell;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.back {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition: color var(--ease);
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.back-arrow {
+  display: inline-flex;
+  transform: scaleX(-1);
+}
+
+// ---------- Cover + info ----------
+
+.service {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(24px, 4vw, 64px);
+}
+
+// card-slant outline drawn over the photo; the photo and its placeholder
+// are cut to the same outline
+.cover {
+  --shape-fill: transparent;
+  --shape-stroke: var(--card-border);
+
+  background: var(--img-placeholder);
+  clip-path: polygon(0 0, 90% 0, 100% 13.04%, 100% 100%, 10% 100%, 0 86.96%);
+}
+
+.cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.code {
+  @include barcode-strip;
+}
+
+.tag {
+  @include tag;
+}
+
+.name {
+  font-family: var(--font-display);
+  font-size: clamp(30px, 3.4vw, 48px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.short {
+  font-size: clamp(16px, 1.3vw, 18px);
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+// ---------- Price ----------
+
+.price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono);
+}
+
+.price-now {
+  font-family: var(--font-display);
+  font-size: clamp(32px, 3vw, 40px);
+  font-weight: 800;
+}
+
+// Currency code in the mono font: Orbitron has no ₾ sign
+.currency {
+  margin-left: 8px;
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.price-old {
+  font-size: 16px;
+  color: var(--text-muted);
+}
+
+.sale {
+  @include tag;
+  align-self: center;
+  background: var(--ink-bg);
+  color: var(--ink-text);
+}
+
+// ---------- Quantity + buttons ----------
+
+// Quantity on its own row, the two buttons under it
+.buy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.buy-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.qty {
+  display: flex;
+  gap: 6px;
+}
+
+.qty-btn,
+.qty-value {
+  width: 50px;
+}
+
+.qty-btn {
+  @include shape-control;
+  color: var(--text);
+  font-size: 20px;
+
+  &:hover:not(:disabled) {
+    --shape-fill: rgb(var(--yellow));
+    --shape-stroke: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.qty-value {
+  --shape-fill: transparent;
+  --shape-stroke: var(--card-border);
+
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.btn {
+  @include shape-control(var(--ink-bg), var(--ink-bg));
+  width: 216px;
+  color: var(--ink-text);
+
+  &:hover {
+    --shape-fill: rgb(var(--yellow));
+    --shape-stroke: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+
+  &--light {
+    --shape-fill: var(--card-bg);
+    --shape-stroke: var(--card-border);
+    color: var(--text);
+  }
+}
+
+.added {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+
+  a {
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--yellow));
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+}
+
+// ---------- Full description ----------
+
+.about {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.about-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+// Line breaks typed in the sheet are kept
+.description {
+  font-size: 17px;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+// ---------- Loading + messages ----------
+
+.skeleton {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+  gap: clamp(24px, 4vw, 64px);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-cover {
+  --shape-fill: var(--img-placeholder);
+  --shape-stroke: transparent;
+}
+
+.skeleton-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.skeleton-line {
+  height: 16px;
+  background: var(--img-placeholder);
+
+  &--title {
+    height: 44px;
+    width: 80%;
+  }
+
+  &--short {
+    width: 50%;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.notice {
+  @include notice;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.notice-link {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--yellow));
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet-wide) {
+  .service,
+  .skeleton {
+    grid-template-columns: 1fr;
+  }
+
+  .cover {
+    max-width: 640px;
+  }
+}

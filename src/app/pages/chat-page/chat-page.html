@@ -1,0 +1,252 @@
+<div class="page" [class.has-history]="hasHistory()" [class.is-chatting]="chatting()">
+  <!-- ---------- History sidebar ---------- -->
+  @if (hasHistory()) {
+    <aside class="sidebar" [class.is-open]="sidebarOpen()" aria-label="Chat history">
+      <div class="sidebar-head">
+        <button type="button" class="new-chat" (click)="newChat()">
+          <app-icon name="edit" />
+          <span>New chat</span>
+        </button>
+        <button
+          type="button"
+          class="icon-btn sidebar-close"
+          aria-label="Close history"
+          (click)="sidebarOpen.set(false)"
+        >
+          <app-icon name="close" />
+        </button>
+      </div>
+
+      <p class="sidebar-label">History</p>
+
+      <ul class="history">
+        @for (item of chat.conversations(); track item.id) {
+          <li>
+            <button
+              type="button"
+              class="history-item"
+              [class.is-active]="item.id === chat.activeId()"
+              (click)="openChat(item.id)"
+            >
+              <span class="history-title">{{ item.title }}</span>
+              <span
+                class="history-delete"
+                role="button"
+                aria-label="Delete chat"
+                (click)="removeChat($event, item.id)"
+              >
+                <app-icon name="trash" />
+              </span>
+            </button>
+          </li>
+        }
+      </ul>
+    </aside>
+
+    <div
+      class="sidebar-backdrop"
+      [class.is-open]="sidebarOpen()"
+      (click)="sidebarOpen.set(false)"
+    ></div>
+  }
+
+  <!-- ---------- Main column ---------- -->
+  <div class="main">
+    <!-- Page corner ornaments -->
+    <div class="corners" aria-hidden="true">
+      @for (pos of ['top-left', 'top-right', 'bottom-left', 'bottom-right']; track pos) {
+        <svg class="corner" [class]="pos" viewBox="0 0 60 60">
+          <path class="corner-line" d="M0.5 60 V0.5 H60" />
+          <rect x="0" y="0" width="8" height="8" />
+          <rect x="8" y="8" width="8" height="8" />
+          <rect x="16" y="0" width="6" height="6" />
+          <rect x="0" y="16" width="6" height="6" />
+        </svg>
+      }
+    </div>
+
+    <header class="top">
+      @if (hasHistory()) {
+        <button
+          type="button"
+          class="icon-btn sidebar-toggle"
+          aria-label="Open history"
+          (click)="sidebarOpen.set(true)"
+        >
+          <app-icon name="sidebar" />
+        </button>
+      }
+      <app-header class="site-header" />
+    </header>
+
+    @if (!chatting()) {
+      <!-- ---------- Start screen ---------- -->
+      <section class="start">
+        <div class="hud">
+          <svg class="hud-rings" viewBox="-300 -300 600 600" aria-hidden="true">
+            <circle class="ring ring--faint" r="262" />
+            <circle class="ring ring--dashed" r="200" />
+            <circle class="ring" r="140" />
+            <circle class="ring ring--thin" r="128" />
+            <path
+              class="hud-line"
+              d="M-300 0H-150M150 0H300M0 -300V-150M0 150V300M-230 -230L-150 -150"
+            />
+            <rect class="node" x="-8" y="-270" width="16" height="16" />
+            <rect class="node" x="-8" y="254" width="16" height="16" />
+            <rect class="node" x="-270" y="-8" width="16" height="16" />
+            <rect class="node" x="254" y="-8" width="16" height="16" />
+            <rect class="node" x="-198" y="-198" width="14" height="14" />
+            <rect class="node node--small" x="186" y="-150" width="9" height="9" />
+            <rect class="node node--small" x="-200" y="140" width="9" height="9" />
+            <rect class="node" x="196" y="148" width="18" height="18" />
+            <rect class="node node--faint" x="-290" y="120" width="7" height="7" />
+          </svg>
+          <img class="robot" [src]="robot()" alt="" />
+        </div>
+
+        @if (!loggedIn()) {
+          <a class="login-btn" routerLink="/login">Log in <span aria-hidden="true">↗</span></a>
+        } @else {
+          <a class="login-btn" routerLink="/profile"
+            >My profile <span aria-hidden="true">↗</span></a
+          >
+        }
+
+        <div class="cards">
+          <div class="card-wrap">
+            <button type="button" class="card card--ai" (click)="focusInput()">
+              <app-icon class="card-icon" name="chat-pixel" />
+              <span class="card-label">Talk to AI</span>
+              <app-icon class="card-arrow" name="arrow-right" />
+            </button>
+          </div>
+          <div class="card-wrap card-wrap--dark">
+            <a class="card card--lawyer" routerLink="/services">
+              <app-icon class="card-icon" name="lawyer-pixel" />
+              <span class="card-label">Talk to a lawyer</span>
+              <app-icon class="card-arrow" name="arrow-right" />
+            </a>
+          </div>
+        </div>
+      </section>
+    } @else {
+      <!-- ---------- Conversation ---------- -->
+      <section #scroller class="thread" (scroll)="onScroll()" aria-live="polite">
+        <div class="thread-inner">
+          @if (chat.loading() && !messages().length) {
+            <p class="thread-loading">Loading conversation…</p>
+          }
+          @for (message of messages(); track message.id) {
+            <article
+              class="msg"
+              [class.msg--user]="message.role === 'user'"
+              [class.msg--failed]="message.failed"
+            >
+              @for (part of message.parts; track $index) {
+                @if (part.type === 'file') {
+                  <div class="msg-file">
+                    <app-icon name="file" />
+                    <span>{{ part.name }}</span>
+                  </div>
+                }
+                @if (part.type === 'text' && part.text) {
+                  @if (message.role === 'user') {
+                    <p class="msg-text msg-text--plain">{{ part.text }}</p>
+                  } @else {
+                    <div class="msg-text" [innerHTML]="format(part.text)"></div>
+                  }
+                }
+                @if (part.type === 'order') {
+                  <div class="order-card">
+                    <span class="service-tag">Order {{ part.orderId }}</span>
+                    <span class="service-title">{{ part.title }}</span>
+                    <ol class="order-steps">
+                      @for (step of part.steps; track $index) {
+                        <li
+                          class="order-step"
+                          [class.is-done]="step.status === 'done'"
+                          [class.is-current]="step.status === 'in_progress'"
+                        >
+                          <span class="order-mark" aria-hidden="true">
+                            @if (step.status === 'done') {
+                              <app-icon name="check" />
+                            }
+                          </span>
+                          <span>{{ step.label }}</span>
+                          <span class="visually-hidden">
+                            ({{ step.status === 'done' ? 'done' : step.status === 'in_progress' ? 'in progress' : 'waiting' }})
+                          </span>
+                        </li>
+                      }
+                    </ol>
+                  </div>
+                }
+                @if (part.type === 'payment') {
+                  <app-bank-transfer
+                    class="msg-payment"
+                    [amount]="part.amount"
+                    [currency]="part.currency"
+                    [reference]="part.reference"
+                  />
+                }
+                @if (part.type === 'service') {
+                  <a class="service-card" [routerLink]="part.link">
+                    <span class="service-tag">Service</span>
+                    <span class="service-title">{{ part.title }}</span>
+                    <span class="service-summary">{{ part.summary }}</span>
+                    <span class="service-foot">
+                      <span class="service-price">{{ part.price }}</span>
+                      <span class="service-cta"> Start <app-icon name="arrow-right" /> </span>
+                    </span>
+                  </a>
+                }
+              }
+
+              @if (message.streaming) {
+                <span class="cursor" aria-hidden="true"></span>
+              } @else if (!message.failed) {
+                <div class="msg-actions">
+                  @if (message.role === 'user') {
+                    <button
+                      type="button"
+                      class="msg-action"
+                      aria-label="Edit question"
+                      [disabled]="chat.busy()"
+                      (click)="startEdit(message)"
+                    >
+                      <app-icon name="edit" />
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="msg-action"
+                      aria-label="Copy answer"
+                      (click)="copy(message)"
+                    >
+                      <app-icon [name]="copiedId() === message.id ? 'check' : 'copy'" />
+                    </button>
+                  }
+                </div>
+              }
+            </article>
+          }
+        </div>
+      </section>
+    }
+
+    <!-- ---------- Input ---------- -->
+    <div class="composer">
+      @if (editingId()) {
+        <div class="editing-note">
+          <span>Editing your question</span>
+          <button type="button" (click)="cancelEdit()">Cancel</button>
+        </div>
+      }
+
+      <app-chat-input [(text)]="draft" [disabled]="chat.busy()" (submitted)="submit($event)" />
+
+      <p class="disclaimer">Even AI Law can make mistakes, so double-check it.</p>
+    </div>
+  </div>
+</div>

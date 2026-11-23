@@ -1,0 +1,76 @@
+<div class="page">
+  <app-header />
+
+  <main class="about">
+    <!-- ---------- Intro ---------- -->
+    <section class="intro">
+      <div class="code" aria-hidden="true"><span class="code-tag">About</span></div>
+      <h1 class="title">AI Law</h1>
+      <p class="lead">
+        AI Law is a forward-thinking Georgian law firm dedicated to modernizing the legal
+        experience. We offer comprehensive legal counsel across a wide spectrum of practice areas,
+        from high-stakes litigation and corporate transactions to intricate tax and accounting
+        matters, complemented by expert legal document drafting.
+      </p>
+    </section>
+
+    <!-- ---------- Principles ---------- -->
+    <section class="section" aria-labelledby="principles-title">
+      <h2 class="section-title" id="principles-title">Our practice is built on three principles</h2>
+
+      <div class="principles">
+        @for (item of principles; track item.title; let i = $index) {
+          <app-shape class="principle" name="card-corner">
+            <div class="principle-body">
+              <span class="principle-num">0{{ i + 1 }}</span>
+              <h3 class="principle-title">{{ item.title }}</h3>
+              <p class="principle-text">{{ item.text }}</p>
+            </div>
+          </app-shape>
+        }
+      </div>
+    </section>
+
+    <!-- ---------- Fixed prices ---------- -->
+    <section class="section split" aria-labelledby="model-title">
+      <h2 class="section-title" id="model-title">Legal products, not billable hours</h2>
+      <div class="text">
+        <p>
+          This ambition drives us to innovate beyond the traditional legal model. Instead of billing
+          by the hour, we offer our expertise through clearly defined legal products. This
+          product-based approach ensures absolute transparency, predictable costs, and exceptional
+          value, giving our clients peace of mind.
+        </p>
+        <p>We invite you to discover a new standard in legal services.</p>
+        <a class="btn" routerLink="/services">
+          <app-shape name="bar-notch">See our services</app-shape>
+        </a>
+      </div>
+    </section>
+
+    <!-- ---------- Social content (videos to be embedded here) ---------- -->
+    <section class="section split" aria-labelledby="social-title">
+      <h2 class="section-title" id="social-title">From our channels</h2>
+      <div class="text">
+        <p>
+          Some of the content we create for our social media platforms is designed to be
+          interesting, entertaining, and hopefully educational. Follow us to see it as it comes out.
+        </p>
+        <app-social class="social" />
+      </div>
+    </section>
+
+    <!-- ---------- Founder ---------- -->
+    <section class="section split" aria-labelledby="founder-title">
+      <h2 class="section-title" id="founder-title">The founder</h2>
+      <div class="text">
+        <p>
+          To learn more about our founder,
+          <a class="link" routerLink="/bio">read his story</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <app-footer />
+</div>

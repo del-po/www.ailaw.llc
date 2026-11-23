@@ -1,0 +1,307 @@
+@use 'mixins' as *;
+
+// ==========================================================
+// Site header: logo, link bar, cart / profile buttons, burger
+// ==========================================================
+
+:host {
+  --logo-size: clamp(56px, 8vmin, 80px);
+
+  --nav-bg: rgb(255 255 255 / 0.55);
+  --nav-border: rgb(var(--black) / 0.22);
+  --nav-text: rgb(var(--black) / 0.75);
+  --nav-hover-text: rgb(var(--black));
+  --nav-hover-bg: rgb(var(--black) / 0.08);
+  --nav-active-bg: rgb(var(--black));
+  --nav-active-text: rgb(var(--white));
+
+  --btn-bg: rgb(255 255 255 / 0.6);
+  --btn-border: rgb(var(--black) / 0.22);
+  --btn-icon: rgb(var(--black));
+
+  --dropdown-bg: rgb(250 250 248 / 0.96);
+
+  display: block;
+}
+
+:host-context(body.dark) {
+  --nav-bg: rgb(var(--black) / 0.6);
+  --nav-border: rgb(255 255 255 / 0.18);
+  --nav-text: rgb(255 255 255 / 0.7);
+  --nav-hover-text: #ffffff;
+  --nav-hover-bg: rgb(255 255 255 / 0.08);
+  --nav-active-bg: rgb(var(--white));
+  --nav-active-text: rgb(var(--black));
+
+  --btn-bg: rgb(var(--black) / 0.75);
+  --btn-border: rgb(255 255 255 / 0.18);
+  --btn-icon: rgb(var(--grey));
+
+  --dropdown-bg: rgb(58 54 50 / 0.98); // lighter than the dark page so the panel stands out
+}
+
+// Dropdowns are placed against the whole header, so on phones they can span its width
+.header {
+  position: relative;
+  height: var(--logo-size);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  font-family: var(--font-mono);
+}
+
+.logo-link {
+  display: block;
+}
+
+.logo {
+  width: var(--logo-size);
+}
+
+// Pushed right, also when a page hides the logo
+.nav {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+// ---------- Link bar ----------
+
+.nav-links {
+  height: 38px;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 3px;
+
+  background: var(--nav-bg);
+  border: 1px solid var(--nav-border);
+  backdrop-filter: blur(6px);
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+
+  color: var(--nav-text);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  white-space: nowrap;
+
+  transition:
+    color var(--ease),
+    background-color var(--ease);
+
+  &:hover {
+    color: var(--nav-hover-text);
+    background: var(--nav-hover-bg);
+  }
+
+  &.is-active {
+    color: var(--nav-active-text);
+    background: var(--nav-active-bg);
+  }
+}
+
+// ---------- Icon buttons ----------
+
+.nav-icons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-btn {
+  --shape-fill: var(--btn-bg);
+  --shape-stroke: var(--btn-border);
+
+  position: relative;
+  width: 38px;
+  height: 38px;
+  display: block;
+  padding: 0;
+
+  color: var(--btn-icon);
+  font-size: 15px;
+  transition: color var(--ease);
+
+  // Blurs what sits behind; same outline as square-cut
+  app-shape {
+    width: 100%;
+    height: 100%;
+    backdrop-filter: blur(6px);
+    clip-path: polygon(21% 0, 100% 0, 100% 79%, 79% 100%, 0 100%, 0 21%);
+  }
+
+  // Yellow corner tick, bottom-left
+  &::after {
+    content: '';
+    position: absolute;
+    left: -3px;
+    bottom: -3px;
+    width: 8px;
+    height: 8px;
+    border-left: 2px solid rgb(var(--yellow));
+    border-bottom: 2px solid rgb(var(--yellow));
+    opacity: 0;
+    transition: opacity var(--ease);
+  }
+
+  &:hover {
+    --shape-fill: rgb(var(--yellow));
+    --shape-stroke: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+
+  &:hover::after,
+  &.is-active::after,
+  &[aria-expanded='true']::after {
+    opacity: 1;
+  }
+}
+
+// Cart counter
+.nav-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  font-size: 10px;
+  font-weight: 700;
+  @include shape-slant-reverse(4px);
+}
+
+// ---------- Burger dropdown (tablet and below) ----------
+
+.nav-menu-btn {
+  display: none;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(50% + 33px); // 14px under the 38px buttons, at any logo size
+  right: 0;
+  z-index: 50;
+  min-width: 200px;
+  padding: 10px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  background: var(--dropdown-bg);
+  backdrop-filter: blur(6px);
+  @include shape-slant-reverse(14px);
+
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-6px);
+  transition:
+    opacity var(--ease),
+    transform var(--ease),
+    visibility 0.2s;
+
+  &.is-open {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+  }
+
+  .nav-link {
+    height: 38px;
+    width: 100%;
+    text-align: left;
+  }
+}
+
+// Name and email at the top of the account menu
+.dropdown-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 14px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--nav-border);
+}
+
+.dropdown-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.dropdown-email {
+  font-size: 11px;
+  color: var(--nav-text);
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ---------- Avatar in the profile button ----------
+
+// Photo cut to the square-cut outline
+.avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  clip-path: polygon(21% 0, 100% 0, 100% 79%, 79% 100%, 0 100%, 0 21%);
+}
+
+.avatar-initials {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.nav-ico {
+  width: 14px;
+  font-size: 12px;
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet) {
+  .nav-links,
+  .nav-cart,
+  .nav-profile {
+    display: none;
+  }
+
+  .nav-menu-btn {
+    display: block;
+  }
+}
+
+@include below(phone) {
+  .nav-btn {
+    width: 34px;
+    height: 34px;
+  }
+
+  // Burger menu spans the header, so it sits centred under it
+  .dropdown {
+    left: 0;
+    min-width: 0;
+  }
+}

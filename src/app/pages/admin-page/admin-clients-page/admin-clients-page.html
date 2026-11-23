@@ -1,0 +1,67 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Clients</h1>
+  <p class="lead">
+    {{ total() }} accounts{{ suspended() ? ', ' + suspended() + ' suspended' : '' }}. A suspended
+    client is signed out at their next login and can't use their account.
+  </p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+
+<label class="search">
+  <span class="visually-hidden">Search clients</span>
+  <app-shape class="field-box" name="field">
+    <input
+      #box
+      type="search"
+      placeholder="Search by name, email or phone…"
+      (input)="search.set(box.value)"
+    />
+  </app-shape>
+</label>
+
+@if (clients()) {
+  <div class="rows">
+    @for (client of list(); track client.UserID) {
+      <div class="row client" [class.is-suspended]="client.Status === 'suspended'">
+        <span class="cell-main">
+          <span class="cell-title">{{ client.DisplayName || '—' }}</span>
+          <span class="cell-sub"
+            >{{ client.Email }}{{ client.Phone ? ' · ' + client.Phone : '' }}</span
+          >
+        </span>
+        <span class="cell-mono">
+          {{ providers(client) }}{{ client.EmailVerified ? '' : ' · unverified' }} <br />Since
+          {{ client.CreatedAt | date: 'MMM d, y' }}
+        </span>
+        <span class="labels">
+          @if (client.Role !== 'client') {
+            <span class="status status--draft">{{ client.Role }}</span>
+          }
+          <span class="status" [class.status--active]="client.Status === 'active'">{{
+            client.Status
+          }}</span>
+        </span>
+        @if (canChange(client)) {
+          <button
+            type="button"
+            class="action"
+            [disabled]="busyId() === client.UserID"
+            (click)="toggle(client)"
+          >
+            {{ client.Status === 'active' ? 'Suspend' : 'Reactivate' }}
+          </button>
+        } @else {
+          <span></span>
+        }
+      </div>
+    } @empty {
+      <p class="small">No clients match.</p>
+    }
+  </div>
+} @else if (!error()) {
+  <div class="skeleton" aria-busy="true"></div>
+}

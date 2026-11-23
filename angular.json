@@ -51,9 +51,7 @@
                 "input": "public"
               }
             ],
-            "styles": [
-              "src/styles.scss"
-            ],
+            "styles": ["src/styles.scss"],
             "server": "src/main.server.ts",
             "outputMode": "server",
             "security": {
@@ -61,6 +59,9 @@
             },
             "ssr": {
               "entry": "src/server.ts"
+            },
+            "stylePreprocessorOptions": {
+              "includePaths": ["src/styles"]
             }
           },
           "configurations": {
@@ -73,8 +74,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "24kB",
+                  "maximumError": "32kB"
                 }
               ],
               "outputHashing": "all"

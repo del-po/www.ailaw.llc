@@ -1,0 +1,135 @@
+@use 'mixins' as *;
+
+:host {
+  display: inline-block;
+}
+
+// ---------- Track ----------
+// The button is the border colour; ::before sits 1px inside and holds the fill,
+// so the border follows the cut corners.
+
+.switch {
+  --w: 80px;
+  --h: 40px;
+  --pad: 4px;
+  --shuttle-w: 40px;
+  --shuttle-h: calc(var(--h) - var(--pad) * 2);
+  --travel: calc(var(--w) - var(--shuttle-w) - var(--pad) * 2);
+  --cut: 8px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  position: relative;
+  display: block;
+  width: var(--w);
+  height: var(--h);
+  background: #efefef;
+  @include shape-slant(var(--cut));
+  transition: background-color 0.55s var(--ease);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    box-shadow: inset 0 2px 6px rgb(var(--black) / 0.12);
+    @include shape-slant(calc(var(--cut) - 0.5px));
+    transition: background 0.55s var(--ease);
+  }
+
+  &[aria-checked='true'] {
+    background: rgb(255 255 255 / 0.14);
+
+    &::before {
+      background: rgb(var(--black));
+      box-shadow: inset 0 3px 8px rgb(0 0 0 / 0.82);
+    }
+  }
+
+  @include below(phone) {
+    --w: 64px;
+    --h: 32px;
+    --shuttle-w: 32px;
+    --pad: 3px;
+  }
+}
+
+// ---------- Shuttle ----------
+// Same trick: ::before is the border, ::after the fill, so the drop shadow stays soft.
+
+.shuttle {
+  --scut: 6px;
+
+  position: absolute;
+  top: var(--pad);
+  left: var(--pad);
+  width: var(--shuttle-w);
+  height: var(--shuttle-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(var(--black));
+  transform: translateX(var(--travel));
+  filter: drop-shadow(0 3px 5px rgb(var(--black) / 0.16));
+  transition: transform 0.55s var(--ease);
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    transition: background 0.45s ease;
+  }
+
+  &::before {
+    inset: 0;
+    background: rgb(var(--black) / 0.14);
+    @include shape-slant(var(--scut));
+  }
+
+  &::after {
+    inset: 1px;
+    background: linear-gradient(180deg, #ffffff 0%, #f5f4f0 100%);
+    @include shape-slant(calc(var(--scut) - 0.5px));
+  }
+
+  .switch[aria-checked='true'] & {
+    transform: translateX(0);
+    color: #f4f4f5;
+
+    &::before {
+      background: rgb(255 255 255 / 0.16);
+    }
+
+    &::after {
+      background: rgb(var(--black));
+    }
+  }
+}
+
+// ---------- Sun / moon ----------
+
+.icon-sun,
+.icon-moon {
+  position: absolute;
+  z-index: 1;
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  transition: 0.45s ease;
+
+  @include below(phone) {
+    width: 13px;
+    height: 13px;
+  }
+}
+
+.icon-moon,
+.switch[aria-checked='true'] .icon-sun {
+  opacity: 0;
+  transform: scale(0.75);
+}
+
+.switch[aria-checked='true'] .icon-moon {
+  opacity: 1;
+  transform: scale(1);
+}

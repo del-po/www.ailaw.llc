@@ -1,0 +1,158 @@
+@use 'mixins' as *;
+@use 'page' as *;
+
+// ==========================================================
+// Founder bio
+// ==========================================================
+
+@include page-theme;
+@include form-controls;
+
+.page {
+  @include page-shell;
+}
+
+.bio {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(48px, 7vw, 96px);
+}
+
+// ---------- Intro ----------
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 900px;
+}
+
+.code {
+  @include barcode-strip;
+}
+
+.code-tag {
+  @include tag;
+}
+
+.title {
+  @include page-title;
+  font-size: clamp(40px, 6.5vw, 88px);
+}
+
+.lead {
+  font-size: clamp(18px, 1.7vw, 24px);
+  line-height: 1.6;
+}
+
+// ---------- Sections ----------
+
+.section {
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.section-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+// Title on the left, content on the right
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: 24px clamp(24px, 5vw, 72px);
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  max-width: 760px;
+
+  p {
+    font-size: clamp(16px, 1.3vw, 18px);
+    line-height: 1.75;
+  }
+}
+
+// ---------- Experience + education ----------
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  list-style: none;
+  max-width: 760px;
+  border-top: 1px solid var(--line);
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.entry-years {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.entry-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.entry-place {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.entry-role {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.entry-mark {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+// Programmes not completed are shown, but quieter
+.entry.is-open {
+  .entry-place,
+  .entry-mark {
+    color: var(--text-muted);
+  }
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@include below(phone) {
+  .entry {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .entry-years {
+    grid-column: 1 / -1;
+  }
+}

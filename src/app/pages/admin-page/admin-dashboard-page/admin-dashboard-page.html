@@ -1,0 +1,38 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Dashboard</h1>
+  <p class="lead">The site at a glance.</p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+
+<div class="tiles">
+  @for (tile of tiles(); track tile.label) {
+    <a class="tile" [routerLink]="tile.link">
+      <app-shape name="square-cut">
+        <span class="tile-body">
+          <span class="tile-value">{{ tile.value }}</span>
+          <span class="tile-label">{{ tile.label }}</span>
+        </span>
+      </app-shape>
+    </a>
+  }
+</div>
+
+<section class="sections" aria-label="Admin sections">
+  <div class="rows">
+    @for (section of sections; track section.link) {
+      <a class="row section" [routerLink]="section.link">
+        <span class="cell-main">
+          <span class="cell-title">{{ section.label }}</span>
+          <span class="cell-sub">{{ section.text }}</span>
+        </span>
+        @if (!section.ready) {
+          <span class="status">Soon</span>
+        }
+      </a>
+    }
+  </div>
+</section>

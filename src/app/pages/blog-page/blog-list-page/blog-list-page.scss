@@ -1,0 +1,270 @@
+@use 'mixins' as *;
+@use '../blog-shared' as *;
+
+// ==========================================================
+// Blog list
+// ==========================================================
+
+@include blog-theme;
+
+.page {
+  @include blog-page;
+}
+
+.blog {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+// ---------- Intro ----------
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+}
+
+.code {
+  @include barcode-strip;
+}
+
+.code-tag {
+  @include tag;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: clamp(44px, 7vw, 88px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.lead {
+  font-size: clamp(16px, 1.4vw, 19px);
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+// ---------- Featured post ----------
+
+.featured {
+  --cut-fill: var(--card-bg);
+  --cut-border: var(--card-border);
+
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  @include cut-frame(22px, top-right, bottom-left);
+  transition: background-color var(--ease);
+
+  &:hover {
+    --cut-fill: var(--card-hover);
+  }
+}
+
+.featured-img {
+  width: 100%;
+  height: 100%;
+  min-height: 280px;
+  object-fit: cover;
+}
+
+.featured-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 14px;
+  padding: clamp(24px, 4vw, 56px);
+}
+
+.featured-title {
+  font-family: var(--font-text);
+  font-size: clamp(26px, 3vw, 40px);
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+// ---------- Toolbar: categories + search ----------
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter {
+  --cut-fill: var(--card-bg);
+  --cut-border: var(--card-border);
+
+  height: 34px;
+  padding: 0 14px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  @include cut-frame(6px, top-left, bottom-right);
+  transition:
+    background-color var(--ease),
+    color var(--ease);
+
+  &:hover {
+    --cut-fill: var(--card-hover);
+  }
+
+  &.is-active {
+    --cut-fill: var(--ink-bg);
+    --cut-border: var(--ink-bg);
+    color: var(--ink-text);
+  }
+}
+
+// The frame sits on the label: inputs can't hold the ::after layer the cut border needs
+.search {
+  --cut-fill: var(--card-bg);
+  --cut-border: var(--card-border);
+
+  display: block;
+  width: min(280px, 100%);
+  @include cut-frame(8px, top-left, bottom-right);
+
+  input {
+    width: 100%;
+    height: 36px;
+    padding: 0 14px;
+    border: none;
+    background: none;
+    font-family: var(--font-mono);
+    font-size: 13px;
+
+    &::placeholder {
+      color: var(--text-muted);
+    }
+  }
+}
+
+// ---------- Article cards ----------
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: clamp(16px, 2.5vw, 32px);
+}
+
+.card {
+  --cut-fill: var(--card-bg);
+  --cut-border: var(--card-border);
+
+  display: flex;
+  flex-direction: column;
+  @include cut-frame(16px, top-right, bottom-left);
+  transition: background-color var(--ease);
+
+  &:hover {
+    --cut-fill: var(--card-hover);
+  }
+
+  &--skeleton {
+    height: 380px;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.card-img {
+  aspect-ratio: 16 / 10;
+  background: var(--img-placeholder);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 22px 24px;
+}
+
+.card-title {
+  font-family: var(--font-text);
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+// ---------- Shared bits ----------
+
+.tag {
+  @include tag;
+  align-self: flex-start;
+}
+
+.deck {
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.meta {
+  margin-top: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.notice {
+  @include notice;
+}
+
+.notice-btn {
+  margin-top: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet) {
+  .featured {
+    grid-template-columns: 1fr;
+  }
+
+  .featured-img {
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+  }
+
+  .search {
+    width: 100%;
+  }
+}
+
+@include below(phone) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

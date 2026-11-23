@@ -1,0 +1,196 @@
+<div class="background">
+  <img class="background-img" [src]="background()" alt="" />
+
+  <!-- Outer corner ornaments -->
+  <div aria-hidden="true">
+    @for (pos of ['top-left', 'top-right', 'bottom-left', 'bottom-right']; track pos) {
+      <svg class="corner" [class]="pos" viewBox="0 0 256 256">
+        <path d="M 88,48 L 168,128 L 88,208 Z" />
+      </svg>
+    }
+  </div>
+
+  <!-- Outer edge ornaments -->
+  <div class="background-middle" aria-hidden="true">
+    @for (pos of ['middle-left', 'middle-top', 'middle-right', 'middle-bottom']; track pos) {
+      <svg class="middle" [class]="pos" viewBox="0 0 256 256">
+        <path d="M 45,100 H 209 L 232,130 H 22 Z" />
+      </svg>
+    }
+  </div>
+
+  <!-- Frame edge handles -->
+  <div class="frame-handles" aria-hidden="true">
+    <svg class="handles left" viewBox="0 0 256 256">
+      <path d="M 45,100 H 209 L 232,130 H 22 Z" />
+    </svg>
+    <svg class="handles top" viewBox="0 0 256 256">
+      <path d="M16 64h224l-12 18H141l-5-7h-16l-5 7H28z" />
+    </svg>
+    <svg class="handles right" viewBox="0 0 256 256">
+      <path d="M 45,100 H 209 L 232,130 H 22 Z" />
+    </svg>
+    <svg class="handles bottom" viewBox="0 0 256 256">
+      <path d="M16 64h224l-12 18H141l-5-7h-16l-5 7H28z" />
+    </svg>
+  </div>
+
+  <!-- Decor around the frame: counter, codes, rulers, footer lines -->
+  <div class="frame-decor" aria-hidden="true">
+    <div class="decor-label">
+      <span class="decor-hatch"></span>
+      <span class="decor-badge">{{ ageYears() }} YRS</span>
+      <span class="decor-count">
+        <span class="age-num">{{ ageMonths() }}</span><span class="age-unit"> MO</span>
+        <span class="age-sep">·</span>
+        <span class="age-num">{{ ageDays() }}</span><span class="age-unit"> D</span>
+        <span class="age-sep">·</span>
+        <span class="age-clock">{{ ageTime() }}</span>
+      </span>
+    </div>
+
+    <div class="decor-codes">
+      <span>WE WILL ALWAYS HELP YOU</span>
+      <span class="decor-bars"></span>
+    </div>
+
+    <span class="decor-ruler decor-ruler--left"></span>
+    <span class="decor-ruler decor-ruler--right"></span>
+    <span class="decor-strip decor-strip--left"></span>
+    <span class="decor-strip decor-strip--right"></span>
+
+    <div class="decor-foot decor-foot--left">
+      <span class="decor-bars"></span>
+      <span>&copy; 2026 AI Law LLC</span>
+    </div>
+    <div class="decor-foot decor-foot--right">
+      <span>Design &amp; Code · Gocha Okreshidze</span>
+    </div>
+  </div>
+
+  <div class="frame">
+    <!-- Frame corner ornaments -->
+    @for (pos of ['top-left', 'top-right', 'bottom-left', 'bottom-right']; track pos) {
+      <svg class="corner" [class]="pos" viewBox="0 0 256 256" aria-hidden="true">
+        <path d="M 88,48 L 168,128 L 88,208 L 88,162 L 106,144 L 106,112 L 88,94 Z" />
+      </svg>
+    }
+
+    <div class="frame-content">
+      <img class="frame-img" [src]="background()" alt="" />
+
+      <h1 class="visually-hidden">AI Law — 24/7 professional legal services</h1>
+
+      <img class="frame-wallpaper" [src]="robot()" alt="" />
+
+      <!-- Logo, link bar, cart, account menu, burger: the shared site header -->
+      <app-header class="top-nav" />
+
+      <nav class="side-menu" aria-label="Main menu" (mouseleave)="hoveredSide.set(null)">
+        @for (item of sideLinks; track item.link; let i = $index) {
+          <a
+            class="menu-item"
+            [class.is-active]="activeSide() === i"
+            [routerLink]="item.link"
+            (mouseenter)="hoveredSide.set(i)"
+            (click)="selectedSide.set(i)"
+          >
+            <span class="menu-label">{{ item.label }}</span>
+            <svg class="menu-marker" viewBox="0 0 14 14" aria-hidden="true">
+              <rect class="marker-box" x="2.5" y="2.5" width="9" height="9" />
+              <path class="marker-arrow" d="M12.5 1.5 L2 7 L12.5 12.5 Z" />
+            </svg>
+          </a>
+        }
+      </nav>
+
+      <!-- Intro, chat card and connect corner.
+           Desktop: this wrapper does nothing (display: contents).
+           Tablet and below: a single column; the frame grows with it. -->
+      <div class="frame-scroll">
+        <!-- Rotating intro, left side -->
+        <section class="intro" aria-label="Why AI Law">
+          <div class="intro-slides">
+            @for (item of slides; track item.title; let i = $index) {
+              <div class="intro-slide" [class.is-active]="currentSlide() === i">
+                <h2 class="intro-title">{{ item.title }}</h2>
+                <div class="intro-code">
+                  <span class="intro-tag">{{ item.tag }}</span>
+                </div>
+                <p class="intro-text">{{ item.text }}</p>
+              </div>
+            }
+          </div>
+
+          <div class="intro-foot">
+            <a class="intro-btn" [routerLink]="slide().link">{{ slide().cta }}</a>
+            <div class="intro-progress" aria-hidden="true" (animationend)="nextSlide()">
+              @for (item of slides; track item.title; let i = $index) {
+                <span
+                  class="intro-seg"
+                  [class.is-active]="currentSlide() === i"
+                  [class.is-done]="i < currentSlide()"
+                  (click)="showSlide(i)"
+                ></span>
+              }
+            </div>
+          </div>
+
+          <!-- Arrow pointing from the text towards the robot -->
+          <svg class="intro-arrow" viewBox="80 70 96 70" aria-hidden="true">
+            <path d="M 120,135 L 85,135 L 128,75 L 171,135 L 136,135" />
+          </svg>
+        </section>
+
+        <!-- Chat card, bottom-left -->
+        <form #promo class="promo" (submit)="send($event, question)">
+          <svg class="promo-frame" [attr.viewBox]="promoViewBox()" aria-hidden="true">
+            <path class="promo-outline" [attr.d]="promoOutline()" />
+            <path class="promo-accent" [attr.d]="promoAccent()" />
+          </svg>
+
+          <span class="promo-hatch" aria-hidden="true"></span>
+
+          <h2 class="promo-title">Ask AI Law</h2>
+
+          <div class="promo-body">
+            <label class="visually-hidden" for="promo-input">Your legal question</label>
+            <textarea
+              #question
+              class="promo-input"
+              id="promo-input"
+              name="q"
+              rows="3"
+              placeholder="Describe your legal question…"
+              (keydown)="onInputKeydown($event, question)"
+            ></textarea>
+
+            <button type="submit" class="promo-send" aria-label="Start chat">
+              <svg class="promo-send-icon" viewBox="80 40 96 176" aria-hidden="true">
+                <path d="M 88,48 L 168,128 L 88,208 L 88,162 L 106,144 L 106,112 L 88,94 Z" />
+              </svg>
+            </button>
+          </div>
+        </form>
+
+        <!-- Connect corner, bottom-right: social icons + QR -->
+        <div class="connect">
+          <app-social class="social-icons" />
+
+          <app-qr-card />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top ruler above the frame -->
+  <svg class="decor-scale" viewBox="0 0 300 26" aria-hidden="true">
+    <path
+      class="decor-scale-line"
+      d="M0,6 H300 M0,2 V10 M30,4 V8 M60,4 V8 M90,4 V8 M120,4 V8 M150,0 V12 M180,4 V8 M210,4 V8 M240,4 V8 M270,4 V8 M300,2 V10"
+    />
+    <path class="decor-scale-mark" d="M145,24 L150,15 L155,24 Z" />
+  </svg>
+
+  <app-theme-switch class="theme-switch" />
+</div>

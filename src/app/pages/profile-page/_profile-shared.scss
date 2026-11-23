@@ -1,0 +1,34 @@
+// ==========================================================
+// Shared by the profile section pages
+// Import with: @use '../profile-shared' as *;
+// ==========================================================
+
+@use 'page' as *;
+
+// Section heading: barcode tag, title, short text
+@mixin section-head {
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .code {
+    @include barcode-strip;
+  }
+
+  .code-tag {
+    @include tag;
+  }
+
+  .title {
+    @include page-title;
+    font-size: clamp(32px, 4.5vw, 56px);
+  }
+
+  .lead {
+    font-size: clamp(15px, 1.3vw, 18px);
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+}

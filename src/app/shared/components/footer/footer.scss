@@ -1,0 +1,102 @@
+@use 'mixins' as *;
+
+// ==========================================================
+// Site footer: QR card, social icons, copyright line
+// ==========================================================
+
+:host {
+  --qr-size: 76px; // read by app-qr-card
+  --gap: 10px;
+
+  display: block;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  font-family: var(--font-mono);
+}
+
+// ---------- QR card + social icons ----------
+
+.connect {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+// 2 × 2 grid, same total height as the QR card (QR + 2 × 14px padding)
+.social-icons {
+  --social-columns: 2;
+  --social-gap: 6px;
+  --social-size: calc((var(--qr-size) + 28px - 6px) / 2);
+}
+
+// ---------- Copyright line ----------
+
+.legal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+
+  color: var(--decor);
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.legal-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+
+  a {
+    transition: color var(--ease);
+
+    &:hover {
+      color: rgb(var(--yellow));
+    }
+  }
+}
+
+// Small barcode strip
+.bars {
+  width: 32px;
+  height: 12px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--decor) 0 2px,
+    transparent 2px 4px,
+    var(--decor) 4px 5px,
+    transparent 5px 8px
+  );
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(phone) {
+  .connect {
+    flex-direction: column;
+  }
+
+  .social-icons {
+    --social-columns: 4;
+  }
+
+  .legal {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .legal-left {
+    justify-content: center;
+  }
+}

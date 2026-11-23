@@ -1,0 +1,81 @@
+<div class="page">
+  <app-header />
+
+  <main class="post">
+    <a class="back" routerLink="/blog">
+      <span class="back-arrow" aria-hidden="true"><app-icon name="arrow-right" /></span>
+      All articles
+    </a>
+
+    @if (post.isLoading()) {
+      <div class="skeleton" aria-busy="true">
+        <span class="skeleton-line skeleton-line--title"></span>
+        <span class="skeleton-line"></span>
+        <span class="skeleton-line skeleton-line--short"></span>
+      </div>
+    } @else if (post.error()) {
+      <div class="notice">
+        <p>This article could not be found.</p>
+        <a class="notice-link" routerLink="/blog">Back to the blog</a>
+      </div>
+    } @else if (post.value(); as article) {
+      <article>
+        <header class="head">
+          <span class="tag">{{ article.category }}</span>
+          <h1 class="title">{{ article.title }}</h1>
+          @if (article.deck) {
+            <p class="deck">{{ article.deck }}</p>
+          }
+          <p class="meta">
+            <span>{{ article.author }}</span>
+            <span aria-hidden="true">·</span>
+            <span>{{ article.date | date: 'MMMM d, y' }}</span>
+            <span aria-hidden="true">·</span>
+            <span>{{ article.readTimeMinutes }} min read</span>
+          </p>
+        </header>
+
+        @if (article.image) {
+          <figure class="cover">
+            <img [src]="article.image" [alt]="article.title" />
+          </figure>
+        }
+
+        <!-- Content is HTML built and escaped by the Blog API -->
+        <div class="content" [innerHTML]="article.content"></div>
+
+        <footer class="foot">
+          @if (article.tags.length) {
+            <ul class="tags">
+              @for (tag of article.tags; track tag) {
+                <li>
+                  <a class="chip" routerLink="/blog" [queryParams]="{ q: tag }">#{{ tag }}</a>
+                </li>
+              }
+            </ul>
+          }
+
+          <div class="share">
+            <span class="share-label">Share</span>
+            @for (item of shareLinks(); track item.icon) {
+              <a
+                class="share-btn"
+                [href]="item.href"
+                target="_blank"
+                rel="noopener noreferrer"
+                [attr.aria-label]="'Share on ' + item.label"
+              >
+                <app-icon [name]="item.icon" />
+              </a>
+            }
+            <button type="button" class="share-btn" aria-label="Copy link" (click)="copyLink()">
+              <app-icon [name]="copied() ? 'check' : 'copy'" />
+            </button>
+          </div>
+        </footer>
+      </article>
+    }
+  </main>
+
+  <app-footer />
+</div>

@@ -1,0 +1,155 @@
+@use 'mixins' as *;
+@use 'page' as *;
+@use '../cart-shared' as *;
+
+// ==========================================================
+// Checkout
+// ==========================================================
+
+@include page-theme;
+@include form-controls;
+@include cart-head;
+@include cart-summary;
+@include cart-notice;
+
+.page {
+  @include page-shell;
+}
+
+.checkout {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+// Details left, summary right
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  align-items: start;
+  gap: clamp(32px, 5vw, 72px);
+}
+
+// ---------- Details ----------
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 520px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.block-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+// The email comes from the account, so it reads as fixed
+.field-box input[readonly] {
+  color: var(--text-muted);
+}
+
+// Free text grows with its content, so it's a plain box rather than a shape
+.area {
+  width: 100%;
+  padding: 12px 16px;
+  resize: vertical;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+
+  &:focus {
+    border-color: rgb(var(--yellow));
+  }
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+}
+
+.agree {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+
+  input {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    accent-color: rgb(var(--yellow));
+  }
+}
+
+// ---------- Order lines in the summary ----------
+
+.order {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.order-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 15px;
+}
+
+.order-qty {
+  margin-left: 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.order-price {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+// ---------- Loading ----------
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-line {
+  height: 72px;
+  background: var(--img-placeholder);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet-wide) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .summary {
+    position: static;
+  }
+}

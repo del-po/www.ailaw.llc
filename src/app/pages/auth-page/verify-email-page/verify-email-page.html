@@ -1,0 +1,75 @@
+<div class="page">
+  <app-header />
+
+  <main class="auth">
+    <section class="intro">
+      <div class="code" aria-hidden="true"><span class="code-tag">Account</span></div>
+      <h1 class="title">Verify email</h1>
+
+      @switch (state()) {
+        @case ('checking') {
+          <p class="lead">Confirming your email address…</p>
+        }
+        @case ('verified') {
+          <p class="lead">Your email address is confirmed. Your account is ready.</p>
+        }
+        @case ('failed') {
+          <p class="lead">This link didn't work.</p>
+        }
+        @default {
+          <p class="lead">
+            We sent a confirmation link to
+            <strong>{{ auth.user()?.email ?? 'your email address' }}</strong>. Open it to finish
+            creating your account.
+          </p>
+        }
+      }
+    </section>
+
+    <div class="form">
+      @switch (state()) {
+        @case ('verified') {
+          <a class="btn" routerLink="/profile">
+            <app-shape name="field">Go to my profile</app-shape>
+          </a>
+        }
+        @case ('checking') {}
+        @default {
+          @if (error()) {
+            <p class="message" role="alert">{{ error() }}</p>
+          }
+          @if (message()) {
+            <p class="message message--ok" role="status">{{ message() }}</p>
+          }
+
+          @if (auth.signedIn()) {
+            <button type="button" class="btn" [disabled]="busy()" (click)="check()">
+              <app-shape name="field">I've confirmed my email</app-shape>
+            </button>
+
+            <button
+              type="button"
+              class="btn btn--light"
+              [disabled]="busy() || resendIn() > 0"
+              (click)="resend()"
+            >
+              <app-shape name="field">
+                {{ resendIn() > 0 ? 'Resend in ' + resendIn() + 's' : 'Send the link again' }}
+              </app-shape>
+            </button>
+
+            <p class="small">
+              Wrong address? <a class="link" routerLink="/register">Register again</a>
+            </p>
+          } @else {
+            <p class="small">
+              <a class="link" routerLink="/login">Log in</a> to resend the confirmation link.
+            </p>
+          }
+        }
+      }
+    </div>
+  </main>
+
+  <app-footer />
+</div>

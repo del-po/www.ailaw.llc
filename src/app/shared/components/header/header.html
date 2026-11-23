@@ -1,0 +1,94 @@
+<header class="header">
+  <a class="logo-link" routerLink="/" aria-label="AI Law home">
+    <app-logo class="logo" />
+  </a>
+
+  <div class="nav">
+    <nav class="nav-links" aria-label="Site">
+      @for (item of mainLinks; track item.link) {
+        <a class="nav-link" [routerLink]="item.link" routerLinkActive="is-active">{{
+          item.label
+        }}</a>
+      }
+    </nav>
+
+    <div class="nav-icons">
+      <a class="nav-btn nav-cart" routerLink="/cart" routerLinkActive="is-active" aria-label="Cart">
+        <app-shape name="square-cut"><app-icon name="cart" /></app-shape>
+        @if (cartCount()) {
+          <span class="nav-badge">{{ cartCount() }}</span>
+        }
+      </a>
+      @if (auth.user(); as user) {
+        <button
+          class="nav-btn nav-profile"
+          type="button"
+          aria-label="Account menu"
+          [attr.aria-expanded]="accountOpen()"
+          (click)="toggleAccount($event)"
+        >
+          <app-shape name="square-cut" [front]="!!user.photoURL">
+            @if (user.photoURL) {
+              <img class="avatar-img" [src]="user.photoURL" alt="" referrerpolicy="no-referrer" />
+            } @else {
+              <span class="avatar-initials">{{ initials() }}</span>
+            }
+          </app-shape>
+        </button>
+      } @else {
+        <a class="nav-btn nav-profile" routerLink="/login" aria-label="Log in">
+          <app-shape name="square-cut"><app-icon name="user" /></app-shape>
+        </a>
+      }
+      <button
+        class="nav-btn nav-menu-btn"
+        type="button"
+        [attr.aria-label]="menuOpen() ? 'Close menu' : 'Open menu'"
+        [attr.aria-expanded]="menuOpen()"
+        (click)="toggleMenu($event)"
+      >
+        <app-shape name="square-cut"><app-icon [name]="menuOpen() ? 'close' : 'menu'" /></app-shape>
+      </button>
+    </div>
+
+    <!-- Account menu (signed in) -->
+    <nav #account class="dropdown" [class.is-open]="accountOpen()" aria-label="Account">
+      <p class="dropdown-who">
+        <span class="dropdown-name">{{ auth.user()?.displayName || 'Your account' }}</span>
+        <span class="dropdown-email">{{ auth.user()?.email }}</span>
+      </p>
+      <a class="nav-link" routerLink="/profile" (click)="accountOpen.set(false)">
+        <app-icon class="nav-ico" name="user" />Profile
+      </a>
+      @if (auth.profile()?.Role === 'admin') {
+        <a class="nav-link" routerLink="/admin" (click)="accountOpen.set(false)">
+          <app-icon class="nav-ico" name="sidebar" />Admin
+        </a>
+      }
+      <a class="nav-link" routerLink="/profile/settings" (click)="accountOpen.set(false)">
+        <app-icon class="nav-ico" name="edit" />Settings
+      </a>
+      <button type="button" class="nav-link" (click)="logOut()">
+        <app-icon class="nav-ico" name="arrow-right" />Log out
+      </button>
+    </nav>
+
+    <nav #dropdown class="dropdown" [class.is-open]="menuOpen()" aria-label="Site (mobile)">
+      @for (item of [...mainLinks, ...extraLinks]; track item.link) {
+        <a
+          class="nav-link"
+          [routerLink]="item.link"
+          routerLinkActive="is-active"
+          (click)="menuOpen.set(false)"
+        >
+          <app-icon class="nav-ico" [name]="item.icon" />{{ item.label }}
+        </a>
+      }
+      @if (auth.signedIn()) {
+        <button type="button" class="nav-link" (click)="logOut()">
+          <app-icon class="nav-ico" name="arrow-right" />Log out
+        </button>
+      }
+    </nav>
+  </div>
+</header>

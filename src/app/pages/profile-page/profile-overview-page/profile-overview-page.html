@@ -1,0 +1,64 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Profile</span></div>
+  <h1 class="title">Hello{{ firstName() ? ', ' + firstName() : '' }}</h1>
+  <p class="lead">
+    Your account at a glance. Orders, payments and documents will appear here as you use AI Law.
+  </p>
+</section>
+
+@if (auth.profile(); as profile) {
+  <section class="details" aria-label="Account details">
+    <dl class="list">
+      <div class="row">
+        <dt>Name</dt>
+        <dd>{{ profile.DisplayName || '—' }}</dd>
+      </div>
+      <div class="row">
+        <dt>Email</dt>
+        <dd>{{ profile.Email }}</dd>
+      </div>
+      <div class="row">
+        <dt>Phone</dt>
+        <dd>
+          @if (profile.Phone) {
+            {{ profile.Phone }}
+          } @else {
+            <a class="link" routerLink="/profile/settings">Add a phone number</a>
+          }
+        </dd>
+      </div>
+      <div class="row">
+        <dt>Sign-in</dt>
+        <dd>{{ signInMethods() || '—' }}</dd>
+      </div>
+      <div class="row">
+        <dt>Member since</dt>
+        <dd>{{ profile.CreatedAt | date: 'MMMM d, y' }}</dd>
+      </div>
+    </dl>
+
+    <a class="link edit" routerLink="/profile/settings">Edit details</a>
+  </section>
+} @else {
+  <div class="skeleton" aria-busy="true">
+    @for (n of [1, 2, 3, 4, 5]; track n) {
+      <span class="skeleton-line"></span>
+    }
+  </div>
+}
+
+<section class="shortcuts" aria-label="Profile sections">
+  @for (section of shortcuts; track section.link; let i = $index) {
+    <a class="tile" [routerLink]="section.link">
+      <app-shape name="square-cut">
+        <span class="tile-body">
+          <span class="tile-num">{{ (i + 2).toString().padStart(2, '0') }}</span>
+          <span class="tile-label">{{ section.label }}</span>
+          @if (!section.ready) {
+            <span class="tile-soon">Coming soon</span>
+          }
+        </span>
+      </app-shape>
+    </a>
+  }
+</section>

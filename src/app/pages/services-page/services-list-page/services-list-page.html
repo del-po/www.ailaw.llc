@@ -1,0 +1,119 @@
+<div class="page">
+  <app-header />
+
+  <main class="services">
+    <!-- ---------- Intro ---------- -->
+    <section class="intro">
+      <div class="code" aria-hidden="true">
+        <span class="code-tag">Fixed prices</span>
+      </div>
+      <h1 class="title">Services</h1>
+      <p class="lead">
+        Legal work at a fixed price, agreed before we start. Choose a service, add it to your cart
+        and our lawyers take it from there.
+      </p>
+    </section>
+
+    @if (services.isLoading()) {
+      <div class="grid" aria-busy="true">
+        @for (n of [1, 2, 3, 4]; track n) {
+          <app-shape class="card card--skeleton" name="card-corner" />
+        }
+      </div>
+    } @else if (services.error()) {
+      <div class="notice">
+        <p>Services could not be loaded right now.</p>
+        <button type="button" class="btn" (click)="services.reload()">
+          <app-shape name="bar-notch">Try again</app-shape>
+        </button>
+      </div>
+    } @else {
+      <!-- ---------- Filters ---------- -->
+      <div class="toolbar">
+        <nav class="filters" aria-label="Categories">
+          @for (name of categories(); track name) {
+            <button
+              type="button"
+              class="filter"
+              [class.is-active]="name === category()"
+              [attr.aria-pressed]="name === category()"
+              (click)="setCategory(name)"
+            >
+              <app-shape name="bar-slant">{{ name }}</app-shape>
+            </button>
+          }
+        </nav>
+
+        <label class="search">
+          <span class="visually-hidden">Search services</span>
+          <app-shape name="bar-notch">
+            <input
+              #box
+              type="search"
+              placeholder="Search…"
+              [value]="search()"
+              (input)="setSearch(box.value)"
+            />
+          </app-shape>
+        </label>
+      </div>
+
+      <!-- ---------- Cards ---------- -->
+      @if (list().length) {
+        <div class="grid">
+          @for (service of list(); track service.slug) {
+            <article class="card">
+              <app-shape name="card-corner">
+                <div class="card-body">
+                  <div class="card-top">
+                    <span class="tag">{{ service.category }}</span>
+                    @if (service.onSale) {
+                      <span class="sale">Sale</span>
+                    }
+                  </div>
+
+                  <h2 class="card-title">
+                    <a class="card-link" [routerLink]="['/services', service.slug]">{{
+                      service.name
+                    }}</a>
+                  </h2>
+                  <p class="card-text">{{ service.shortDescription }}</p>
+
+                  <div class="card-foot">
+                    <p class="price">
+                      @if (service.onSale) {
+                        <s class="price-old"
+                          >{{ service.price | number: '1.0-2' }} {{ service.currency }}</s
+                        >
+                      }
+                      <span class="price-now">
+                        {{ service.finalPrice | number: '1.0-2'
+                        }}<small class="currency">{{ service.currency }}</small>
+                      </span>
+                    </p>
+
+                    <button
+                      type="button"
+                      class="add"
+                      [class.is-added]="justAdded() === service.slug"
+                      [attr.aria-label]="'Add ' + service.name + ' to cart'"
+                      (click)="addToCart(service)"
+                    >
+                      <app-shape name="square-cut">
+                        <app-icon [name]="justAdded() === service.slug ? 'check' : 'cart'" />
+                      </app-shape>
+                    </button>
+                  </div>
+                </div>
+              </app-shape>
+            </article>
+          }
+        </div>
+      } @else {
+        <p class="notice">No services match this filter.</p>
+      }
+    }
+  </main>
+
+  <app-footer />
+</div>

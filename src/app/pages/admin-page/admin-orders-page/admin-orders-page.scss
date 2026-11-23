@@ -1,0 +1,125 @@
+@use 'mixins' as *;
+@use 'order-list' as *;
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin orders
+// ==========================================================
+
+@include admin-page;
+@include order-list;
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.filter {
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  transition:
+    color var(--ease),
+    background-color var(--ease);
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &.is-active {
+    border-color: var(--ink-bg);
+    background: var(--ink-bg);
+    color: var(--ink-text);
+  }
+}
+
+.search {
+  width: 300px;
+
+  input {
+    font-size: 13px;
+  }
+}
+
+// Client details as label / value rows
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fact {
+  display: grid;
+  grid-template-columns: 100px minmax(0, 1fr);
+  gap: 12px;
+  font-size: 15px;
+
+  dt {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    line-height: 22px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  dd {
+    overflow-wrap: anywhere;
+  }
+}
+
+.note {
+  white-space: pre-line;
+}
+
+.item--total {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-weight: 700;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 220px)) 180px;
+  align-items: end;
+  gap: 12px;
+}
+
+.field-box select {
+  width: 100%;
+  height: 100%;
+  padding: 0 12px;
+  border: none;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet) {
+  .search {
+    width: 100%;
+  }
+
+  .controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,1 +1,281 @@
-/* You can add global styles to this file, and also import other style files */
+/* ==========================================================
+   AI Law — global styles
+   Only things every page shares. Page/component styles
+   live in each component's own .scss file.
+   ========================================================== */
+
+/* ---------- Fonts ---------- */
+
+/* Courier Prime */
+
+@font-face {
+  font-family: 'Courier Prime';
+  src: url('/fonts/courier/courier-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Courier Prime';
+  src: url('/fonts/courier/courier-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Courier Prime';
+  src: url('/fonts/courier/courier-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Courier Prime';
+  src: url('/fonts/courier/courier-bold-italic.woff2') format('woff2');
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* Rockwell */
+
+@font-face {
+  font-family: 'Rockwell';
+  src: url('/fonts/rockwell/rockwell-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Rockwell';
+  src: url('/fonts/rockwell/rockwell-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Rockwell';
+  src: url('/fonts/rockwell/rockwell-condensed-regular.woff2') format('woff2');
+  font-weight: 400;
+  font-stretch: condensed;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Rockwell';
+  src: url('/fonts/rockwell/rockwell-condensed-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-stretch: condensed;
+  font-display: swap;
+}
+
+/* Orbitron */
+
+@font-face {
+  font-family: 'Orbitron';
+  src: url('/fonts/orbitron/orbitron-variable.woff2') format('woff2');
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+/* Blakely */
+
+@font-face {
+  font-family: 'Blakely';
+  src: url('/fonts/blakely/blakely-light.woff2') format('woff2');
+  font-weight: 300;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Blakely';
+  src: url('/fonts/blakely/blakely-bold.woff2') format('woff2');
+  font-weight: 700;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Blakely';
+  src: url('/fonts/blakely/blakely-black.woff2') format('woff2');
+  font-weight: 900;
+  font-display: swap;
+}
+
+/* Flegrei */
+
+@font-face {
+  font-family: 'Flegrei';
+  src: url('/fonts/flegrei/flegrei.woff2') format('woff2');
+  font-display: swap;
+}
+
+/* Rostov */
+
+@font-face {
+  font-family: 'Rostov';
+  src: url('/fonts/rostov/rostov.woff2') format('woff2');
+  font-display: swap;
+}
+
+/* Stalinist One */
+
+@font-face {
+  font-family: 'Stalinist One';
+  src: url('/fonts/stalinist/stalinist.woff2') format('woff2');
+  font-display: swap;
+}
+
+/* ---------- Colours & Tokens ---------- */
+
+/* Light Theme */
+
+:root {
+  /* Brand colours (r g b) */
+  --black: 45 42 39;
+  --grey: 211 211 211;
+  --yellow: 254 221 0;
+  --white: 242 242 242;
+
+  /* Theme */
+  --bg: rgb(var(--grey) / 0.4);
+  --surface: rgb(var(--white) / 0.6);
+  --text: rgb(var(--black));
+  --text-muted: rgb(var(--black) / 0.65);
+  --line: rgb(var(--black) / 0.22);
+  --decor: rgb(var(--black));
+
+  /* Fonts */
+  --font-text: 'Rockwell', serif;
+  --font-mono: 'Courier Prime', 'Courier New', monospace;
+  --font-display: 'Orbitron', sans-serif;
+  --font-heading: 'Blakely', sans-serif;
+  --font-logo: 'Flegrei', sans-serif;
+  --font-accent: 'Rostov', sans-serif;
+  --font-decor: 'Stalinist One', sans-serif;
+
+  /* Shapes */
+  --cut-sm: 8px;
+  --cut-md: 16px;
+  --cut-lg: 30px;
+
+  /* Motion */
+  --ease: 0.2s ease;
+}
+
+/* Dark Theme */
+body.dark {
+  --bg: rgb(var(--black));
+  --surface: rgb(var(--black) / 0.6);
+  --text: rgb(var(--white));
+  --text-muted: rgb(var(--white) / 0.65);
+  --line: rgb(var(--white) / 0.18);
+  --decor: rgb(var(--white) / 0.45);
+}
+
+/* ---------- Reset ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html,
+body {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-text);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+img,
+svg,
+video,
+canvas,
+picture {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p {
+  overflow-wrap: break-word;
+}
+
+textarea {
+  resize: none;
+}
+
+/* ---------- No Focus Outlines / Tap Highlights ---------- */
+*:focus,
+*:focus-visible {
+  outline: none;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------- Text Selection ---------- */
+::selection {
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+}
+
+/* ---------- Icons ---------- */
+.icon {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  background: currentColor;
+  mask: var(--src) center / contain no-repeat;
+}
+
+/* ---------- Helpers ---------- */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

@@ -1,0 +1,25 @@
+@use 'page' as *;
+@use '../profile-shared' as *;
+
+@include page-theme;
+@include section-head;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.note {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.link {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--yellow));
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}

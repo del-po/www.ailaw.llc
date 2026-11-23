@@ -1,0 +1,145 @@
+<div class="page">
+  <app-header />
+
+  <main class="cart">
+    <section class="head">
+      <div class="code" aria-hidden="true"><span class="code-tag">Cart</span></div>
+      <h1 class="title">Cart</h1>
+    </section>
+
+    @if (loading()) {
+      <div class="skeleton" aria-busy="true">
+        @for (n of [1, 2]; track n) {
+          <span class="skeleton-line"></span>
+        }
+      </div>
+    } @else if (services.error()) {
+      <div class="notice">
+        <p>Your cart could not be loaded right now.</p>
+        <button type="button" class="btn btn--inline" (click)="services.reload()">
+          <app-shape name="bar-notch">Try again</app-shape>
+        </button>
+      </div>
+    } @else if (!lines().length) {
+      <div class="notice">
+        <p>Your cart is empty.</p>
+        <a class="btn btn--inline" routerLink="/services">
+          <app-shape name="bar-notch">Browse services</app-shape>
+        </a>
+      </div>
+    } @else {
+      <div class="layout">
+        <!-- ---------- Items ---------- -->
+        <section class="items" aria-label="Items in your cart">
+          @for (line of available(); track line.slug) {
+            <article class="line">
+              <div class="line-info">
+                <span class="tag">{{ line.service!.category }}</span>
+                <a class="line-name" [routerLink]="['/services', line.slug]">{{
+                  line.service!.name
+                }}</a>
+                <p class="line-unit">
+                  @if (line.service!.onSale) {
+                    <s>{{ line.service!.price | number: '1.0-2' }}</s>
+                  }
+                  {{ line.service!.finalPrice | number: '1.0-2' }} {{ line.service!.currency }} each
+                </p>
+              </div>
+
+              <div class="qty" role="group" [attr.aria-label]="'Quantity of ' + line.service!.name">
+                <button
+                  type="button"
+                  class="qty-btn"
+                  aria-label="Fewer"
+                  [disabled]="line.quantity <= 1"
+                  (click)="changeQuantity(line, -1)"
+                >
+                  <app-shape name="square-cut">−</app-shape>
+                </button>
+                <output class="qty-value" aria-live="polite">{{ line.quantity }}</output>
+                <button
+                  type="button"
+                  class="qty-btn"
+                  aria-label="More"
+                  [disabled]="line.quantity >= maxQuantity"
+                  (click)="changeQuantity(line, 1)"
+                >
+                  <app-shape name="square-cut">+</app-shape>
+                </button>
+              </div>
+
+              <p class="line-total">
+                {{ line.service!.finalPrice * line.quantity | number: '1.0-2'
+                }}<small class="currency">{{ line.service!.currency }}</small>
+              </p>
+
+              <button
+                type="button"
+                class="remove"
+                [attr.aria-label]="'Remove ' + line.service!.name"
+                (click)="remove(line)"
+              >
+                <app-icon name="trash" />
+              </button>
+            </article>
+          }
+
+          <!-- Services removed from the catalogue since they were added -->
+          @if (unavailable().length) {
+            <div class="message" role="status">
+              {{ unavailable().length === 1 ? 'One service' : unavailable().length + ' services' }}
+              in your cart {{ unavailable().length === 1 ? 'is' : 'are' }} no longer available.
+              <button type="button" class="link" (click)="removeUnavailable()">Remove</button>
+            </div>
+          }
+
+          <div class="items-foot">
+            <a class="link" routerLink="/services">Continue browsing</a>
+            <button type="button" class="link link--muted" (click)="cart.clear()">
+              Empty cart
+            </button>
+          </div>
+        </section>
+
+        <!-- ---------- Summary ---------- -->
+        <aside class="summary" aria-label="Order summary">
+          <h2 class="summary-title">Summary</h2>
+
+          <dl class="sums">
+            <div class="sum">
+              <dt>Services</dt>
+              <dd>{{ totals().count }}</dd>
+            </div>
+            @if (totals().savings > 0) {
+              <div class="sum">
+                <dt>Regular price</dt>
+                <dd>{{ totals().subtotal | number: '1.0-2' }} {{ totals().currency }}</dd>
+              </div>
+              <div class="sum sum--save">
+                <dt>You save</dt>
+                <dd>−{{ totals().savings | number: '1.0-2' }} {{ totals().currency }}</dd>
+              </div>
+            }
+            <div class="sum sum--total">
+              <dt>Total</dt>
+              <dd>
+                {{ totals().total | number: '1.0-2'
+                }}<small class="currency">{{ totals().currency }}</small>
+              </dd>
+            </div>
+          </dl>
+
+          <a class="btn" routerLink="/checkout" [class.is-disabled]="!available().length">
+            <app-shape name="field">Checkout</app-shape>
+          </a>
+
+          <p class="small">
+            Fixed prices. The final amount is confirmed at checkout before you pay.
+          </p>
+        </aside>
+      </div>
+    }
+  </main>
+
+  <app-footer />
+</div>

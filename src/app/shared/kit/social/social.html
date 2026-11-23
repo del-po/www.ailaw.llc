@@ -1,0 +1,9 @@
+<nav class="social" aria-label="Social media">
+  @for (link of links(); track link.icon) {
+    <a class="tile" [href]="link.url" target="_blank" rel="noopener" [attr.aria-label]="link.label">
+      <app-shape name="square-cut">
+        <app-icon [name]="link.icon" />
+      </app-shape>
+    </a>
+  }
+</nav>

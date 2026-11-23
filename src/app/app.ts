@@ -1,5 +1,6 @@
-import { Component, signal } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { ThemeService } from './core/services/theme.service';
 
 @Component({
   imports: [RouterOutlet],
@@ -8,5 +9,6 @@ import { RouterOutlet } from '@angular/router';
   templateUrl: './app.html',
 })
 export class App {
-  protected readonly title = signal('www.ailaw.llc');
+  // Started here so the saved theme applies on every page, not only pages with the switch
+  private readonly theme = inject(ThemeService);
 }

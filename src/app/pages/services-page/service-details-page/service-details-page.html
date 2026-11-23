@@ -1,0 +1,115 @@
+<div class="page">
+  <app-header />
+
+  <main class="details">
+    <a class="back" routerLink="/services">
+      <span class="back-arrow" aria-hidden="true"><app-icon name="arrow-right" /></span>
+      All services
+    </a>
+
+    @if (service.isLoading()) {
+      <div class="skeleton" aria-busy="true">
+        <app-shape class="skeleton-cover" name="card-slant" />
+        <div class="skeleton-lines">
+          <span class="skeleton-line skeleton-line--title"></span>
+          <span class="skeleton-line"></span>
+          <span class="skeleton-line skeleton-line--short"></span>
+        </div>
+      </div>
+    } @else if (service.error()) {
+      <div class="notice">
+        <p>This service could not be loaded right now.</p>
+        <button type="button" class="btn" (click)="service.reload()">
+          <app-shape name="bar-notch">Try again</app-shape>
+        </button>
+      </div>
+    } @else if (service.value(); as item) {
+      <article class="service">
+        <!-- ---------- Cover ---------- -->
+        <app-shape class="cover" name="card-slant" front>
+          @if (item.image) {
+            <img class="cover-img" [src]="item.image" [alt]="item.name" />
+          }
+        </app-shape>
+
+        <!-- ---------- Summary + buying ---------- -->
+        <div class="info">
+          <div class="code" aria-hidden="true">
+            <span class="tag">{{ item.category }}</span>
+          </div>
+
+          <h1 class="name">{{ item.name }}</h1>
+          <p class="short">{{ item.shortDescription }}</p>
+
+          <div class="price">
+            @if (item.onSale) {
+              <s class="price-old">{{ item.price | number: '1.0-2' }} {{ item.currency }}</s>
+            }
+            <span class="price-now">
+              {{ item.finalPrice | number: '1.0-2'
+              }}<small class="currency">{{ item.currency }}</small>
+            </span>
+            @if (item.onSale && item.discountEnd) {
+              <span class="sale">Offer ends {{ item.discountEnd | date: 'MMM d' }}</span>
+            }
+          </div>
+
+          <div class="buy">
+            <div class="qty" role="group" aria-label="Quantity">
+              <button
+                type="button"
+                class="qty-btn"
+                aria-label="Fewer"
+                [disabled]="quantity() <= 1"
+                (click)="changeQuantity(-1)"
+              >
+                <app-shape name="square-cut">−</app-shape>
+              </button>
+              <app-shape class="qty-value" name="square-cut">
+                <output aria-live="polite">{{ quantity() }}</output>
+              </app-shape>
+              <button
+                type="button"
+                class="qty-btn"
+                aria-label="More"
+                [disabled]="quantity() >= maxQuantity"
+                (click)="changeQuantity(1)"
+              >
+                <app-shape name="square-cut">+</app-shape>
+              </button>
+            </div>
+
+            <div class="buy-buttons">
+              <button type="button" class="btn" (click)="addToCart()">
+                <app-shape name="bar-notch">{{ added() ? 'Added ✓' : 'Add to cart' }}</app-shape>
+              </button>
+
+              <button type="button" class="btn btn--light" (click)="buyNow()">
+                <app-shape name="bar-notch">Buy now</app-shape>
+              </button>
+            </div>
+          </div>
+
+          @if (added()) {
+            <p class="added">In your cart. <a routerLink="/cart">View cart</a> or keep browsing.</p>
+          }
+        </div>
+      </article>
+
+      <!-- ---------- Full description ---------- -->
+      @if (item.description) {
+        <section class="about">
+          <h2 class="about-title">About this service</h2>
+          <p class="description">{{ item.description }}</p>
+        </section>
+      }
+    } @else {
+      <div class="notice">
+        <p>This service doesn't exist or is no longer available.</p>
+        <a class="notice-link" routerLink="/services">See all services</a>
+      </div>
+    }
+  </main>
+
+  <app-footer />
+</div>

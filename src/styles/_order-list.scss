@@ -1,0 +1,136 @@
+// ==========================================================
+// Expandable list of orders: profile orders and admin orders
+// Import with: @use 'order-list' as *;
+// ==========================================================
+
+@use 'mixins' as *;
+
+// Expandable list of orders, shared with the admin orders page
+@mixin order-list {
+  .rows {
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--line);
+  }
+
+  .order {
+    border-bottom: 1px solid var(--line);
+
+    &.is-open {
+      background: var(--card-bg);
+    }
+  }
+
+  .row {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 130px 220px;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 12px;
+    text-align: left;
+    transition: background-color var(--ease);
+
+    &:hover {
+      background: var(--card-bg);
+    }
+  }
+
+  .cell-main {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .cell-title {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  .cell-sub,
+  .cell-mono {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+    overflow-wrap: anywhere;
+  }
+
+  .labels {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+
+  // Order or payment status; yellow when done
+  .status {
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 18px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+
+    &--active {
+      border-color: rgb(var(--yellow));
+      background: rgb(var(--yellow));
+      color: rgb(var(--black));
+    }
+  }
+
+  .detail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0 12px 20px;
+  }
+
+  .items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+  }
+
+  .item {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    font-size: 15px;
+  }
+
+  .qty {
+    margin-left: 4px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .skeleton {
+    height: 200px;
+    background: var(--img-placeholder);
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  @include below(tablet) {
+    .row {
+      grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .labels {
+      grid-column: 1 / -1;
+      justify-content: flex-start;
+    }
+  }
+}

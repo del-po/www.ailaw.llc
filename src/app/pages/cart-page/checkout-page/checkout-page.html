@@ -1,0 +1,142 @@
+<div class="page">
+  <app-header />
+
+  <main class="checkout">
+    <section class="head">
+      <div class="code" aria-hidden="true"><span class="code-tag">Step 2 of 3</span></div>
+      <h1 class="title">Checkout</h1>
+    </section>
+
+    @if (loading()) {
+      <div class="skeleton" aria-busy="true">
+        <span class="skeleton-line"></span>
+        <span class="skeleton-line"></span>
+      </div>
+    } @else if (services.error()) {
+      <div class="notice">
+        <p>Your order could not be loaded right now.</p>
+        <button type="button" class="btn btn--inline" (click)="services.reload()">
+          <app-shape name="bar-notch">Try again</app-shape>
+        </button>
+      </div>
+    } @else if (!lines().length) {
+      <div class="notice">
+        <p>There's nothing to check out yet.</p>
+        <a class="btn btn--inline" routerLink="/services">
+          <app-shape name="bar-notch">Browse services</app-shape>
+        </a>
+      </div>
+    } @else {
+      <form #form class="layout" (submit)="placeOrder($event, form)">
+        <!-- ---------- Contact details ---------- -->
+        <section class="details" aria-labelledby="details-title">
+          <h2 class="block-title" id="details-title">Your details</h2>
+          <p class="small">A lawyer uses these to contact you about your order.</p>
+
+          <label class="field">
+            <span class="field-label">Full name</span>
+            <app-shape class="field-box" name="field">
+              <input
+                name="name"
+                autocomplete="name"
+                maxlength="100"
+                required
+                [value]="auth.profile()?.DisplayName ?? auth.user()?.displayName ?? ''"
+              />
+            </app-shape>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Email</span>
+            <app-shape class="field-box" name="field">
+              <input type="email" [value]="auth.user()?.email ?? ''" readonly />
+            </app-shape>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Phone</span>
+            <app-shape class="field-box" name="field">
+              <input
+                name="phone"
+                type="tel"
+                autocomplete="tel"
+                maxlength="30"
+                required
+                [value]="auth.profile()?.Phone ?? ''"
+              />
+            </app-shape>
+          </label>
+
+          <label class="field">
+            <span class="field-label">Notes for the lawyer · optional</span>
+            <textarea
+              class="area"
+              name="note"
+              rows="4"
+              maxlength="1000"
+              placeholder="Anything we should know before we start"
+            ></textarea>
+          </label>
+
+          <label class="agree">
+            <input type="checkbox" name="agree" required />
+            <span>
+              I agree to the <a class="link" routerLink="/terms" target="_blank">Terms</a> and
+              <a class="link" routerLink="/privacy" target="_blank">Privacy Policy</a>.
+            </span>
+          </label>
+        </section>
+
+        <!-- ---------- Order summary ---------- -->
+        <aside class="summary" aria-label="Order summary">
+          <h2 class="summary-title">Your order</h2>
+
+          <ul class="order">
+            @for (line of lines(); track line.slug) {
+              <li class="order-line">
+                <span class="order-name">
+                  {{ line.service!.name }}
+                  @if (line.quantity > 1) {
+                    <span class="order-qty">× {{ line.quantity }}</span>
+                  }
+                </span>
+                <span class="order-price">
+                  {{ line.service!.finalPrice * line.quantity | number: '1.0-2' }}
+                </span>
+              </li>
+            }
+          </ul>
+
+          <dl class="sums">
+            @if (totals().savings > 0) {
+              <div class="sum sum--save">
+                <dt>You save</dt>
+                <dd>−{{ totals().savings | number: '1.0-2' }} {{ totals().currency }}</dd>
+              </div>
+            }
+            <div class="sum sum--total">
+              <dt>Total</dt>
+              <dd>
+                {{ totals().total | number: '1.0-2'
+                }}<small class="currency">{{ totals().currency }}</small>
+              </dd>
+            </div>
+          </dl>
+
+          @if (error()) {
+            <p class="message" role="alert">{{ error() }}</p>
+          }
+
+          <button type="submit" class="btn" [disabled]="busy()">
+            <app-shape name="field">{{ busy() ? 'Placing order…' : 'Place order' }}</app-shape>
+          </button>
+
+          <p class="small">You'll pay by bank transfer. The details are on the next page.</p>
+          <a class="small link" routerLink="/cart">Back to cart</a>
+        </aside>
+      </form>
+    }
+  </main>
+
+  <app-footer />
+</div>

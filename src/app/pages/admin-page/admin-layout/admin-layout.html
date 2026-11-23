@@ -1,0 +1,28 @@
+<div class="page">
+  <app-header />
+
+  <main class="admin">
+    <nav class="menu" aria-label="Admin">
+      @for (section of sections; track section.link; let i = $index) {
+        <a
+          class="menu-link"
+          [routerLink]="section.link"
+          routerLinkActive="is-active"
+          [routerLinkActiveOptions]="{ exact: true }"
+        >
+          <span class="menu-num">{{ (i + 1).toString().padStart(2, '0') }}</span>
+          {{ section.label }}
+          @if (!section.ready) {
+            <span class="menu-soon">Soon</span>
+          }
+        </a>
+      }
+    </nav>
+
+    <div class="content">
+      <router-outlet />
+    </div>
+  </main>
+
+  <app-footer />
+</div>

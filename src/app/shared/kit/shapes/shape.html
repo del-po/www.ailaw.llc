@@ -1,0 +1,21 @@
+<svg
+  class="shape-svg"
+  [attr.viewBox]="shape().viewBox"
+  preserveAspectRatio="none"
+  aria-hidden="true"
+  focusable="false"
+>
+  @for (d of shape().paths; track $index) {
+    <path
+      [attr.d]="d"
+      [attr.transform]="shape().transform ?? null"
+      [attr.stroke-linejoin]="shape().join ?? 'round'"
+      [class.is-open]="shape().open"
+      vector-effect="non-scaling-stroke"
+    />
+  }
+</svg>
+
+<div class="shape-content">
+  <ng-content />
+</div>

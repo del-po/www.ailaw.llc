@@ -1,0 +1,260 @@
+@use 'mixins' as *;
+@use 'page' as *;
+
+// ==========================================================
+// Services list
+// ==========================================================
+
+@include page-theme;
+
+.page {
+  @include page-shell;
+}
+
+.services {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+// ---------- Intro ----------
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 720px;
+}
+
+.code {
+  @include barcode-strip;
+}
+
+.code-tag {
+  @include tag;
+}
+
+.title {
+  @include page-title;
+}
+
+.lead {
+  font-size: clamp(16px, 1.4vw, 19px);
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+// ---------- Filters + search ----------
+
+.toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+// Same width for every filter, so they share one height
+.filter {
+  @include shape-control;
+  width: 128px;
+  color: var(--text);
+
+  &:hover {
+    --shape-fill: var(--card-hover);
+  }
+
+  &.is-active {
+    --shape-fill: var(--ink-bg);
+    --shape-stroke: var(--ink-bg);
+    color: var(--ink-text);
+  }
+}
+
+// Width chosen so its height matches the filters
+.search {
+  @include shape-control;
+  width: 205px;
+  cursor: text;
+
+  input {
+    width: 100%;
+    height: 100%;
+    padding: 0 18px;
+    border: none;
+    background: none;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 0;
+    text-transform: none;
+
+    &::placeholder {
+      color: var(--text-muted);
+    }
+  }
+}
+
+// ---------- Cards ----------
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: clamp(16px, 2.5vw, 32px);
+}
+
+.card {
+  --shape-fill: var(--card-bg);
+  --shape-stroke: var(--card-border);
+
+  &:hover {
+    --shape-fill: var(--card-hover);
+  }
+
+  &--skeleton {
+    display: grid;
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.card-body {
+  width: 100%;
+  height: 100%;
+  padding: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tag {
+  @include tag;
+}
+
+.sale {
+  @include tag;
+  background: var(--ink-bg);
+  color: var(--ink-text);
+}
+
+.card-title {
+  font-size: clamp(19px, 1.5vw, 22px);
+  line-height: 1.2;
+
+  // Max two lines
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+// The title link covers the whole card; the cart button sits above it
+.card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.card-text {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--text-muted);
+
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+// Kept clear of the cut corner on the right
+.card-foot {
+  margin-top: auto;
+  padding-right: 24%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.price {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-mono);
+}
+
+.price-old {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.price-now {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+}
+
+// Currency code in the mono font: Orbitron has no ₾ sign
+.currency {
+  margin-left: 6px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.add {
+  @include shape-control;
+  position: relative;
+  z-index: 1;
+  flex: 0 0 44px;
+  color: var(--text);
+  font-size: 15px;
+
+  &:hover,
+  &.is-added {
+    --shape-fill: rgb(var(--yellow));
+    --shape-stroke: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+}
+
+// ---------- Messages ----------
+
+.notice {
+  @include notice;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.btn {
+  @include shape-control(var(--ink-bg), var(--ink-bg));
+  width: 216px;
+  color: var(--ink-text);
+
+  &:hover {
+    --shape-fill: rgb(var(--yellow));
+    --shape-stroke: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+}

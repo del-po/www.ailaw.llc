@@ -1,0 +1,97 @@
+// ==========================================================
+// Shared by the blog list and blog post pages
+// Import with: @use '../blog-shared' as *;
+// ==========================================================
+
+@use 'mixins' as *;
+
+// Colours for cards and chips, light and dark. Include at the top level of a page's styles.
+@mixin blog-theme {
+  :host {
+    --card-bg: rgb(255 255 255 / 0.55);
+    --card-hover: rgb(255 255 255 / 0.9);
+    --card-border: rgb(var(--black) / 0.16);
+    --ink-bg: rgb(var(--black));
+    --ink-text: rgb(var(--white));
+    --img-placeholder: rgb(var(--black) / 0.06);
+
+    display: block;
+  }
+
+  :host-context(body.dark) {
+    --card-bg: rgb(255 255 255 / 0.04);
+    --card-hover: rgb(255 255 255 / 0.09);
+    --card-border: rgb(255 255 255 / 0.14);
+    --ink-bg: rgb(var(--white));
+    --ink-text: rgb(var(--black));
+    --img-placeholder: rgb(255 255 255 / 0.05);
+  }
+}
+
+// Page shell: header on top, footer at the bottom, content capped and centred
+@mixin blog-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px clamp(16px, 4vw, 64px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(40px, 6vw, 72px);
+
+  > main {
+    flex: 1;
+  }
+}
+
+// Yellow label
+@mixin tag {
+  padding: 0 8px;
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+// Yellow stripes, a slot for a tag, fading grey bars
+@mixin barcode-strip {
+  display: flex;
+  align-items: center;
+  height: 18px;
+
+  &::before,
+  &::after {
+    content: '';
+    height: 18px;
+  }
+
+  &::before {
+    flex: 0 0 40px;
+    background: repeating-linear-gradient(90deg, rgb(var(--yellow)) 0 2px, transparent 2px 5px);
+  }
+
+  &::after {
+    flex: 0 0 160px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--text-muted) 0 1px,
+      transparent 1px 4px,
+      var(--text-muted) 4px 6px,
+      transparent 6px 9px
+    );
+    -webkit-mask-image: linear-gradient(to right, #000, transparent);
+    mask-image: linear-gradient(to right, #000, transparent);
+  }
+}
+
+@mixin notice {
+  padding: 40px 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}

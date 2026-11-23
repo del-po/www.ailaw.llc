@@ -1,0 +1,217 @@
+// ==========================================================
+// Shared by the legal pages (terms, privacy)
+// Import with: @use '../legal-shared' as *;
+// ==========================================================
+
+@use 'mixins' as *;
+@use 'page' as *;
+
+// Intro, contents list and numbered parts. Include once at the top level of a page's styles.
+@mixin legal-page {
+  @include page-theme;
+  @include form-controls;
+
+  .page {
+    @include page-shell;
+  }
+
+  .legal {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(40px, 6vw, 72px);
+  }
+
+  // ---------- Intro ----------
+
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 900px;
+  }
+
+  .code {
+    @include barcode-strip;
+  }
+
+  .code-tag {
+    @include tag;
+  }
+
+  .title {
+    @include page-title;
+  }
+
+  .lead {
+    font-size: clamp(16px, 1.4vw, 19px);
+    line-height: 1.7;
+    color: var(--text-muted);
+  }
+
+  // ---------- Contents list + text ----------
+
+  .layout {
+    display: grid;
+    grid-template-columns: 260px minmax(0, 1fr);
+    align-items: start;
+    gap: clamp(32px, 5vw, 72px);
+  }
+
+  .toc {
+    position: sticky;
+    top: 32px;
+    display: flex;
+    flex-direction: column;
+    border-top: 1px solid var(--line);
+  }
+
+  .toc-link {
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    transition:
+      color var(--ease),
+      background-color var(--ease);
+
+    &:hover {
+      color: var(--text);
+      background: var(--card-bg);
+    }
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    gap: 56px;
+    max-width: 780px;
+  }
+
+  // One part per roman numeral
+  .part {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+    scroll-margin-top: 24px; // breathing room when opened from the contents list
+
+    p {
+      font-size: 16px;
+      line-height: 1.75;
+    }
+  }
+
+  .part-title {
+    font-family: var(--font-display);
+    font-size: clamp(22px, 2.2vw, 30px);
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .sub {
+    margin-top: 14px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  // Company details as label / value rows
+  .facts {
+    border-top: 1px solid var(--line);
+  }
+
+  .fact {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line);
+
+    dt {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      line-height: 24px;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    dd {
+      font-size: 16px;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .channels {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+    font-size: 16px;
+  }
+
+  // ==========================================================
+  // Responsive (largest → smallest)
+  // ==========================================================
+
+  // Contents list becomes a scrolling row above the text
+  @include below(tablet-wide) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .toc {
+      position: static;
+      flex-direction: row;
+      overflow-x: auto;
+      border-top: none;
+      border-bottom: 1px solid var(--line);
+      scrollbar-width: none;
+    }
+
+    .toc-link {
+      border-bottom: none;
+      white-space: nowrap;
+    }
+  }
+
+  @include below(phone) {
+    .fact {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 2px;
+    }
+  }
+
+  // Bulleted points with a small yellow square
+  .points {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    list-style: none;
+
+    li {
+      position: relative;
+      padding-left: 22px;
+      font-size: 16px;
+      line-height: 1.7;
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0.6em;
+        width: 8px;
+        height: 8px;
+        background: rgb(var(--yellow));
+      }
+    }
+  }
+}

@@ -1,0 +1,47 @@
+@use 'mixins' as *;
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin clients
+// ==========================================================
+
+@include admin-page;
+
+.search {
+  display: block;
+  max-width: 420px;
+
+  input {
+    font-size: 13px;
+  }
+}
+
+.client {
+  grid-template-columns: minmax(0, 1fr) 180px 150px 90px;
+
+  &.is-suspended .cell-title {
+    color: var(--text-muted);
+    text-decoration: line-through;
+  }
+}
+
+.labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet) {
+  .client {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 8px;
+
+    .cell-mono {
+      grid-column: 1 / -1;
+    }
+  }
+}

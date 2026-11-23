@@ -1,0 +1,51 @@
+<div class="page">
+  <app-header />
+
+  <main class="result">
+    <section class="head">
+      <div class="code" aria-hidden="true"><span class="code-tag">Step 3 of 3</span></div>
+      <h1 class="title">Thank you</h1>
+
+      @if (order(); as item) {
+        <p class="lead">
+          Your order is placed.
+          @if (item.paid) {
+            It's paid, and a lawyer will contact you shortly.
+          } @else {
+            To start, transfer {{ item.total | number: '1.2-2' }} {{ item.currency }} using the
+            details below. A lawyer will contact you once the payment arrives.
+          }
+        </p>
+        <p class="order">
+          Order number <strong class="order-id">{{ item.orderNumber }}</strong>
+        </p>
+      } @else if (error()) {
+        <p class="lead">{{ error() }}</p>
+      } @else {
+        <p class="lead">Loading your order…</p>
+      }
+    </section>
+
+    @if (order(); as item) {
+      @if (!item.paid) {
+        <app-bank-transfer
+          class="transfer"
+          [amount]="item.total"
+          [currency]="item.currency"
+          [reference]="item.orderNumber"
+        />
+      }
+    }
+
+    <div class="actions">
+      <a class="btn" routerLink="/profile/orders">
+        <app-shape name="bar-notch">My orders</app-shape>
+      </a>
+      <a class="btn btn--light" routerLink="/services">
+        <app-shape name="bar-notch">More services</app-shape>
+      </a>
+    </div>
+  </main>
+
+  <app-footer />
+</div>

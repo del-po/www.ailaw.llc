@@ -1,0 +1,45 @@
+// Colours and line come from the parent, so hover and dark theme are set there:
+// --shape-fill, --shape-stroke, --shape-stroke-width.
+// Give the host a width (or height); the other side follows the shape.
+
+:host {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.shape-svg {
+  // Inset by half the line, so the whole outline stays inside the box
+  position: absolute;
+  inset: calc(var(--shape-stroke-width, 1px) / 2);
+  width: calc(100% - var(--shape-stroke-width, 1px));
+  height: calc(100% - var(--shape-stroke-width, 1px));
+  overflow: visible;
+}
+
+path {
+  fill: var(--shape-fill, transparent);
+  stroke: var(--shape-stroke, currentColor);
+  stroke-width: var(--shape-stroke-width, 1px);
+  transition:
+    fill var(--ease),
+    stroke var(--ease);
+
+  &.is-open {
+    fill: none;
+    stroke-linecap: round;
+  }
+}
+
+// Outline above the content, e.g. over a photo
+:host(.is-front) .shape-svg {
+  z-index: 1;
+}
+
+.shape-content {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+}

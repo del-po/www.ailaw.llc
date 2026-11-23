@@ -1,0 +1,155 @@
+@use 'mixins' as *;
+
+:host {
+  --input-bg: rgb(247 247 245);
+  --input-border: rgb(var(--black) / 0.12);
+  --attach-bg: rgb(var(--black) / 0.06);
+  --send-bg: rgb(var(--black));
+  --send-icon: rgb(var(--white));
+
+  display: block;
+}
+
+:host-context(body.dark) {
+  --input-bg: rgb(46 43 40);
+  --input-border: rgb(255 255 255 / 0.16);
+  --attach-bg: rgb(255 255 255 / 0.08);
+  --send-bg: rgb(var(--yellow));
+  --send-icon: rgb(var(--black));
+}
+
+// Bar: the outer layer is the border colour, ::before holds the fill 1px inside,
+// so the border follows the cut corners. The fill is opaque so the border can't show through.
+.bar {
+  position: relative;
+  padding: 10px;
+  background: var(--input-border);
+  @include shape-octagon(14px);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    z-index: 0;
+    background: var(--input-bg);
+    @include shape-octagon(13.5px);
+  }
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+}
+
+.row {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+// ---------- Attach and send buttons ----------
+
+.attach,
+.send {
+  flex: 0 0 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  cursor: pointer;
+  @include shape-octagon(8px);
+  transition:
+    background-color var(--ease),
+    color var(--ease),
+    opacity var(--ease);
+}
+
+.attach {
+  background: var(--attach-bg);
+  color: var(--text);
+
+  &:hover {
+    background: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+}
+
+.send {
+  background: var(--send-bg);
+  color: var(--send-icon);
+
+  &:hover:not(:disabled) {
+    background: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: default;
+  }
+}
+
+// ---------- Text box ----------
+
+.box {
+  flex: 1;
+  min-width: 0;
+  max-height: 200px;
+  padding: 11px 4px;
+  border: none;
+  background: none;
+  font-family: var(--font-text);
+  font-size: 15px;
+  line-height: 22px;
+  overflow-y: auto;
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+}
+
+// ---------- Attached files ----------
+
+.files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  padding: 4px 6px 4px 8px;
+  background: var(--attach-bg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  @include shape-slant-reverse(6px);
+}
+
+.file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-remove {
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+@include below(phone) {
+  .attach,
+  .send {
+    flex-basis: 40px;
+    height: 40px;
+  }
+}

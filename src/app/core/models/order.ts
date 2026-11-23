@@ -1,0 +1,79 @@
+// Orders, as the Orders API (Google Apps Script) stores and returns them
+
+export type OrderStatus = 'placed' | 'in_progress' | 'completed' | 'cancelled';
+export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
+
+// What checkout sends. Only slugs and quantities: the Orders API looks up
+// every price in the Services sheet itself.
+export interface OrderRequest {
+  items: { slug: string; quantity: number }[];
+  customerName: string;
+  customerPhone: string;
+  customerNotes: string;
+}
+
+export interface BankTransfer {
+  method: 'bank-transfer';
+  recipient: string;
+  iban: string;
+  reference: string; // the order number
+}
+
+// Returned right after the order is saved
+export interface OrderPlaced {
+  orderId: string;
+  orderNumber: string;
+  total: number;
+  currency: string;
+  orderStatus: OrderStatus;
+  paymentStatus: PaymentStatus;
+  payment: BankTransfer;
+}
+
+export interface OrderItem {
+  orderItemId: string;
+  productId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number; // regular price
+  discountAmount: number; // for the whole line
+  taxAmount: number;
+  lineTotal: number;
+}
+
+export interface Order {
+  orderId: string;
+  orderNumber: string;
+  currency: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  subtotal: number;
+  discountTotal: number;
+  taxTotal: number;
+  total: number;
+  orderStatus: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paymentProvider: string;
+  paymentReference: string;
+  billingAddress: string;
+  customerNotes: string;
+  createdAt: string;
+  updatedAt: string;
+  paidAt: string;
+  completedAt: string;
+  items?: OrderItem[]; // only when a single order is opened
+}
+
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  placed: 'Placed',
+  in_progress: 'In progress',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  unpaid: 'Unpaid',
+  paid: 'Paid',
+  refunded: 'Refunded',
+};

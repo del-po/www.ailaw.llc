@@ -1,0 +1,207 @@
+@use 'mixins' as *;
+@use 'page' as *;
+@use '../cart-shared' as *;
+
+// ==========================================================
+// Cart
+// ==========================================================
+
+@include page-theme;
+@include form-controls;
+@include cart-head;
+@include cart-summary;
+@include cart-notice;
+
+.page {
+  @include page-shell;
+}
+
+.cart {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+// ---------- Layout: items left, summary right ----------
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  align-items: start;
+  gap: clamp(32px, 5vw, 72px);
+}
+
+// ---------- Items ----------
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 120px 32px;
+  align-items: center;
+  gap: 20px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.line-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.line-name {
+  font-size: clamp(18px, 1.5vw, 22px);
+  font-weight: 700;
+  line-height: 1.25;
+  transition: color var(--ease);
+
+  &:hover {
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--yellow));
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+}
+
+.line-unit {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+
+  s {
+    margin-right: 6px;
+  }
+}
+
+.qty {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.qty-btn {
+  @include shape-control;
+  width: 36px;
+  color: var(--text);
+  font-size: 18px;
+
+  &:hover:not(:disabled) {
+    --shape-fill: rgb(var(--yellow));
+    --shape-stroke: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: default;
+  }
+}
+
+.qty-value {
+  width: 32px;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.line-total {
+  text-align: right;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.remove {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  transition: color var(--ease);
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.items-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.link {
+  font-family: var(--font-mono);
+  font-size: 13px;
+
+  &--muted {
+    color: var(--text-muted);
+    text-decoration-color: var(--line);
+  }
+}
+
+.message .link {
+  margin-left: 8px;
+  font-weight: 700;
+}
+
+// ---------- Loading ----------
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-line {
+  height: 72px;
+  background: var(--img-placeholder);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet-wide) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .summary {
+    position: static;
+  }
+}
+
+// Name on top; quantity, total and remove in a row under it
+@include below(phone) {
+  .line {
+    grid-template-columns: auto minmax(0, 1fr) 32px;
+    gap: 14px;
+  }
+
+  .line-info {
+    grid-column: 1 / -1;
+  }
+
+  .line-total {
+    text-align: left;
+  }
+}

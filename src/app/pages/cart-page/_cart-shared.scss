@@ -1,0 +1,127 @@
+// ==========================================================
+// Shared by the cart pages (cart, checkout, payment results)
+// Import with: @use '../cart-shared' as *;
+// ==========================================================
+
+@use 'page' as *;
+
+// Page heading: barcode tag + title
+@mixin cart-head {
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .code {
+    @include barcode-strip;
+  }
+
+  .code-tag,
+  .tag {
+    @include tag;
+  }
+
+  .title {
+    @include page-title;
+  }
+
+  .lead {
+    font-size: clamp(16px, 1.4vw, 19px);
+    line-height: 1.6;
+    color: var(--text-muted);
+    max-width: 640px;
+  }
+}
+
+// Summary box with the totals, used by cart and checkout
+@mixin cart-summary {
+  .summary {
+    position: sticky;
+    top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 24px;
+    background: var(--card-bg);
+    border-top: 4px solid rgb(var(--yellow));
+  }
+
+  .summary-title {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .sums {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .sum {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+
+    dt {
+      color: var(--text-muted);
+    }
+
+    &--save dd {
+      font-weight: 700;
+    }
+
+    &--total {
+      padding-top: 14px;
+      border-top: 1px solid var(--line);
+
+      dt {
+        color: var(--text);
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
+      dd {
+        font-family: var(--font-display);
+        font-size: 28px;
+        font-weight: 800;
+      }
+    }
+  }
+
+  // Currency code in the mono font: Orbitron has no ₾ sign
+  .currency {
+    margin-left: 6px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .btn.is-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+// Centred message with a button under it (empty cart, errors, payment results)
+@mixin cart-notice {
+  .notice {
+    @include notice;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  // bar-notch keeps its own proportions, so it gets a fixed width
+  .btn--inline {
+    width: 216px;
+  }
+}

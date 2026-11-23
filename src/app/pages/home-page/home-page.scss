@@ -1,0 +1,1309 @@
+@use 'mixins' as *;
+
+// ==========================================================
+// Home page
+// ==========================================================
+
+:host {
+  display: block;
+
+  // Size of the frame's corner cuts, also used to line up the corner decor
+  --frame-cut: 30px;
+
+  // Time since registration
+  --age-num: rgb(var(--black));
+  --age-unit: rgb(var(--black) / 0.55);
+  --age-clock: rgb(var(--black));
+
+  // Glass panel (intro on tablet)
+  --social-tile: rgb(255 255 255 / 0.6);
+
+  // Big headline
+  --hero-fill: rgb(var(--black));
+
+  // Promo card
+  --promo-bg: rgb(var(--black) / 0.1);
+  --promo-text: rgb(var(--black));
+  --promo-muted: rgb(var(--black) / 0.75);
+  --promo-line: rgb(255 255 255 / 0.9);
+  --promo-hatch: rgb(var(--black) / 0.35);
+  --promo-btn-bg: rgb(var(--black));
+  --promo-btn-text: rgb(var(--white));
+  --promo-btn-hover-bg: rgb(var(--yellow));
+  --promo-btn-hover-text: rgb(var(--black));
+  --promo-track: rgb(var(--black) / 0.15);
+  --promo-fill: rgb(var(--black));
+  --input-bg: rgb(255 255 255 / 0.75);
+  --input-border: rgb(var(--black) / 0.25);
+
+  // Connector lines
+  --link: rgb(var(--black) / 0.6);
+
+  // Side menu
+  --menu-text: rgb(var(--black) / 0.75);
+  --menu-chip: rgb(var(--black));
+
+  // Logo size, passed to the header (sets its height too)
+  --logo-size: clamp(60px, 12vmin, 100px);
+
+  // QR square, read by app-qr-card
+  --qr-size: clamp(64px, 10vmin, 88px);
+
+  // Frame size — shared by .frame and .frame-handles
+  --frame-w: min(80%, calc(100% - 100px), 1600px);
+  --frame-h: min(70%, 900px);
+
+  // Chat card height on desktop, used to centre the intro above it
+  --promo-h: 137px;
+
+  // Distance of logo / QR / socials from the frame edges.
+  // Same value on both axes so all corners are symmetrical.
+  --inset: clamp(36px, 3.5vmin, 56px);
+}
+
+// ---------- Dark theme ----------
+
+:host-context(body.dark) {
+  --age-num: rgb(var(--white));
+  --age-unit: rgb(255 255 255 / 0.45);
+  --age-clock: rgb(var(--yellow));
+
+  --menu-text: rgb(255 255 255 / 0.75);
+
+  --social-tile: rgb(var(--black) / 0.6);
+
+  --hero-fill: rgb(var(--white));
+
+  --promo-bg: rgb(255 255 255 / 0.06);
+  --promo-text: rgb(var(--white));
+  --promo-muted: rgb(255 255 255 / 0.72);
+  --promo-line: rgb(255 255 255 / 0.45);
+  --promo-hatch: rgb(255 255 255 / 0.35);
+  --promo-btn-bg: rgb(var(--yellow));
+  --promo-btn-text: rgb(var(--black));
+  --promo-btn-hover-bg: #ffffff;
+  --promo-btn-hover-text: rgb(var(--black));
+  --promo-track: rgb(255 255 255 / 0.2);
+  --promo-fill: rgb(var(--yellow));
+  --input-bg: rgb(var(--black) / 0.6);
+  --input-border: rgb(255 255 255 / 0.22);
+
+  --link: rgb(255 255 255 / 0.55);
+}
+
+// ---------- Background ----------
+
+.background {
+  position: relative;
+  z-index: 0;
+
+  width: 100%;
+  min-width: 320px;
+  height: 100vh;
+  height: 100dvh;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  overflow: hidden;
+  border: 5px solid rgb(var(--black));
+}
+
+.background-img {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+
+  // filter: blur(4px);
+}
+
+// All ornament shapes share the same ink colour
+.corner path,
+.middle path,
+.handles path {
+  fill: rgb(var(--black));
+  stroke: rgb(var(--black));
+  stroke-width: 1;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+// ---------- Corner ornaments (outer + frame) ----------
+
+.corner {
+  position: absolute;
+  z-index: 3;
+  width: 100px;
+  height: 100px;
+  pointer-events: none;
+}
+
+.top-left {
+  top: -39px;
+  left: -39px;
+  transform: rotate(225deg);
+}
+
+.top-right {
+  top: -39px;
+  right: -39px;
+  transform: rotate(315deg);
+}
+
+.bottom-left {
+  bottom: -39px;
+  left: -39px;
+  transform: rotate(135deg);
+}
+
+.bottom-right {
+  bottom: -39px;
+  right: -39px;
+  transform: rotate(45deg);
+}
+
+// ---------- Outer edge ornaments ----------
+
+.background-middle {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.middle {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+}
+
+.middle-left {
+  left: -50px;
+  top: 50%;
+  transform: translateY(-50%) rotate(90deg);
+}
+
+.middle-top {
+  top: -50px;
+  left: 50%;
+  transform: translateX(-50%) rotate(180deg);
+}
+
+.middle-right {
+  right: -50px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-90deg);
+}
+
+.middle-bottom {
+  bottom: -50px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+// ---------- Frame ----------
+
+.frame {
+  position: relative;
+  z-index: 1;
+
+  width: var(--frame-w);
+  height: var(--frame-h);
+
+  overflow: hidden;
+  border: 5px solid rgb(var(--black));
+  box-shadow: 0 15px 35px rgb(0 0 0 / 0.5);
+
+  @include shape-octagon(var(--frame-cut));
+}
+
+.frame-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.frame-img {
+  position: absolute;
+  inset: 0;
+
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+
+  filter: blur(4px);
+  transform: scale(1.05); // hides the soft blurred edges
+}
+
+.frame-wallpaper {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: auto;
+  max-width: none;
+  height: 100%;
+}
+
+// ---------- Frame handles ----------
+
+.frame-handles {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+
+  width: var(--frame-w);
+  height: var(--frame-h);
+  transform: translate(-50%, -50%);
+
+  pointer-events: none;
+}
+
+.handles {
+  position: absolute;
+}
+
+.handles.left,
+.handles.right {
+  top: 50%;
+  width: clamp(100px, 35vh, 350px);
+  height: clamp(100px, 35vh, 350px);
+}
+
+.handles.left {
+  left: 0;
+  transform: translate(-50%, -50%) rotate(-90deg);
+}
+
+.handles.right {
+  right: 0;
+  transform: translate(50%, -50%) rotate(90deg);
+}
+
+.handles.top,
+.handles.bottom {
+  left: 50%;
+  width: clamp(100px, 25vw, 250px);
+  height: clamp(100px, 25vw, 250px);
+}
+
+.handles.top {
+  top: 2px;
+  transform: translate(-50%, -75%) rotate(180deg);
+}
+
+.handles.bottom {
+  bottom: 2px;
+  transform: translate(-50%, 75%);
+}
+
+// ---------- Frame overlays ----------
+
+// Shared header across the top: logo left, links and buttons right.
+// app-header sets its own --logo-size, so the home value is passed in here.
+app-header.top-nav {
+  --logo-size: inherit;
+
+  position: absolute;
+  top: var(--inset);
+  left: var(--inset);
+  right: var(--inset);
+  z-index: 20;
+}
+
+// ---------- Connect corner (bottom-right) ----------
+
+// Social icons + QR card, bottom-right, lined up with the side menu
+.connect {
+  position: absolute;
+  bottom: var(--inset);
+  right: var(--inset);
+  z-index: 10;
+
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+}
+
+.social-icons {
+  --social-columns: 2;
+  --social-gap: 6px;
+  --social-size: calc((var(--qr-size) + 28px - 6px) / 2); // QR card height (QR + 2 × 14px), 2 rows
+}
+
+// Wrapper around intro, chat card and connect corner.
+// Desktop: no box of its own, children are placed as before.
+// Tablet and below: becomes the page column (see the responsive section).
+.frame-scroll {
+  display: contents;
+}
+
+// ---------- Intro (left, rotating) ----------
+
+// Lined up with the logo, centred in the space between the logo and the chat card
+.intro {
+  position: absolute;
+  left: var(--inset);
+  top: calc((var(--logo-size) + 100% - var(--promo-h)) / 2);
+  z-index: 10;
+  transform: translateY(-50%);
+
+  width: clamp(220px, 19vw, 280px);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+
+  color: var(--hero-fill);
+  font-family: var(--font-mono);
+}
+
+// Slides stacked in one grid cell: block height = tallest slide
+.intro-slides {
+  display: grid;
+}
+
+.intro-slide {
+  grid-area: 1 / 1;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  opacity: 0;
+  transform: translateY(6px);
+  visibility: hidden;
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease,
+    visibility 0.4s;
+}
+
+.intro-slide.is-active {
+  opacity: 1;
+  transform: translateY(0);
+  visibility: visible;
+}
+
+// Big square title
+.intro-title {
+  font-family: var(--font-display);
+  font-size: clamp(22px, 2.2vw, 32px);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+// Barcode strip: yellow stripes, yellow tag, fading grey bars
+.intro-code {
+  display: flex;
+  align-items: center;
+  height: 16px;
+}
+
+.intro-code::before {
+  content: '';
+  flex: 0 0 40px;
+  height: 16px;
+  background: repeating-linear-gradient(90deg, rgb(var(--yellow)) 0 2px, transparent 2px 5px);
+}
+
+.intro-code::after {
+  content: '';
+  flex: 1;
+  height: 16px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--link) 0 1px,
+    transparent 1px 4px,
+    var(--link) 4px 6px,
+    transparent 6px 9px
+  );
+  -webkit-mask-image: linear-gradient(to right, #000, transparent);
+  mask-image: linear-gradient(to right, #000, transparent);
+}
+
+.intro-tag {
+  height: 16px;
+  padding: 0 8px;
+
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.intro-text {
+  font-family: var(--font-text);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--promo-muted);
+}
+
+// Progress left, button right (button has order: 2)
+.intro-foot {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+// Same notched shape and colours as the card send button
+.intro-btn {
+  flex: 0 0 140px;
+  padding: 9px 0 10px;
+  text-align: center;
+
+  order: 2;
+
+  background: var(--promo-btn-bg);
+  color: var(--promo-btn-text);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 9px) 0,
+    100% 9px,
+    100% 100%,
+    calc(100% - 12px) 100%,
+    calc(100% - 15px) calc(100% - 3px),
+    calc(100% - 30px) calc(100% - 3px),
+    calc(100% - 33px) 100%,
+    9px 100%,
+    0 calc(100% - 9px)
+  );
+
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.intro-btn:hover {
+  background: var(--promo-btn-hover-bg);
+  color: var(--promo-btn-hover-text);
+}
+
+// One segment per slide; the active one fills over the slide time
+.intro-progress {
+  flex: 0 0 96px;
+  display: flex;
+  gap: 4px;
+}
+
+.intro-seg {
+  position: relative;
+  flex: 1;
+  height: 2px;
+  background: var(--promo-track);
+  cursor: pointer;
+}
+
+// Bigger click area than the 2px line
+.intro-seg::before {
+  content: '';
+  position: absolute;
+  inset: -6px 0;
+}
+
+.intro-seg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--promo-fill);
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.intro-seg.is-done::after {
+  transform: scaleX(1);
+}
+
+.intro-seg.is-active::after {
+  animation: intro-fill var(--intro-time, 5s) linear forwards;
+}
+
+// Hovering the intro pauses the rotation
+.intro:hover .intro-seg.is-active::after {
+  animation-play-state: paused;
+}
+
+@keyframes intro-fill {
+  to {
+    transform: scaleX(1);
+  }
+}
+
+// Arrow from the text towards the robot (your chevron shape)
+.intro-arrow {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 18px);
+  transform: translateY(-50%) rotate(90deg);
+
+  width: auto;
+  height: 50px;
+  overflow: visible;
+}
+
+.intro-arrow path {
+  fill: none;
+  stroke: rgb(var(--yellow));
+  stroke-width: 10;
+  stroke-linejoin: miter;
+  stroke-linecap: butt;
+}
+
+// ---------- Background decor around the frame ----------
+
+// Same box as the frame, so decor can sit just outside its edges
+.frame-decor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+
+  width: var(--frame-w);
+  height: var(--frame-h);
+  transform: translate(-50%, -50%);
+
+  pointer-events: none;
+  color: var(--decor);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+// Top-left: hatch + years badge + time-since-registration counter
+.decor-label {
+  position: absolute;
+  bottom: calc(100% + 16px);
+  left: var(--frame-cut);
+
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.decor-hatch {
+  width: 30px;
+  height: 16px;
+  margin-right: -12px;
+  background: repeating-linear-gradient(-45deg, var(--decor) 0 2px, transparent 2px 5px);
+}
+
+.decor-badge {
+  height: 16px;
+  padding: 0 8px;
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  line-height: 16px;
+}
+
+.decor-count {
+  height: 22px;
+  padding: 0 8px;
+  background: rgb(255 255 255 / 0.6);
+  line-height: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+// Top-right: small codes
+.decor-codes {
+  position: absolute;
+  bottom: calc(100% + 20px);
+  right: var(--frame-cut);
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.decor-bars {
+  width: 32px;
+  height: 12px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--decor) 0 2px,
+    transparent 2px 4px,
+    var(--decor) 4px 5px,
+    transparent 5px 8px
+  );
+}
+
+// Side rulers with a yellow marker pointing at the frame
+.decor-ruler {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 24px;
+  height: clamp(140px, 28vh, 240px);
+  background:
+    linear-gradient(var(--decor), var(--decor)) center / 1px 100% no-repeat,
+    repeating-linear-gradient(to bottom, var(--decor) 0 1px, transparent 1px 24px) center / 10px
+      100% no-repeat;
+}
+
+.decor-ruler::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 12px;
+  margin-top: -6px;
+  background: rgb(var(--yellow));
+}
+
+.decor-ruler--left {
+  right: calc(100% + 52px);
+}
+
+.decor-ruler--left::after {
+  left: calc(100% + 4px);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.decor-ruler--right {
+  left: calc(100% + 52px);
+}
+
+.decor-ruler--right::after {
+  right: calc(100% + 4px);
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+// Hatched strips further out
+.decor-strip {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+
+  width: 14px;
+  height: clamp(100px, 18vh, 160px);
+}
+
+.decor-strip--left {
+  right: calc(100% + 92px);
+  background: repeating-linear-gradient(-45deg, var(--decor) 0 2px, transparent 2px 7px);
+}
+
+.decor-strip--right {
+  left: calc(100% + 92px);
+  background: repeating-linear-gradient(45deg, var(--decor) 0 2px, transparent 2px 7px);
+}
+
+// Under the frame: small codes left and right
+.decor-foot {
+  position: absolute;
+  top: calc(100% + 18px);
+
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.decor-foot--left {
+  left: var(--frame-cut);
+}
+
+.decor-foot--right {
+  right: var(--frame-cut);
+}
+
+// Ruler at the very top, above the frame
+.decor-scale {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  margin: 0 auto;
+  transform: scaleY(-1);
+
+  width: 300px;
+  height: 26px;
+  pointer-events: none;
+}
+
+.decor-scale-line {
+  fill: none;
+  stroke: var(--decor);
+  stroke-width: 1;
+  shape-rendering: crispEdges;
+}
+
+.decor-scale-mark {
+  fill: rgb(var(--yellow));
+}
+
+// ---------- Chat card (bottom-left) ----------
+
+// Wide, low glass card: top-right and bottom-left corners cut
+.promo {
+  --cut: 16px;
+
+  position: absolute;
+  left: var(--inset);
+  bottom: var(--inset);
+  z-index: 10;
+
+  width: clamp(320px, 30vw, 410px);
+  padding: 12px 16px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  background: var(--promo-bg);
+  backdrop-filter: blur(5px) saturate(1.2);
+  -webkit-backdrop-filter: blur(5px) saturate(1.2);
+  @include shape-slant(var(--cut));
+
+  color: var(--promo-text);
+  font-family: var(--font-mono);
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
+}
+
+// Outline + yellow accent on the cut, drawn to the card's size by the component
+.promo-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.promo-outline {
+  fill: none;
+  stroke: var(--promo-line);
+  stroke-width: 1;
+}
+
+.promo-accent {
+  fill: none;
+  stroke: rgb(var(--yellow));
+  stroke-width: 4;
+}
+
+// Diagonal hazard stripes, pinned top-right
+.promo-hatch {
+  position: absolute;
+  top: 12px;
+  right: 30px;
+
+  width: 46px;
+  height: 8px;
+  background: repeating-linear-gradient(-45deg, var(--promo-hatch) 0 2px, transparent 2px 5px);
+}
+
+// Input + vertical button, in place of the old slide text
+.promo-body {
+  display: flex;
+  gap: 8px;
+  height: 84px;
+}
+
+.promo-input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 10px 12px;
+  resize: none;
+
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--promo-text);
+  clip-path: polygon(10px 0, 100% 0, 100% 100%, 0 100%, 0 10px);
+
+  font-family: var(--font-text);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.promo-input::placeholder {
+  color: var(--promo-muted);
+}
+
+// Tall narrow button: arrow on top, label written upwards
+.promo-send {
+  flex: 0 0 46px;
+  height: 100%;
+  padding: 10px 0 8px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 6px;
+
+  border: none;
+  cursor: pointer;
+  background: var(--promo-btn-bg);
+  color: var(--promo-btn-text);
+  @include shape-slant(10px);
+
+  font-family: inherit;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.promo-send:hover {
+  background: var(--promo-btn-hover-bg);
+  color: var(--promo-btn-hover-text);
+}
+
+.promo-send-icon {
+  width: auto;
+  height: 50px;
+}
+
+.promo-send-icon path {
+  fill: currentColor;
+  stroke: none;
+}
+
+.promo-title {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+// Dark theme: darker counter box
+
+:host-context(body.dark) .decor-count {
+  background: rgb(var(--black) / 0.6);
+}
+
+// ---------- Side menu ----------
+
+.side-menu {
+  position: absolute;
+  top: 50%;
+  right: var(--inset);
+  z-index: 10;
+  transform: translateY(-50%);
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: clamp(10px, 2vh, 18px);
+
+  font-family: var(--font-mono);
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  color: var(--menu-text);
+  font-size: clamp(12px, 1.4vw, 15px);
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  text-decoration: none;
+
+  transition:
+    color 0.2s ease,
+    font-size 0.2s ease;
+}
+
+// Label with corner-frame marks, shown only when active
+.menu-label {
+  position: relative;
+  padding: 4px 12px;
+  transition: background-color 0.2s ease;
+}
+
+.menu-label::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  --c: rgb(var(--yellow));
+  --len: 8px;
+  --w: 2px;
+
+  background:
+    linear-gradient(var(--c), var(--c)) top left / var(--len) var(--w),
+    linear-gradient(var(--c), var(--c)) top left / var(--w) var(--len),
+    linear-gradient(var(--c), var(--c)) top right / var(--len) var(--w),
+    linear-gradient(var(--c), var(--c)) top right / var(--w) var(--len),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--len) var(--w),
+    linear-gradient(var(--c), var(--c)) bottom left / var(--w) var(--len),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--len) var(--w),
+    linear-gradient(var(--c), var(--c)) bottom right / var(--w) var(--len);
+  background-repeat: no-repeat;
+
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+// Square checkbox / hollow arrow marker
+.menu-marker {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  overflow: visible;
+}
+
+.marker-box,
+.marker-arrow {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linejoin: miter;
+  transition: opacity 0.2s ease;
+}
+
+.marker-box {
+  stroke: var(--menu-text);
+}
+
+.marker-arrow {
+  stroke: rgb(var(--yellow));
+  opacity: 0;
+}
+
+// Active item
+.menu-item.is-active {
+  color: rgb(var(--yellow));
+  font-size: clamp(14px, 1.8vw, 20px);
+  font-weight: 700;
+}
+
+.menu-item.is-active .menu-label {
+  background-color: var(--menu-chip);
+}
+
+.menu-item.is-active .menu-label::before {
+  opacity: 1;
+}
+
+.menu-item.is-active .marker-box {
+  opacity: 0;
+}
+
+.menu-item.is-active .marker-arrow {
+  opacity: 1;
+}
+
+// ---------- Time since registration ----------
+
+// Fixed widths keep the counter box from resizing as the digits change
+.age-num {
+  display: inline-block;
+  width: calc(2ch + 2 * 2px);
+  text-align: center;
+  color: var(--age-num);
+}
+
+.age-unit,
+.age-sep {
+  color: var(--age-unit);
+}
+
+.age-clock {
+  display: inline-block;
+  width: calc(8ch + 8 * 2px);
+  text-align: center;
+  color: var(--age-clock);
+}
+
+// ---------- Theme switch ----------
+
+// Centred in the strip between frame bottom and page bottom
+// (moves to the right on tablets, see the responsive section)
+.theme-switch {
+  position: absolute;
+  bottom: calc((100% - var(--frame-h)) / 4);
+  left: 50%;
+  z-index: 100;
+  transform: translate(-50%, 50%);
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+// ---------- Tablet-wide: single column, frame grows ----------
+@include below(tablet-wide) {
+  :host {
+    // Space above and below the frame for the ornaments and the switch
+    --strip: 70px;
+    // The frame fills the page minus the two strips, so the handles,
+    // which use --frame-h, still line up with it
+    --frame-h: calc(100% - 2 * var(--strip));
+  }
+
+  .decor-ruler,
+  .decor-strip,
+  .frame-decor,
+  .side-menu,
+  .intro-arrow {
+    display: none;
+  }
+
+  .background {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-block: var(--strip);
+  }
+
+  .frame {
+    height: auto;
+    min-height: calc(100dvh - 10px - 2 * var(--strip));
+  }
+
+  // Column fills the whole frame; QR + icons sit at the bottom
+  .frame-content {
+    height: auto;
+    min-height: inherit;
+    display: flex;
+    flex-direction: column;
+  }
+
+  // Robot stays screen-sized at the bottom instead of growing with the frame
+  .frame-wallpaper {
+    height: calc(100dvh - 10px - 2 * var(--strip));
+    max-height: 100%;
+  }
+
+  // Switch: bottom-right, in the strip under the frame,
+  // right edge lined up with the frame's right edge
+  .theme-switch {
+    bottom: calc(var(--strip) / 2);
+    left: auto;
+    right: calc((100% - var(--frame-w)) / 2);
+    transform: translateY(50%);
+  }
+
+  // The column: normal flow, starts below the logo and header
+  .frame-scroll {
+    position: relative;
+    z-index: 10;
+    flex: 1;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    padding: calc(var(--inset) + var(--logo-size) + 24px) var(--inset) var(--inset);
+  }
+
+  // Back into the normal flow of the column
+  .intro,
+  .promo,
+  .connect {
+    position: relative;
+    inset: auto;
+    transform: none;
+    flex-shrink: 0;
+  }
+
+  // Intro: centred, title / barcode / text / button + slider.
+  // Grows with tall screens.
+  .intro {
+    order: 1;
+    width: 100%;
+    min-height: 26vh;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+
+    // Glass backing so the text stays readable over the robot
+    padding: 16px;
+    background: var(--social-tile);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    @include shape-slant-reverse(12px);
+  }
+
+  .intro-slide {
+    align-items: center;
+  }
+
+  .intro-title {
+    font-size: clamp(22px, 2.6vh, 34px);
+  }
+
+  .intro-text {
+    font-size: clamp(12px, 1.3vh, 15px);
+    text-align: justify;
+    -webkit-hyphens: auto;
+    hyphens: auto; // splits long words so justified lines don't get big gaps
+  }
+
+  // Barcode keeps a fixed width instead of stretching
+  .intro-code {
+    width: min(100%, 280px);
+  }
+
+  .intro-foot {
+    justify-content: center;
+  }
+
+  .promo {
+    order: 2;
+    width: 100%;
+    min-height: 22vh;
+  }
+
+  // The question box takes all the extra height of the chat card
+  .promo-body {
+    flex: 1;
+    height: auto;
+    min-height: 84px;
+  }
+
+  .promo-input {
+    height: auto; // lets the box stretch to the full height of .promo-body
+  }
+
+  // Social icons on the left, QR on the right, same width as the blocks above
+  .connect {
+    order: 3;
+    width: 100%;
+    margin-top: auto;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+// ---------- Phone ----------
+@include below(phone) {
+  :host {
+    --strip: 60px;
+  }
+
+  app-header.top-nav {
+    left: 14px;
+    right: 14px;
+  }
+
+  .decor-scale {
+    display: none;
+  }
+
+  .frame-scroll {
+    gap: 14px;
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  // Intro: title may wrap, text gets the full width
+  .intro {
+    padding: 12px;
+  }
+
+  .intro-title {
+    font-size: 17px;
+    white-space: normal;
+  }
+
+  .intro-code {
+    width: 100%;
+  }
+
+  .intro-code::before {
+    flex-basis: 20px;
+  }
+
+  .intro-tag {
+    letter-spacing: 1px;
+  }
+
+  // Slider, then button, stacked
+  .intro-foot {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .intro-btn,
+  .intro-progress {
+    flex: none;
+  }
+
+  .intro-btn {
+    width: 140px;
+  }
+
+  .intro-progress {
+    width: 96px;
+  }
+
+  // Chat card: stripes move under the title, send button under the question box
+  .promo {
+    padding: 12px;
+  }
+
+  .promo-title {
+    order: 0;
+    font-size: 16px;
+  }
+
+  .promo-hatch {
+    position: static;
+    order: 1;
+  }
+
+  .promo-body {
+    order: 2;
+    flex-direction: column;
+    height: auto;
+  }
+
+  .promo-input {
+    flex: none;
+    height: 84px;
+  }
+
+  .promo-send {
+    flex: 0 0 44px;
+    width: 100%;
+    height: 44px;
+    padding: 0;
+  }
+
+  .promo-send-icon {
+    height: 24px;
+  }
+
+  // Icons in one row above the QR
+  .connect {
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .social-icons {
+    --social-columns: 4;
+  }
+}

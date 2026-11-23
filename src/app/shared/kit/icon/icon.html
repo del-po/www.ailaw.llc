@@ -1,0 +1,10 @@
+<svg
+  [attr.viewBox]="icon().viewBox"
+  [attr.role]="label() ? 'img' : null"
+  [attr.aria-label]="label() || null"
+  [attr.aria-hidden]="label() ? null : 'true'"
+>
+  @for (d of icon().paths; track $index) {
+    <path [attr.d]="d" />
+  }
+</svg>

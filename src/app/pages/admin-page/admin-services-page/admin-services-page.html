@@ -1,0 +1,237 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Services</h1>
+  <p class="lead">
+    Services, prices, discounts and categories. Archived services stay in the sheet for past orders.
+  </p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="message message--ok" role="status">{{ notice() }}</p>
+}
+
+<!-- ---------- Editor ---------- -->
+@if (editing(); as item) {
+  <form #form class="editor" (submit)="save($event, form)">
+    <h2 class="block-title">{{ item.ID ? 'Edit service' : 'New service' }}</h2>
+
+    <div class="grid">
+      <label class="field">
+        <span class="field-label">Name</span>
+        <app-shape class="field-box" name="field">
+          <input name="Name" maxlength="120" required [value]="item.Name" />
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Address on the site · empty = made from the name</span>
+        <app-shape class="field-box" name="field">
+          <input
+            name="Slug"
+            maxlength="120"
+            pattern="[a-z0-9]+(-[a-z0-9]+)*"
+            [value]="item.Slug"
+            placeholder="e.g. contract-drafting"
+          />
+        </app-shape>
+      </label>
+
+      <label class="field wide">
+        <span class="field-label">Short description · on the card</span>
+        <textarea
+          class="area"
+          name="ShortDescription"
+          rows="2"
+          maxlength="300"
+          [value]="item.ShortDescription"
+        ></textarea>
+      </label>
+
+      <label class="field wide">
+        <span class="field-label">Full description · on the service page</span>
+        <textarea
+          class="area"
+          name="Description"
+          rows="6"
+          maxlength="5000"
+          [value]="item.Description"
+        ></textarea>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Price</span>
+        <app-shape class="field-box" name="field">
+          <input name="Price" type="number" min="0" step="0.01" required [value]="item.Price" />
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Currency</span>
+        <app-shape class="field-box" name="field">
+          <input name="Currency" maxlength="3" [value]="item.Currency" />
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Category</span>
+        <app-shape class="field-box" name="field">
+          <select name="Category" required>
+            @for (category of activeCategories(); track category.ID) {
+              <option [value]="category.Name" [selected]="category.Name === item.Category">
+                {{ category.Name }}
+              </option>
+            }
+          </select>
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Status</span>
+        <app-shape class="field-box" name="field">
+          <select name="Status">
+            @for (status of statuses; track status) {
+              <option [value]="status" [selected]="status === item.Status">{{ status }}</option>
+            }
+          </select>
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Image · Drive link, Drive file ID or image URL</span>
+        <app-shape class="field-box" name="field">
+          <input name="Image" [value]="item.Image" />
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Discounted price · empty = no discount</span>
+        <app-shape class="field-box" name="field">
+          <input
+            name="DiscountedPrice"
+            type="number"
+            min="0"
+            step="0.01"
+            [value]="item.DiscountedPrice"
+          />
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Discount from</span>
+        <app-shape class="field-box" name="field">
+          <input name="DiscountStart" type="date" [value]="item.DiscountStart" />
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Discount until</span>
+        <app-shape class="field-box" name="field">
+          <input name="DiscountEnd" type="date" [value]="item.DiscountEnd" />
+        </app-shape>
+      </label>
+    </div>
+
+    <div class="editor-actions">
+      <button type="submit" class="btn" [disabled]="busy()">
+        <app-shape name="bar-notch">{{ busy() ? 'Saving…' : 'Save' }}</app-shape>
+      </button>
+      <button type="button" class="btn btn--light" [disabled]="busy()" (click)="editing.set(null)">
+        <app-shape name="bar-notch">Cancel</app-shape>
+      </button>
+      @if (item.ID && item.Status !== 'Inactive') {
+        <button type="button" class="action" [disabled]="busy()" (click)="archive(item)">
+          Archive
+        </button>
+      }
+    </div>
+  </form>
+}
+
+<!-- ---------- Service list ---------- -->
+<section class="block">
+  <div class="block-head">
+    <h2 class="block-title">All services</h2>
+    @if (!editing()) {
+      <button type="button" class="action" (click)="newService()">+ New service</button>
+    }
+  </div>
+
+  @if (services(); as list) {
+    <div class="rows">
+      @for (service of list; track service.ID) {
+        <div class="row service">
+          <span class="cell-main">
+            <span class="cell-title">{{ service.Name }}</span>
+            <span class="cell-sub">{{ service.Category }} · /services/{{ service.Slug }}</span>
+          </span>
+          <span class="cell-mono">
+            @if (service.DiscountedPrice !== '') {
+              <s>{{ service.Price | number: '1.0-2' }}</s>
+              {{ service.DiscountedPrice | number: '1.0-2' }}
+            } @else {
+              {{ service.Price | number: '1.0-2' }}
+            }
+            {{ service.Currency }}
+          </span>
+          <span
+            class="status"
+            [class.status--active]="service.Status === 'Active'"
+            [class.status--draft]="service.Status === 'Draft'"
+          >
+            {{ service.Status }}
+          </span>
+          <button type="button" class="action" (click)="edit(service)">Edit</button>
+        </div>
+      } @empty {
+        <p class="small">No services yet.</p>
+      }
+    </div>
+  } @else if (!error()) {
+    <div class="skeleton" aria-busy="true"></div>
+  }
+</section>
+
+<!-- ---------- Categories ---------- -->
+<section class="block">
+  <h2 class="block-title">Categories</h2>
+  <p class="small">
+    A category in use can't be archived. Renaming one renames it on its services too.
+  </p>
+
+  <div class="rows">
+    @for (category of categories(); track category.ID) {
+      <div class="row category">
+        <app-shape class="field-box" name="field">
+          <input
+            #name
+            [value]="category.Name"
+            [attr.aria-label]="'Name of ' + category.Name"
+            (keydown.enter)="name.blur()"
+            (blur)="renameCategory(category, name.value)"
+          />
+        </app-shape>
+        <span class="status" [class.status--active]="category.Status === 'Active'">{{
+          category.Status
+        }}</span>
+        <button type="button" class="action" [disabled]="busy()" (click)="toggleCategory(category)">
+          {{ category.Status === 'Active' ? 'Archive' : 'Restore' }}
+        </button>
+      </div>
+    }
+  </div>
+
+  <form class="add" (submit)="addCategory($event, newName)">
+    <app-shape class="field-box" name="field">
+      <input
+        #newName
+        placeholder="New category name"
+        maxlength="60"
+        aria-label="New category name"
+      />
+    </app-shape>
+    <button type="submit" class="action" [disabled]="busy()">+ Add</button>
+  </form>
+</section>

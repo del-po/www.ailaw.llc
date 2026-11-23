@@ -1,0 +1,18 @@
+@use 'page' as *;
+@use '../profile-shared' as *;
+@use 'order-list' as *;
+
+// ==========================================================
+// Profile orders
+// ==========================================================
+
+@include page-theme;
+@include form-controls;
+@include section-head;
+@include order-list;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}

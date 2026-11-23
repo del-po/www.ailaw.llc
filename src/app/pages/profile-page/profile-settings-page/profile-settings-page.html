@@ -1,0 +1,195 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Profile</span></div>
+  <h1 class="title">Settings</h1>
+  <p class="lead">Your details, password and account.</p>
+</section>
+
+<!-- ---------- Details ---------- -->
+<section class="block" aria-labelledby="details-title">
+  <h2 class="block-title" id="details-title">Your details</h2>
+
+  @if (auth.profile(); as profile) {
+    <form #detailsForm class="form" (submit)="saveDetails($event, detailsForm)">
+      <label class="field">
+        <span class="field-label">First name</span>
+        <app-shape class="field-box" name="field">
+          <input
+            name="firstName"
+            autocomplete="given-name"
+            maxlength="80"
+            [value]="profile.FirstName"
+          />
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Last name</span>
+        <app-shape class="field-box" name="field">
+          <input
+            name="lastName"
+            autocomplete="family-name"
+            maxlength="80"
+            [value]="profile.LastName"
+          />
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Display name · shown on the site</span>
+        <app-shape class="field-box" name="field">
+          <input
+            name="displayName"
+            autocomplete="nickname"
+            maxlength="100"
+            [value]="profile.DisplayName"
+          />
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Phone</span>
+        <app-shape class="field-box" name="field">
+          <input
+            name="phone"
+            type="tel"
+            autocomplete="tel"
+            maxlength="30"
+            [value]="profile.Phone"
+          />
+        </app-shape>
+      </label>
+
+      <p class="small">
+        Email: {{ profile.Email }}. It's tied to how you sign in, so it can't be changed here.
+      </p>
+
+      @if (details().error) {
+        <p class="message" role="alert">{{ details().error }}</p>
+      }
+      @if (details().done) {
+        <p class="message message--ok" role="status">{{ details().done }}</p>
+      }
+
+      <button type="submit" class="btn" [disabled]="details().busy">
+        <app-shape name="field">{{ details().busy ? 'Saving…' : 'Save details' }}</app-shape>
+      </button>
+    </form>
+  } @else {
+    <p class="small">Loading your details…</p>
+  }
+</section>
+
+<!-- ---------- Password ---------- -->
+<section class="block" aria-labelledby="password-title">
+  <h2 class="block-title" id="password-title">Password</h2>
+
+  @if (auth.hasPassword()) {
+    <form
+      #passwordForm
+      class="form"
+      (submit)="changePassword($event, current.value, next.value, repeat.value, passwordForm)"
+    >
+      <input
+        type="email"
+        class="visually-hidden"
+        [value]="auth.user()?.email"
+        autocomplete="username"
+        readonly
+        tabindex="-1"
+        aria-hidden="true"
+      />
+
+      <label class="field">
+        <span class="field-label">Current password</span>
+        <app-shape class="field-box" name="field">
+          <input #current type="password" autocomplete="current-password" required />
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">New password · at least {{ minPassword }} characters</span>
+        <app-shape class="field-box" name="field">
+          <input
+            #next
+            type="password"
+            autocomplete="new-password"
+            [minLength]="minPassword"
+            required
+          />
+        </app-shape>
+      </label>
+
+      <label class="field">
+        <span class="field-label">Repeat new password</span>
+        <app-shape class="field-box" name="field">
+          <input #repeat type="password" autocomplete="new-password" required />
+        </app-shape>
+      </label>
+
+      @if (password().error) {
+        <p class="message" role="alert">{{ password().error }}</p>
+      }
+      @if (password().done) {
+        <p class="message message--ok" role="status">{{ password().done }}</p>
+      }
+
+      <button type="submit" class="btn" [disabled]="password().busy">
+        <app-shape name="field">{{ password().busy ? 'Changing…' : 'Change password' }}</app-shape>
+      </button>
+    </form>
+  } @else {
+    <p class="small">
+      You sign in with Google, so your password is managed in your Google account.
+    </p>
+  }
+</section>
+
+<!-- ---------- Delete account ---------- -->
+<section class="block block--danger" aria-labelledby="delete-title">
+  <h2 class="block-title" id="delete-title">Delete account</h2>
+  <p class="small">
+    Your login and profile are removed for good. Orders, invoices and legal documents we're required
+    to keep are not deleted.
+  </p>
+
+  @if (!confirmingDelete()) {
+    <button type="button" class="btn btn--light" (click)="confirmingDelete.set(true)">
+      <app-shape name="field">Delete my account</app-shape>
+    </button>
+  } @else {
+    <form #deleteForm class="form" (submit)="deleteAccount($event, deleteForm)">
+      @if (auth.hasPassword()) {
+        <label class="field">
+          <span class="field-label">Current password</span>
+          <app-shape class="field-box" name="field">
+            <input name="password" type="password" autocomplete="current-password" required />
+          </app-shape>
+        </label>
+      } @else {
+        <p class="small">Google will ask you to sign in once more to confirm.</p>
+      }
+
+      <label class="field">
+        <span class="field-label">Type {{ deleteWord }} to confirm</span>
+        <app-shape class="field-box" name="field">
+          <input name="confirm" autocomplete="off" required />
+        </app-shape>
+      </label>
+
+      @if (removal().error) {
+        <p class="message" role="alert">{{ removal().error }}</p>
+      }
+
+      <button type="submit" class="btn btn--danger" [disabled]="removal().busy">
+        <app-shape name="field">{{ removal().busy ? 'Deleting…' : 'Delete for good' }}</app-shape>
+      </button>
+      <button
+        type="button"
+        class="btn btn--light"
+        [disabled]="removal().busy"
+        (click)="confirmingDelete.set(false)"
+      >
+        <app-shape name="field">Cancel</app-shape>
+      </button>
+    </form>
+  }
+</section>

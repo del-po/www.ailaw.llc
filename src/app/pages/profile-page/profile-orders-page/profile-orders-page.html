@@ -1,0 +1,79 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Profile</span></div>
+  <h1 class="title">Orders</h1>
+  <p class="lead">Services you ordered and their progress.</p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+
+@if (list(); as orders) {
+  <div class="rows">
+    @for (order of orders; track order.orderId) {
+      <div class="order" [class.is-open]="openId() === order.orderId">
+        <button
+          type="button"
+          class="row"
+          [attr.aria-expanded]="openId() === order.orderId"
+          (click)="toggle(order)"
+        >
+          <span class="cell-main">
+            <span class="cell-title">{{ order.orderNumber }}</span>
+            <span class="cell-sub">{{ order.createdAt | date: 'MMM d, y' }}</span>
+          </span>
+          <span class="cell-mono">{{ order.total | number: '1.2-2' }} {{ order.currency }}</span>
+          <span class="labels">
+            <span class="status" [class.status--active]="order.orderStatus === 'completed'">
+              {{ orderLabels[order.orderStatus] }}
+            </span>
+            <span class="status" [class.status--active]="order.paymentStatus === 'paid'">
+              {{ paymentLabels[order.paymentStatus] }}
+            </span>
+          </span>
+        </button>
+
+        @if (openId() === order.orderId) {
+          <div class="detail">
+            @if (detail(); as full) {
+              <ul class="items">
+                @for (item of full.items; track item.orderItemId) {
+                  <li class="item">
+                    <span>
+                      {{ item.name }}
+                      @if (item.quantity > 1) {
+                        <span class="qty">× {{ item.quantity }}</span>
+                      }
+                    </span>
+                    <span class="cell-mono">{{ item.lineTotal | number: '1.2-2' }}</span>
+                  </li>
+                }
+              </ul>
+              @if (full.discountTotal > 0) {
+                <p class="cell-sub">
+                  Discount: −{{ full.discountTotal | number: '1.2-2' }} {{ full.currency }}
+                </p>
+              }
+              @if (full.customerNotes) {
+                <p class="cell-sub">Your note: {{ full.customerNotes }}</p>
+              }
+              @if (full.paymentStatus === 'unpaid' && full.orderStatus !== 'cancelled') {
+                <app-bank-transfer
+                  [amount]="full.total"
+                  [currency]="full.currency"
+                  [reference]="full.orderNumber"
+                />
+              }
+            } @else {
+              <p class="cell-sub">Loading…</p>
+            }
+          </div>
+        }
+      </div>
+    } @empty {
+      <p class="small">No orders yet. <a class="link" routerLink="/services">Browse services</a></p>
+    }
+  </div>
+} @else if (!error()) {
+  <div class="skeleton" aria-busy="true"></div>
+}

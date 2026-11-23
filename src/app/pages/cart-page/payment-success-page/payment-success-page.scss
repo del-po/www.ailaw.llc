@@ -1,0 +1,49 @@
+@use 'page' as *;
+@use '../cart-shared' as *;
+
+// ==========================================================
+// Payment success / failed (same layout)
+// ==========================================================
+
+@include page-theme;
+@include form-controls;
+@include cart-head;
+
+.page {
+  @include page-shell;
+}
+
+.result {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.order {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.order-id {
+  margin-left: 8px;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.transfer {
+  max-width: 560px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+// bar-notch keeps its own proportions, so the buttons get a fixed width
+.actions .btn {
+  width: 216px;
+}

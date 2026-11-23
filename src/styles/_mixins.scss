@@ -1,0 +1,152 @@
+// ==========================================================
+// Mixins: breakpoints and cut-corner shapes
+// Import in a component with: @use 'mixins' as *;
+// ==========================================================
+
+@use 'sass:map';
+@use 'sass:list';
+
+// ---------- Layout limits ----------
+
+$site-min: 320px;
+$site-max: 2560px;
+
+// ---------- Breakpoints ----------
+
+$breakpoints: (
+  phone: 480px,
+  tablet: 768px,
+  tablet-wide: 1024px,
+  laptop: 1366px,
+  desktop: 1920px,
+);
+
+// Styles for screens at or below the breakpoint
+@mixin below($name) {
+  @if not map.has-key($breakpoints, $name) {
+    @error "Unknown breakpoint: #{$name}";
+  }
+  @media (max-width: #{map.get($breakpoints, $name)}) {
+    @content;
+  }
+}
+
+// Styles for screens above the breakpoint
+@mixin above($name) {
+  @if not map.has-key($breakpoints, $name) {
+    @error "Unknown breakpoint: #{$name}";
+  }
+  @media (min-width: #{map.get($breakpoints, $name) + 1px}) {
+    @content;
+  }
+}
+
+// ---------- Shapes ----------
+// Corner sizes stay fixed; the shape stretches with the element.
+
+// Top-right and bottom-left corners cut
+@mixin shape-slant($cut: 16px) {
+  clip-path: polygon(
+    0 0,
+    calc(100% - #{$cut}) 0,
+    100% #{$cut},
+    100% 100%,
+    #{$cut} 100%,
+    0 calc(100% - #{$cut})
+  );
+}
+
+// Top-left and bottom-right corners cut
+@mixin shape-slant-reverse($cut: 16px) {
+  clip-path: polygon(
+    #{$cut} 0,
+    100% 0,
+    100% calc(100% - #{$cut}),
+    calc(100% - #{$cut}) 100%,
+    0 100%,
+    0 #{$cut}
+  );
+}
+
+// All four corners cut
+@mixin shape-octagon($cut: 16px) {
+  clip-path: polygon(
+    #{$cut} 0,
+    calc(100% - #{$cut}) 0,
+    100% #{$cut},
+    100% calc(100% - #{$cut}),
+    calc(100% - #{$cut}) 100%,
+    #{$cut} 100%,
+    0 calc(100% - #{$cut}),
+    0 #{$cut}
+  );
+}
+
+// ---------- Cut corners with a full border ----------
+// clip-path removes the border on a cut corner, so the whole 1px frame,
+// diagonals included, is drawn as one shape on a layer above the content.
+// Set --cut-border and --cut-fill on the element (also in :hover). Uses ::after.
+// Corners: top-left, top-right, bottom-right, bottom-left.
+// Usage: @include cut-frame(8px, top-left, bottom-right);
+
+@mixin cut-frame($cut, $corners...) {
+  position: relative;
+  border: 1px solid transparent;
+  background: var(--cut-fill) padding-box;
+  clip-path: _cut-polygon($cut, $corners);
+
+  // Ring = outer outline minus the same outline inset by 1px (evenodd),
+  // so the diagonals are real polygon edges and match the straight sides.
+  // Sits above children, so photos can't cover it.
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    z-index: 1;
+    pointer-events: none;
+    background: var(--cut-border);
+    clip-path: polygon(evenodd, _cut-points($cut, $corners, 0px), _cut-points($cut, $corners, 1px));
+  }
+}
+
+@function _cut-polygon($c, $corners) {
+  @return polygon(_cut-points($c, $corners, 0px));
+}
+
+// Outline points, optionally inset by $i. An inset diagonal stays parallel,
+// so its end points move by $i * (sqrt(2) - 1) along the edges.
+@function _cut-points($c, $corners, $i) {
+  $d: $c + $i * 0.4142;
+  $far: calc(100% - #{$i});
+  $far-d: calc(100% - #{$d});
+  $points: ();
+
+  @if list.index($corners, top-left) {
+    $points: list.append($points, $d $i, $separator: comma);
+  } @else {
+    $points: list.append($points, $i $i, $separator: comma);
+  }
+  @if list.index($corners, top-right) {
+    $points: list.append($points, $far-d $i, $separator: comma);
+    $points: list.append($points, $far $d, $separator: comma);
+  } @else {
+    $points: list.append($points, $far $i, $separator: comma);
+  }
+  @if list.index($corners, bottom-right) {
+    $points: list.append($points, $far $far-d, $separator: comma);
+    $points: list.append($points, $far-d $far, $separator: comma);
+  } @else {
+    $points: list.append($points, $far $far, $separator: comma);
+  }
+  @if list.index($corners, bottom-left) {
+    $points: list.append($points, $d $far, $separator: comma);
+    $points: list.append($points, $i $far-d, $separator: comma);
+  } @else {
+    $points: list.append($points, $i $far, $separator: comma);
+  }
+  @if list.index($corners, top-left) {
+    $points: list.append($points, $i $d, $separator: comma);
+  }
+
+  @return $points;
+}

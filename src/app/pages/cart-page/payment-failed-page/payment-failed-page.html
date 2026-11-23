@@ -1,0 +1,30 @@
+<div class="page">
+  <app-header />
+
+  <main class="result">
+    <section class="head">
+      <div class="code" aria-hidden="true"><span class="code-tag">Payment</span></div>
+      <h1 class="title">Not paid</h1>
+      <p class="lead">
+        The payment didn't go through and nothing was charged. Your cart is still saved, so you can
+        try again or use another card.
+      </p>
+    </section>
+
+    <div class="actions">
+      <a class="btn" routerLink="/checkout">
+        <app-shape name="bar-notch">Try again</app-shape>
+      </a>
+      <a class="btn btn--light" routerLink="/cart">
+        <app-shape name="bar-notch">Back to cart</app-shape>
+      </a>
+    </div>
+
+    <p class="small">
+      Problem keeps happening? <a class="link" routerLink="/chat">Ask in the chat</a> and we'll
+      help.
+    </p>
+  </main>
+
+  <app-footer />
+</div>

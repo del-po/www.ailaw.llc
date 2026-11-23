@@ -1,0 +1,46 @@
+// Square tiles with top-left and bottom-right cuts.
+// Set from the parent: --social-size, --social-gap, --social-columns.
+
+:host {
+  --tile-fill: rgb(255 255 255 / 0.6);
+  --tile-stroke: rgb(var(--black) / 0.22);
+  --tile-icon: rgb(var(--black));
+
+  display: block;
+}
+
+:host-context(body.dark) {
+  --tile-fill: rgb(var(--black) / 0.6);
+  --tile-stroke: rgb(255 255 255 / 0.18);
+  --tile-icon: #e6e6e6;
+}
+
+.social {
+  display: grid;
+  grid-template-columns: repeat(var(--social-columns, 4), var(--social-size, 44px));
+  gap: var(--social-gap, 6px);
+}
+
+.tile {
+  --shape-fill: var(--tile-fill);
+  --shape-stroke: var(--tile-stroke);
+
+  display: block;
+  color: var(--tile-icon);
+  font-size: calc(var(--social-size, 44px) * 0.32);
+  transition: color var(--ease);
+
+  // Blurs whatever sits behind the tile; same outline as square-cut
+  backdrop-filter: blur(6px);
+  clip-path: polygon(21% 0, 100% 0, 100% 79%, 79% 100%, 0 100%, 0 21%);
+
+  &:hover {
+    --shape-fill: rgb(var(--yellow));
+    --shape-stroke: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+
+  app-shape {
+    width: 100%;
+  }
+}

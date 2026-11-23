@@ -1,0 +1,142 @@
+@use 'page' as *;
+@use '../profile-shared' as *;
+
+// ==========================================================
+// Profile overview
+// ==========================================================
+
+@include page-theme;
+@include section-head;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+// ---------- Account details ----------
+
+.details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  max-width: 640px;
+}
+
+.list {
+  width: 100%;
+  border-top: 1px solid var(--line);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+
+  dt {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    line-height: 22px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  dd {
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.link {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--yellow));
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.edit {
+  font-weight: 700;
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 640px;
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-line {
+  height: 20px;
+  background: var(--img-placeholder);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// ---------- Shortcut tiles ----------
+
+.shortcuts {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.tile {
+  --shape-fill: var(--card-bg);
+  --shape-stroke: var(--card-border);
+
+  transition: color var(--ease);
+
+  &:hover {
+    --shape-fill: rgb(var(--yellow));
+    --shape-stroke: rgb(var(--yellow));
+    color: rgb(var(--black));
+
+    .tile-num,
+    .tile-soon {
+      color: rgb(var(--black));
+    }
+  }
+}
+
+.tile-body {
+  width: 100%;
+  height: 100%;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tile-num {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.tile-label {
+  margin-top: auto;
+  font-family: var(--font-display);
+  font-size: clamp(11px, 0.9vw, 14px); // "Conversations" fits on one line
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.tile-soon {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}

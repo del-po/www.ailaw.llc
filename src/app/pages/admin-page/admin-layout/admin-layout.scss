@@ -1,0 +1,112 @@
+@use 'mixins' as *;
+@use 'page' as *;
+
+// ==========================================================
+// Admin frame: section menu + content
+// ==========================================================
+
+@include page-theme;
+
+.page {
+  @include page-shell;
+}
+
+.admin {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(32px, 5vw, 72px);
+}
+
+// ---------- Section menu ----------
+
+.menu {
+  position: sticky;
+  top: 32px;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+}
+
+.menu-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--line);
+
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: nowrap;
+
+  transition:
+    color var(--ease),
+    background-color var(--ease);
+
+  &:hover {
+    color: var(--text);
+    background: var(--card-bg);
+  }
+
+  &.is-active {
+    color: var(--ink-text);
+    background: var(--ink-bg);
+
+    .menu-num {
+      color: rgb(var(--yellow));
+    }
+  }
+}
+
+.menu-num {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.menu-soon {
+  margin-left: auto;
+  font-size: 9px;
+  letter-spacing: 1px;
+  opacity: 0.7;
+}
+
+// ---------- Content ----------
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-width: 0;
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+// Menu becomes a scrolling row above the content
+@include below(tablet-wide) {
+  .admin {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .menu {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    border-top: none;
+    border-bottom: 1px solid var(--line);
+    scrollbar-width: none;
+  }
+
+  .menu-link {
+    border-bottom: none;
+  }
+
+  .menu-soon {
+    display: none;
+  }
+}

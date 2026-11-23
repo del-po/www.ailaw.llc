@@ -1,0 +1,80 @@
+@use 'mixins' as *;
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin dashboard
+// ==========================================================
+
+@include admin-page;
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(10px, 1.6vw, 20px);
+  max-width: 820px;
+}
+
+.tile {
+  --shape-fill: var(--card-bg);
+  --shape-stroke: var(--card-border);
+
+  &:hover {
+    --shape-fill: rgb(var(--yellow));
+    --shape-stroke: rgb(var(--yellow));
+    color: rgb(var(--black));
+
+    .tile-label {
+      color: rgb(var(--black));
+    }
+  }
+}
+
+.tile-body {
+  width: 100%;
+  height: 100%;
+  padding: clamp(12px, 1.4vw, 18px);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.tile-value {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 3.2vw, 44px);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.tile-label {
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 0.8vw, 11px);
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.sections {
+  max-width: 820px;
+}
+
+.section {
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding-inline: 12px;
+  transition: background-color var(--ease);
+
+  &:hover {
+    background: var(--card-bg);
+  }
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(phone) {
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

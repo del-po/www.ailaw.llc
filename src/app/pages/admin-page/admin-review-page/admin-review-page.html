@@ -1,0 +1,73 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Review</h1>
+  <p class="lead">
+    Order steps waiting for you, oldest first. When you mark a step done, the chat continues the
+    order and keeps the client updated.
+  </p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+
+@if (tasks() === null) {
+  <div class="skeleton" aria-hidden="true"></div>
+} @else if (!tasks()!.length) {
+  <p class="empty">Nothing is waiting for you.</p>
+} @else {
+  <ul class="tasks">
+    @for (task of tasks(); track key(task)) {
+      <li class="task">
+        <div class="task-head">
+          <span class="tag">{{ task.label }}</span>
+          <span class="task-order">{{ task.orderId }}</span>
+          <span class="task-since">waiting since {{ task.waitingSince | date: 'd MMM, HH:mm' }}</span>
+        </div>
+
+        <h2 class="task-service">{{ task.service }}</h2>
+        <p class="task-text">{{ task.task }}</p>
+
+        <dl class="facts">
+          <div class="fact">
+            <dt>Client</dt>
+            <dd>{{ task.clientName || '—' }} · {{ task.clientEmail }}</dd>
+          </div>
+          <div class="fact">
+            <dt>Fee</dt>
+            <dd>{{ task.price | number: '1.0-2' }} {{ task.currency }}</dd>
+          </div>
+          @for (item of task.details | keyvalue: keepOrder; track item.key) {
+            <div class="fact">
+              <dt>{{ item.key }}</dt>
+              <dd>{{ item.value }}</dd>
+            </div>
+          }
+        </dl>
+
+        <form class="form task-form" (submit)="complete($event, task)">
+          @if (task.needsFile) {
+            <label class="field">
+              <span class="field-label">Link to the document (Drive, PDF)</span>
+              <app-shape class="field-box" name="field">
+                <input name="result" type="url" required placeholder="https://…" />
+              </app-shape>
+            </label>
+          }
+          <label class="field">
+            <span class="field-label">Note for yourself · optional</span>
+            <app-shape class="field-box" name="field">
+              <input name="note" maxlength="300" />
+            </app-shape>
+          </label>
+
+          <button type="submit" class="btn" [disabled]="busyKey() !== null">
+            <app-shape name="bar-notch">{{
+              busyKey() === key(task) ? 'Saving…' : 'Mark done'
+            }}</app-shape>
+          </button>
+        </form>
+      </li>
+    }
+  </ul>
+}

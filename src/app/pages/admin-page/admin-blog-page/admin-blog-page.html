@@ -1,0 +1,38 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Blog</h1>
+  <p class="lead">
+    Articles are written and published in Google Drive: a document in the
+    <a class="link" [href]="folder" target="_blank" rel="noopener">Blog → Published</a> folder
+    appears on the site within about ten minutes.
+  </p>
+</section>
+
+@if (posts.isLoading()) {
+  <div class="skeleton" aria-busy="true"></div>
+} @else if (posts.error()) {
+  <p class="message" role="alert">
+    Articles could not be loaded.
+    <button type="button" class="action" (click)="posts.reload()">Try again</button>
+  </p>
+} @else {
+  <div class="rows">
+    @for (post of posts.value(); track post.slug) {
+      <div class="row post">
+        <span class="cell-main">
+          <span class="cell-title">{{ post.title }}</span>
+          <span class="cell-sub">{{ post.category }} · {{ post.author }}</span>
+        </span>
+        <span class="cell-mono">{{ post.date | date: 'MMM d, y' }}</span>
+        <span>
+          @if (post.featured) {
+            <span class="status status--active">Featured</span>
+          }
+        </span>
+        <a class="action" [routerLink]="['/blog', post.slug]">View</a>
+      </div>
+    } @empty {
+      <p class="small">No published articles yet.</p>
+    }
+  </div>
+}

@@ -1,0 +1,270 @@
+// ==========================================================
+// Shared by content pages (services, and later the others)
+// Import with: @use 'page' as *;
+// ==========================================================
+
+// Colours for cards and controls, light and dark. Include at the top level of a page's styles.
+@mixin page-theme {
+  :host {
+    --card-bg: rgb(255 255 255 / 0.55);
+    --card-hover: rgb(255 255 255 / 0.9);
+    --card-border: rgb(var(--black) / 0.16);
+    --ink-bg: rgb(var(--black));
+    --ink-text: rgb(var(--white));
+    --img-placeholder: rgb(var(--black) / 0.06);
+
+    display: block;
+  }
+
+  :host-context(body.dark) {
+    --card-bg: rgb(255 255 255 / 0.04);
+    --card-hover: rgb(255 255 255 / 0.09);
+    --card-border: rgb(255 255 255 / 0.14);
+    --ink-bg: rgb(var(--white));
+    --ink-text: rgb(var(--black));
+    --img-placeholder: rgb(255 255 255 / 0.05);
+  }
+}
+
+// Page shell: header on top, footer at the bottom, content capped and centred
+@mixin page-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 32px clamp(16px, 4vw, 64px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(40px, 6vw, 72px);
+
+  > main {
+    flex: 1;
+  }
+}
+
+// Big page title
+@mixin page-title {
+  font-family: var(--font-display);
+  font-size: clamp(44px, 7vw, 88px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+// Yellow label
+@mixin tag {
+  padding: 0 8px;
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 18px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+// Yellow stripes, a slot for a tag, fading grey bars
+@mixin barcode-strip {
+  display: flex;
+  align-items: center;
+  height: 18px;
+
+  &::before,
+  &::after {
+    content: '';
+    height: 18px;
+  }
+
+  &::before {
+    flex: 0 0 40px;
+    background: repeating-linear-gradient(90deg, rgb(var(--yellow)) 0 2px, transparent 2px 5px);
+  }
+
+  &::after {
+    flex: 0 0 160px;
+    background: repeating-linear-gradient(
+      90deg,
+      var(--text-muted) 0 1px,
+      transparent 1px 4px,
+      var(--text-muted) 4px 6px,
+      transparent 6px 9px
+    );
+    -webkit-mask-image: linear-gradient(to right, #000, transparent);
+    mask-image: linear-gradient(to right, #000, transparent);
+  }
+}
+
+@mixin notice {
+  padding: 40px 0;
+  text-align: center;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+}
+
+// Shape-drawn control (filter, button, input): colours set through the shape
+@mixin shape-control($fill: var(--card-bg), $stroke: var(--card-border)) {
+  --shape-fill: #{$fill};
+  --shape-stroke: #{$stroke};
+
+  display: block;
+  padding: 0;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--ease);
+
+  app-shape {
+    width: 100%;
+  }
+}
+
+// Form fields, buttons, links and messages drawn with the 'field' shape.
+// Include once at the top level of a page's styles.
+@mixin form-controls {
+  // ---------- Form ----------
+
+  .form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+    max-width: 380px;
+  }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .field-box {
+    --shape-fill: var(--card-bg);
+    --shape-stroke: var(--card-border);
+
+    width: 100%;
+
+    &:focus-within {
+      --shape-stroke: rgb(var(--yellow));
+    }
+
+    input {
+      width: 100%;
+      height: 100%;
+      padding: 0 16px;
+      border: none;
+      background: none;
+      font-family: var(--font-mono);
+      font-size: 14px;
+    }
+  }
+
+  // Link sitting at the right of a field label, e.g. "Forgot password?"
+  .field-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .btn {
+    @include shape-control(var(--ink-bg), var(--ink-bg));
+    width: 100%;
+    color: var(--ink-text);
+
+    &:hover:not(:disabled) {
+      --shape-fill: rgb(var(--yellow));
+      --shape-stroke: rgb(var(--yellow));
+      color: rgb(var(--black));
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+
+    &--light {
+      --shape-fill: var(--card-bg);
+      --shape-stroke: var(--card-border);
+      color: var(--text);
+    }
+  }
+
+  .btn-content {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  // Line with "or" between Google and email sign-in
+  .divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+  }
+
+  .link {
+    color: var(--text);
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--yellow));
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  .small {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  // ---------- Messages ----------
+
+  // Yellow bar on the left: problems; dark bar: confirmations
+  .message {
+    padding: 12px 14px;
+    border-left: 4px solid rgb(var(--yellow));
+    background: var(--card-bg);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    line-height: 1.5;
+
+    &--ok {
+      border-left-color: var(--ink-bg);
+    }
+  }
+
+  // Chrome paints autofilled fields light blue; keep our colours instead
+  .field-box input:-webkit-autofill {
+    -webkit-text-fill-color: var(--text);
+    transition: background-color 9999s;
+  }
+}

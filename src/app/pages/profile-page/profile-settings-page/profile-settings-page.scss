@@ -1,0 +1,50 @@
+@use 'page' as *;
+@use '../profile-shared' as *;
+
+// ==========================================================
+// Profile settings
+// ==========================================================
+
+@include page-theme;
+@include section-head;
+@include form-controls;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+// One block per form, separated by a line
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 520px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.block-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.form {
+  max-width: none;
+}
+
+// Final delete button: yellow, so it reads as a warning in both themes
+.btn--danger {
+  --shape-fill: rgb(var(--yellow));
+  --shape-stroke: rgb(var(--yellow));
+  color: rgb(var(--black));
+
+  &:hover:not(:disabled) {
+    --shape-fill: var(--ink-bg);
+    --shape-stroke: var(--ink-bg);
+    color: var(--ink-text);
+  }
+}

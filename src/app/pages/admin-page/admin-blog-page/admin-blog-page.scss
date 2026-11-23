@@ -1,0 +1,22 @@
+@use 'mixins' as *;
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin blog
+// ==========================================================
+
+@include admin-page;
+
+.post {
+  grid-template-columns: minmax(0, 1fr) 110px 90px 48px;
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet) {
+  .post {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}

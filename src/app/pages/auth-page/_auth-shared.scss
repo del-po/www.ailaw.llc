@@ -1,0 +1,59 @@
+// ==========================================================
+// Shared by the auth pages (login, register, verify email,
+// forgot password, reset password)
+// Import with: @use '../auth-shared' as *;
+// ==========================================================
+
+@use 'mixins' as *;
+@use 'page' as *;
+
+// Page layout, form controls and messages. Include once at the top level of a page's styles.
+@mixin auth-page {
+  @include page-theme;
+
+  .page {
+    @include page-shell;
+  }
+
+  // Intro on the left, form on the right; one column on smaller screens
+  .auth {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) min(100%, 380px);
+    align-items: start;
+    gap: clamp(32px, 6vw, 96px);
+
+    @include below(tablet-wide) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  // ---------- Intro ----------
+
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    max-width: 560px;
+  }
+
+  .code {
+    @include barcode-strip;
+  }
+
+  .code-tag {
+    @include tag;
+  }
+
+  .title {
+    @include page-title;
+    font-size: clamp(40px, 6vw, 72px);
+  }
+
+  .lead {
+    font-size: clamp(16px, 1.4vw, 19px);
+    line-height: 1.6;
+    color: var(--text-muted);
+  }
+
+  @include form-controls;
+}

@@ -1,0 +1,37 @@
+<section class="transfer" aria-label="Bank transfer details">
+  <h2 class="transfer-title">Pay by bank transfer</h2>
+
+  <dl class="rows">
+    <div class="row">
+      <dt>Recipient</dt>
+      <dd>{{ bank.recipient }}</dd>
+      <span></span>
+    </div>
+    <div class="row">
+      <dt>IBAN</dt>
+      <dd class="mono">{{ bank.iban }}</dd>
+      <button type="button" class="copy" (click)="copy('iban', bank.iban)">
+        {{ copied() === 'iban' ? 'Copied' : 'Copy' }}
+      </button>
+    </div>
+    <div class="row">
+      <dt>Amount</dt>
+      <dd class="mono">{{ amount() | number: '1.2-2' }} {{ currency() }}</dd>
+      <button type="button" class="copy" (click)="copy('amount', amount().toFixed(2))">
+        {{ copied() === 'amount' ? 'Copied' : 'Copy' }}
+      </button>
+    </div>
+    <div class="row">
+      <dt>Reference</dt>
+      <dd class="mono">{{ reference() }}</dd>
+      <button type="button" class="copy" (click)="copy('reference', reference())">
+        {{ copied() === 'reference' ? 'Copied' : 'Copy' }}
+      </button>
+    </div>
+  </dl>
+
+  <p class="note">
+    Write the reference in the transfer's purpose, so we can match your payment. Work starts once
+    the payment arrives.
+  </p>
+</section>

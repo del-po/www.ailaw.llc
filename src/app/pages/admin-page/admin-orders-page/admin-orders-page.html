@@ -1,0 +1,195 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Orders</h1>
+  <p class="lead">
+    Every order, newest first. Mark an order paid when its transfer arrives, using the order number
+    in the transfer's purpose.
+  </p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+
+<div class="toolbar">
+  <nav class="filters" aria-label="Filter orders">
+    @for (item of filters; track item.value) {
+      <button
+        type="button"
+        class="filter"
+        [class.is-active]="filter() === item.value"
+        [attr.aria-pressed]="filter() === item.value"
+        (click)="filter.set(item.value)"
+      >
+        {{ item.label }}
+      </button>
+    }
+  </nav>
+
+  <label class="search">
+    <span class="visually-hidden">Search orders</span>
+    <app-shape class="field-box" name="field">
+      <input
+        #box
+        type="search"
+        placeholder="Order number, name, email…"
+        (input)="search.set(box.value)"
+      />
+    </app-shape>
+  </label>
+</div>
+
+@if (all()) {
+  <div class="rows">
+    @for (order of list(); track order.orderId) {
+      <div class="order" [class.is-open]="openId() === order.orderId">
+        <button
+          type="button"
+          class="row"
+          [attr.aria-expanded]="openId() === order.orderId"
+          (click)="toggle(order)"
+        >
+          <span class="cell-main">
+            <span class="cell-title">{{ order.orderNumber }}</span>
+            <span class="cell-sub"
+              >{{ order.customerName }} · {{ order.createdAt | date: 'MMM d, y, HH:mm' }}</span
+            >
+          </span>
+          <span class="cell-mono">{{ order.total | number: '1.2-2' }} {{ order.currency }}</span>
+          <span class="labels">
+            <span class="status" [class.status--active]="order.orderStatus === 'completed'">
+              {{ orderLabels[order.orderStatus] }}
+            </span>
+            <span class="status" [class.status--active]="order.paymentStatus === 'paid'">
+              {{ paymentLabels[order.paymentStatus] }}
+            </span>
+          </span>
+        </button>
+
+        @if (openId() === order.orderId) {
+          <div class="detail">
+            @if (detail(); as full) {
+              <dl class="facts">
+                <div class="fact">
+                  <dt>Client</dt>
+                  <dd>{{ full.customerName }}</dd>
+                </div>
+                <div class="fact">
+                  <dt>Email</dt>
+                  <dd>
+                    <a class="link" [href]="'mailto:' + full.customerEmail">{{
+                      full.customerEmail
+                    }}</a>
+                  </dd>
+                </div>
+                <div class="fact">
+                  <dt>Phone</dt>
+                  <dd>
+                    @if (full.customerPhone) {
+                      <a class="link" [href]="'tel:' + full.customerPhone">{{
+                        full.customerPhone
+                      }}</a>
+                    } @else {
+                      —
+                    }
+                  </dd>
+                </div>
+                @if (full.customerNotes) {
+                  <div class="fact">
+                    <dt>Note</dt>
+                    <dd class="note">{{ full.customerNotes }}</dd>
+                  </div>
+                }
+                <div class="fact">
+                  <dt>Payment</dt>
+                  <dd>
+                    {{ full.paymentProvider || '—' }} · ref. {{ full.paymentReference || '—' }}
+                  </dd>
+                </div>
+                @if (full.paidAt) {
+                  <div class="fact">
+                    <dt>Paid</dt>
+                    <dd>{{ full.paidAt | date: 'MMM d, y, HH:mm' }}</dd>
+                  </div>
+                }
+                @if (full.completedAt) {
+                  <div class="fact">
+                    <dt>Completed</dt>
+                    <dd>{{ full.completedAt | date: 'MMM d, y, HH:mm' }}</dd>
+                  </div>
+                }
+              </dl>
+
+              <ul class="items">
+                @for (item of full.items; track item.orderItemId) {
+                  <li class="item">
+                    <span>
+                      {{ item.name }}
+                      @if (item.quantity > 1) {
+                        <span class="qty">× {{ item.quantity }}</span>
+                      }
+                    </span>
+                    <span class="cell-mono">{{ item.lineTotal | number: '1.2-2' }}</span>
+                  </li>
+                }
+                <li class="item item--total">
+                  <span
+                    >Total{{
+                      full.discountTotal > 0
+                        ? ' (discount ' + (full.discountTotal | number: '1.2-2') + ')'
+                        : ''
+                    }}</span
+                  >
+                  <span class="cell-mono"
+                    >{{ full.total | number: '1.2-2' }} {{ full.currency }}</span
+                  >
+                </li>
+              </ul>
+
+              <div class="controls">
+                <label class="field">
+                  <span class="field-label">Order status</span>
+                  <app-shape class="field-box" name="field">
+                    <select #orderStatus>
+                      @for (status of orderStatuses; track status) {
+                        <option [value]="status" [selected]="status === full.orderStatus">
+                          {{ orderLabels[status] }}
+                        </option>
+                      }
+                    </select>
+                  </app-shape>
+                </label>
+                <label class="field">
+                  <span class="field-label">Payment</span>
+                  <app-shape class="field-box" name="field">
+                    <select #paymentStatus>
+                      @for (status of paymentStatuses; track status) {
+                        <option [value]="status" [selected]="status === full.paymentStatus">
+                          {{ paymentLabels[status] }}
+                        </option>
+                      }
+                    </select>
+                  </app-shape>
+                </label>
+                <button
+                  type="button"
+                  class="btn save"
+                  [disabled]="busy()"
+                  (click)="save(full, orderStatus.value, paymentStatus.value)"
+                >
+                  <app-shape name="bar-notch">{{ busy() ? 'Saving…' : 'Save' }}</app-shape>
+                </button>
+              </div>
+            } @else {
+              <p class="cell-sub">Loading…</p>
+            }
+          </div>
+        }
+      </div>
+    } @empty {
+      <p class="small">No orders match.</p>
+    }
+  </div>
+} @else if (!error()) {
+  <div class="skeleton" aria-busy="true"></div>
+}

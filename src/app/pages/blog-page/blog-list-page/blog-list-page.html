@@ -1,0 +1,105 @@
+<div class="page">
+  <app-header />
+
+  <main class="blog">
+    <!-- ---------- Intro ---------- -->
+    <section class="intro">
+      <div class="code" aria-hidden="true">
+        <span class="code-tag">AI Law Journal</span>
+      </div>
+      <h1 class="title">Blog</h1>
+      <p class="lead">
+        Peculiar laws, historic cases, documentaries, short stories and new ideas: short reads that
+        fit into your day.
+      </p>
+    </section>
+
+    @if (posts.isLoading()) {
+      <div class="grid" aria-busy="true">
+        @for (n of [1, 2, 3]; track n) {
+          <div class="card card--skeleton"></div>
+        }
+      </div>
+    } @else if (posts.error()) {
+      <div class="notice">
+        <p>Articles could not be loaded right now.</p>
+        <button type="button" class="notice-btn" (click)="posts.reload()">Try again</button>
+      </div>
+    } @else {
+      <!-- ---------- Featured ---------- -->
+      @if (featured(); as post) {
+        <a class="featured" [routerLink]="['/blog', post.slug]">
+          @if (post.image) {
+            <img class="featured-img" [src]="post.image" [alt]="post.title" />
+          }
+          <div class="featured-body">
+            <span class="tag">{{ post.category }}</span>
+            <h2 class="featured-title">{{ post.title }}</h2>
+            @if (post.deck) {
+              <p class="deck">{{ post.deck }}</p>
+            }
+            <p class="meta">
+              {{ post.date | date: 'MMM d, y' }} · {{ post.readTimeMinutes }} min read
+            </p>
+          </div>
+        </a>
+      }
+
+      <!-- ---------- Filters ---------- -->
+      <div class="toolbar">
+        <nav class="filters" aria-label="Categories">
+          @for (name of categories(); track name) {
+            <button
+              type="button"
+              class="filter"
+              [class.is-active]="name === category()"
+              (click)="setCategory(name)"
+            >
+              {{ name }}
+            </button>
+          }
+        </nav>
+
+        <label class="search">
+          <span class="visually-hidden">Search articles</span>
+          <input
+            #box
+            type="search"
+            placeholder="Search articles…"
+            [value]="search()"
+            (input)="setSearch(box.value)"
+          />
+        </label>
+      </div>
+
+      <!-- ---------- Articles ---------- -->
+      @if (list().length) {
+        <div class="grid">
+          @for (post of list(); track post.slug) {
+            <a class="card" [routerLink]="['/blog', post.slug]">
+              <div class="card-img">
+                @if (post.image) {
+                  <img [src]="post.image" [alt]="post.title" loading="lazy" />
+                }
+              </div>
+              <div class="card-body">
+                <span class="tag">{{ post.category }}</span>
+                <h3 class="card-title">{{ post.title }}</h3>
+                @if (post.deck) {
+                  <p class="deck">{{ post.deck }}</p>
+                }
+                <p class="meta">
+                  {{ post.date | date: 'MMM d, y' }} · {{ post.readTimeMinutes }} min read
+                </p>
+              </div>
+            </a>
+          }
+        </div>
+      } @else if (filtering()) {
+        <p class="notice">No articles match this filter.</p>
+      }
+    }
+  </main>
+
+  <app-footer />
+</div>

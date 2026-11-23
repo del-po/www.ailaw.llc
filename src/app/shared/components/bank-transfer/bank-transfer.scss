@@ -1,0 +1,68 @@
+:host {
+  display: block;
+}
+
+.transfer {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 24px;
+  background: var(--card-bg, rgb(255 255 255 / 0.55));
+  border-top: 4px solid rgb(var(--yellow));
+}
+
+.transfer-title {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.rows {
+  border-top: 1px solid var(--line);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+
+  dt {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  dd {
+    font-size: 16px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+
+.copy {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--yellow));
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}
+
+.note {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
