@@ -23,7 +23,16 @@
       <label class="field">
         <span class="field-label">Full name</span>
         <app-shape class="field-box" name="field">
-          <input #name type="text" name="name" autocomplete="name" maxlength="100" required />
+          <input
+            #name
+            type="text"
+            name="name"
+            autocomplete="name"
+            maxlength="100"
+            required
+            pattern="[A-Za-z][A-Za-z '.\-]*"
+            title="Please write your name in English letters"
+          />
         </app-shape>
       </label>
 
@@ -61,6 +70,7 @@
         <a class="link" routerLink="/privacy">Privacy Policy</a>.
       </p>
       <p class="small">Already registered? <a class="link" routerLink="/login">Log in</a></p>
+      <p class="small">Are you a lawyer? <a class="link" routerLink="/join">Join AI Law as a lawyer</a></p>
     </form>
   </main>
 

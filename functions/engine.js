@@ -6,6 +6,9 @@
 //   - the lawyer's Review queue
 // Knowledge (settings, instructions, services, steps) lives in the Chat
 // spreadsheet, so most changes are sheet edits, not code.
+// Orders live in Orders Database like every other order: the chat places
+// them through the Orders Apps Script (folder, agreement, email), and their
+// steps are kept there in the OrderSteps tab.
 // ==========================================================
 
 import { randomUUID } from 'node:crypto';
@@ -21,6 +24,14 @@ import {
 } from './sheets.js';
 
 const TIME_ZONE = 'Asia/Tbilisi';
+
+// Orders Database (the function's service account must be an Editor) and
+// the Orders Apps Script, which places orders with the client's own token
+const ORDERS_SHEET_ID = '1bpWDaAs71FNpQpIAg2INx3cMb7rMI15tNLMJ_BQkdOQ';
+const ORDERS_API =
+  'https://script.google.com/macros/s/AKfycbyaIvPqskHw6eW_9IM43PHQd0YV2Y0gZJM7x6ZC--KHWeZZJplDGEmQ51JUKYy7tD2H/exec';
+// Who clients contact to get verified
+const VERIFY_CONTACT = 'our lawyer Gocha Okreshidze (info@ailaw.llc, (+995) 591-893-893)';
 const TITLE_LENGTH = 40;
 const MAX_QUESTION_LENGTH = 4000;
 const MAX_TOOL_ROUNDS = 5;
@@ -48,6 +59,27 @@ function parseJson(text, fallback) {
 const chatTab = (tab) => readTab(CHAT_SHEET_ID, tab);
 const append = (tab, obj) => appendRow(CHAT_SHEET_ID, tab, obj);
 const update = (tab, row, changes) => updateRow(CHAT_SHEET_ID, tab, row, changes);
+const ordersTab = (tab) => readTab(ORDERS_SHEET_ID, tab);
+const appendOrders = (tab, obj) => appendRow(ORDERS_SHEET_ID, tab, obj);
+const updateOrders = (tab, row, changes) => updateRow(ORDERS_SHEET_ID, tab, row, changes);
+const nowIso = () => new Date().toISOString();
+
+// Calls the Orders Apps Script; its error codes come back as ApiErrors
+async function ordersApi(action, idToken, data) {
+  const res = await fetch(ORDERS_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action, idToken, data }),
+  });
+  let result;
+  try {
+    result = JSON.parse(await res.text());
+  } catch {
+    throw new ApiError('ORDERS_UNAVAILABLE');
+  }
+  if (!result.ok) throw new ApiError(result.error || 'ORDER_FAILED');
+  return result.data;
+}
 
 export async function knowledge() {
   return cached('knowledge', KNOWLEDGE_SECONDS, async () => {
@@ -67,7 +99,7 @@ export async function knowledge() {
 }
 
 export async function findUser(uid) {
-  const users = await cached('users', 60, () => readTab(USERS_SHEET_ID, 'Users'));
+  const users = await cached('users', 60, () => readTab(USERS_SHEET_ID, 'Clients'));
   return users.rows.find((r) => r.UserID === uid) || null;
 }
 
@@ -349,8 +381,9 @@ async function buildSystemPrompt(ctx) {
             (isTrue(f.Required) ? '' : ' — optional'),
         )
         .join('\n');
+      const forVerified = requiresOf(s) === 'verified' ? ' (verified clients only)' : '';
       return (
-        `- id: ${s.ServiceId} — ${s.Title}, ${s.Price} ${s.Currency}\n  ${s.Summary}\n` +
+        `- id: ${s.ServiceId} — ${s.Title}, ${s.Price} ${s.Currency}${forVerified}\n  ${s.Summary}\n` +
         `  Offer when: ${s.WhenToOffer}` +
         (list ? `\n  Details needed to order:\n${list}` : '')
       );
@@ -362,9 +395,15 @@ async function buildSystemPrompt(ctx) {
     ? `The client is signed in${caller.name ? ' as ' + caller.name : ''} and can order.`
     : 'The client is not signed in: they can ask questions, but must sign in (Log in, top right) before ordering.';
 
+  const verified = caller.signedIn && (await isVerified(caller.uid));
+  const verification = verified
+    ? 'The client is verified, so they can order every service.'
+    : `The client is not verified: services marked "verified clients only" can't be ordered yet; ` +
+      `for those, tell them to contact ${VERIFY_CONTACT} to get verified.`;
+
   return (
     `${instructions}\n\n## Services list\n${services || '(no services yet)'}` +
-    `\n\n## Context\nToday is ${today()} (Tbilisi). ${who}`
+    `\n\n## Context\nToday is ${today()} (Tbilisi). ${who} ${verification}`
   );
 }
 
@@ -406,6 +445,15 @@ const TOOLS = {
     },
     run: async (ctx, args) => {
       if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
+      // Requires = verified: we must know the client first
+      const service = await findService(args.service_id);
+      if (requiresOf(service) === 'verified' && !(await isVerified(ctx.caller.uid))) {
+        return {
+          error: 'VERIFICATION_REQUIRED',
+          instruction: `This service is only for verified clients. Ask the client to contact ${VERIFY_CONTACT} to get verified; after that they can order it here.`,
+        };
+      }
+      if (!ctx.caller.idToken) return { error: 'SIGN_IN_REQUIRED' };
       const order = await createOrder(ctx, args.service_id, parseJson(args.details, {}));
       addPart(ctx, await orderCard(order.OrderId));
       addPart(ctx, {
@@ -428,7 +476,7 @@ const TOOLS = {
     description: "The signed-in client's orders with the progress of each.",
     run: async (ctx) => {
       if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
-      const orders = await listMyOrders(ctx.caller);
+      const orders = await listMyOrders(ctx.caller, ctx.env);
       for (const o of orders.filter((o) => o.status !== 'completed').slice(0, 3)) {
         addPart(ctx, await orderCard(o.orderId));
       }
@@ -451,6 +499,21 @@ function addPart(ctx, part) {
 // ==========================================================
 // Services and orders
 // ==========================================================
+
+// Services tab → Requires: guest, user or verified; empty = user
+function requiresOf(service) {
+  return (
+    String(service.Requires || '')
+      .trim()
+      .toLowerCase() || 'user'
+  );
+}
+
+// Clients tab → Type = verified
+async function isVerified(uid) {
+  const user = uid ? await findUser(uid) : null;
+  return !!user && String(user.Type || '').toLowerCase() === 'verified';
+}
 
 async function findService(serviceId) {
   const service = (await knowledge()).services.find((s) => s.ServiceId === serviceId);
@@ -477,23 +540,13 @@ async function createOrder(ctx, serviceId, details) {
     details,
   );
 
-  const stamp = today().slice(2).replace(/-/g, ''); // yyMMdd
-  const order = {
-    OrderId: `SO-${stamp}-${randomUUID().slice(0, 4).toUpperCase()}`,
-    ServiceId: service.ServiceId,
-    ServiceTitle: service.Title,
-    UserId: ctx.caller.uid,
-    Email: ctx.caller.email,
-    Name: ctx.caller.name,
-    ConversationId: ctx.conversationId,
-    Price: Number(service.Price),
-    Currency: service.Currency,
-    Data: JSON.stringify(data),
-    Status: 'in_progress',
-    CreatedAt: Date.now(),
-    UpdatedAt: Date.now(),
-  };
-  await append('ServiceOrders', order);
+  // A normal order in Orders Database; the service's ServiceId is its
+  // Slug in Products Database
+  const placed = await ordersApi('placeChatOrder', ctx.caller.idToken, {
+    slug: service.ServiceId,
+    details: data,
+    conversationId: ctx.conversationId,
+  });
 
   // The order gets its own copy of the steps, so later edits to the
   // service don't change orders already running
@@ -501,10 +554,11 @@ async function createOrder(ctx, serviceId, details) {
     .filter((s) => s.ServiceId === serviceId)
     .sort((a, b) => Number(a.StepNo) - Number(b.StepNo));
   for (const s of own) {
-    await append('OrderSteps', {
-      OrderId: order.OrderId,
+    await appendOrders('OrderSteps', {
+      OrderID: placed.orderId,
+      OrderNumber: placed.orderNumber,
       StepNo: Number(s.StepNo),
-      StepId: s.StepId,
+      StepID: s.StepId,
       Owner: s.Owner,
       Capability: s.Capability,
       ClientLabel: s.ClientLabel,
@@ -513,12 +567,12 @@ async function createOrder(ctx, serviceId, details) {
       Status: 'waiting',
       Result: '',
       Note: '',
-      UpdatedAt: Date.now(),
+      UpdatedAt: nowIso(),
     });
   }
 
-  await advanceOrder(order.OrderId, ctx.env);
-  return findOrder(order.OrderId);
+  await advanceOrder(placed.orderNumber, ctx.env);
+  return findOrder(placed.orderNumber);
 }
 
 // Checks the AI's details against ServiceFields
@@ -546,15 +600,37 @@ function validateDetails(fields, details) {
   return data;
 }
 
-async function findOrder(orderId) {
-  const order = (await chatTab('ServiceOrders')).rows.find((o) => o.OrderId === orderId);
-  if (!order) throw new ApiError('NOT_FOUND');
-  return order;
+// An Orders row in the shape the engine uses; OrderId is the order number
+// (AIL-…), which clients see and use as the payment reference
+function fromOrdersRow(r) {
+  return {
+    _row: r._row,
+    OrderId: r.OrderNumber,
+    OrderUuid: r.OrderID,
+    ServiceTitle: r.Service,
+    UserId: r.UserID,
+    Email: r.CustomerEmail,
+    Name: r.CustomerName,
+    ConversationId: r.ConversationID,
+    Price: r.Total,
+    Currency: r.Currency,
+    Data: r.Details || '{}',
+    Status: r.OrderStatus,
+    PaymentStatus: r.PaymentStatus,
+    CreatedAt: r.CreatedAt,
+    Source: r.Source,
+  };
 }
 
-async function orderSteps(orderId) {
-  return (await chatTab('OrderSteps')).rows
-    .filter((s) => s.OrderId === orderId)
+async function findOrder(orderNumber) {
+  const row = (await ordersTab('Orders')).rows.find((o) => o.OrderNumber === orderNumber);
+  if (!row) throw new ApiError('NOT_FOUND');
+  return fromOrdersRow(row);
+}
+
+async function orderSteps(orderNumber) {
+  return (await ordersTab('OrderSteps')).rows
+    .filter((s) => s.OrderNumber === orderNumber)
     .sort((a, b) => Number(a.StepNo) - Number(b.StepNo));
 }
 
@@ -564,10 +640,11 @@ function toClientOrder(order, steps) {
   return {
     orderId: order.OrderId,
     title: order.ServiceTitle,
-    status: order.Status,
+    // placed and in_progress both show as in progress
+    status: done || order.Status === 'cancelled' ? order.Status : 'in_progress',
     price: Number(order.Price),
     currency: order.Currency,
-    createdAt: Number(order.CreatedAt),
+    createdAt: new Date(order.CreatedAt).getTime() || Number(order.CreatedAt) || 0,
     details: parseJson(order.Data, {}),
     steps: steps.map((s) => ({
       label: s.ClientLabel,
@@ -588,20 +665,23 @@ async function orderCard(orderId) {
   };
 }
 
-export async function listMyOrders(caller) {
+// Orders with steps only (chat orders); checkout orders have their own page
+export async function listMyOrders(caller, env) {
   if (!caller.signedIn) return [];
-  const [orders, steps] = await Promise.all([chatTab('ServiceOrders'), chatTab('OrderSteps')]);
+  await resumePaidOrders(env);
+  const [orders, steps] = await Promise.all([ordersTab('Orders'), ordersTab('OrderSteps')]);
   return orders.rows
-    .filter((o) => o.UserId === caller.uid)
-    .sort((a, b) => Number(b.CreatedAt) - Number(a.CreatedAt))
-    .map((o) =>
-      toClientOrder(
-        o,
-        steps.rows
-          .filter((s) => s.OrderId === o.OrderId)
-          .sort((a, b) => Number(a.StepNo) - Number(b.StepNo)),
-      ),
-    );
+    .filter((o) => o.UserID === caller.uid)
+    .map(fromOrdersRow)
+    .map((o) => ({
+      order: o,
+      steps: steps.rows
+        .filter((s) => s.OrderNumber === o.OrderId)
+        .sort((a, b) => Number(a.StepNo) - Number(b.StepNo)),
+    }))
+    .filter((x) => x.steps.length)
+    .map((x) => toClientOrder(x.order, x.steps))
+    .sort((a, b) => b.createdAt - a.createdAt);
 }
 
 // ==========================================================
@@ -610,16 +690,16 @@ export async function listMyOrders(caller) {
 // (which waits in the admin Review page) or the end of the order.
 // ==========================================================
 
-async function advanceOrder(orderId, env) {
-  const order = await findOrder(orderId);
-  const steps = await orderSteps(orderId);
+async function advanceOrder(orderNumber, env) {
+  const order = await findOrder(orderNumber);
+  const steps = await orderSteps(orderNumber);
 
   for (const step of steps) {
     if (step.Status === 'done') continue;
 
     if (step.Owner === 'lawyer') {
       if (step.Status !== 'active') {
-        await update('OrderSteps', step._row, { Status: 'active', UpdatedAt: Date.now() });
+        await updateOrders('OrderSteps', step._row, { Status: 'active', UpdatedAt: nowIso() });
         await notifyLawyer(order, step, env);
       }
       return;
@@ -629,16 +709,46 @@ async function advanceOrder(orderId, env) {
     if (!capability) throw new ApiError('UNKNOWN_CAPABILITY');
 
     const result = (await capability(order, step, steps, parseJson(step.Config, {}), env)) || '';
-    await update('OrderSteps', step._row, {
+    // A step that has to wait (e.g. for the payment) stays active and stops here
+    if (result && typeof result === 'object' && result.wait) {
+      if (step.Status !== 'active') {
+        await updateOrders('OrderSteps', step._row, { Status: 'active', UpdatedAt: nowIso() });
+      }
+      return;
+    }
+    await updateOrders('OrderSteps', step._row, {
       Status: 'done',
       Result: result,
-      UpdatedAt: Date.now(),
+      UpdatedAt: nowIso(),
     });
     step.Status = 'done';
     step.Result = result;
   }
 
-  await update('ServiceOrders', order._row, { Status: 'completed', UpdatedAt: Date.now() });
+  await updateOrders('Orders', order._row, {
+    OrderStatus: 'completed',
+    CompletedAt: nowIso(),
+    UpdatedAt: nowIso(),
+  });
+}
+
+// Orders waiting for their payment go on once the order is marked paid
+// (admin page or Orders sheet). Checked when orders or tasks are opened.
+async function resumePaidOrders(env) {
+  const [orders, steps] = await Promise.all([ordersTab('Orders'), ordersTab('OrderSteps')]);
+  const waiting = steps.rows.filter(
+    (s) => s.Capability === 'await_payment' && s.Status === 'active',
+  );
+  for (const step of waiting) {
+    const order = orders.rows.find((o) => o.OrderNumber === step.OrderNumber);
+    if (order && order.PaymentStatus === 'paid') {
+      try {
+        await advanceOrder(step.OrderNumber, env);
+      } catch (err) {
+        console.error('Resume order ' + step.OrderNumber, err);
+      }
+    }
+  }
 }
 
 // ==========================================================
@@ -650,13 +760,16 @@ const CAPABILITIES = {
   // The details were collected in the conversation before the order existed
   collect: () => 'Details received',
 
+  // Waits until the order is marked paid in Orders Database
+  await_payment: (order) => (order.PaymentStatus === 'paid' ? 'Paid' : { wait: true }),
+
   // config: { base, rate, output } — e.g. 1% of income stored as "tax"
   calculate: async (order, step, steps, config) => {
     const data = parseJson(order.Data, {});
     const value = Math.round(Number(data[config.base] || 0) * Number(config.rate) * 100) / 100;
     data[config.output] = value;
     order.Data = JSON.stringify(data);
-    await update('ServiceOrders', order._row, { Data: order.Data, UpdatedAt: Date.now() });
+    await updateOrders('Orders', order._row, { Details: order.Data, UpdatedAt: nowIso() });
     return `${config.output} = ${value}`;
   },
 
@@ -691,7 +804,7 @@ const CAPABILITIES = {
 
 async function notifyLawyer(order, step, env) {
   const to = (await knowledge()).settings.LawyerEmail;
-  if (!to) return;
+  if (!to || !env) return;
   await env.sendMail({
     to,
     subject: `AI Law task: ${step.ClientLabel} — ${order.OrderId}`,
@@ -711,14 +824,16 @@ async function notifyLawyer(order, step, env) {
 // Lawyer: the Review page
 // ==========================================================
 
-export async function adminTasks() {
-  const [orders, steps] = await Promise.all([chatTab('ServiceOrders'), chatTab('OrderSteps')]);
+export async function adminTasks(caller, env) {
+  await resumePaidOrders(env);
+  const [orders, steps] = await Promise.all([ordersTab('Orders'), ordersTab('OrderSteps')]);
   return steps.rows
     .filter((s) => s.Owner === 'lawyer' && s.Status === 'active')
     .map((s) => {
-      const order = orders.rows.find((o) => o.OrderId === s.OrderId) || {};
+      const row = orders.rows.find((o) => o.OrderNumber === s.OrderNumber);
+      const order = row ? fromOrdersRow(row) : {};
       return {
-        orderId: s.OrderId,
+        orderId: s.OrderNumber,
         stepNo: Number(s.StepNo),
         label: s.ClientLabel,
         task: s.LawyerTask,
@@ -729,8 +844,8 @@ export async function adminTasks() {
         price: Number(order.Price),
         currency: order.Currency,
         details: parseJson(order.Data, {}),
-        createdAt: Number(order.CreatedAt),
-        waitingSince: Number(s.UpdatedAt),
+        createdAt: new Date(order.CreatedAt).getTime() || 0,
+        waitingSince: new Date(s.UpdatedAt).getTime() || Number(s.UpdatedAt) || 0,
       };
     })
     .sort((a, b) => a.waitingSince - b.waitingSince);
@@ -747,12 +862,12 @@ export async function adminCompleteStep(caller, data, env) {
     throw new ApiError('FILE_LINK_REQUIRED');
   }
 
-  await update('OrderSteps', step._row, {
+  await updateOrders('OrderSteps', step._row, {
     Status: 'done',
     Result: result,
     Note: String(data.note || '').trim() + (caller.email ? ' — ' + caller.email : ''),
-    UpdatedAt: Date.now(),
+    UpdatedAt: nowIso(),
   });
   await advanceOrder(data.orderId, env);
-  return adminTasks();
+  return adminTasks(caller, env);
 }

@@ -8,7 +8,7 @@ export interface Profile {
   Email: string;
   Phone: string;
   Role: 'client' | 'staff' | 'admin';
-  Status: 'active' | 'suspended';
+  Status: 'active' | 'suspended' | 'deleted';
   Providers: string; // comma-separated, e.g. "password,google.com"
   EmailVerified: boolean;
   PhotoURL: string;

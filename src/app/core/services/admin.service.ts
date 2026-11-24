@@ -2,6 +2,7 @@ import { Service, inject } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom, map } from 'rxjs';
 import { AdminCategory, AdminServiceInput, AdminServiceRow } from '../models/admin';
+import { AdminLawyer } from '../models/lawyer';
 import { Profile } from '../models/profile';
 import { AuthService } from './auth.service';
 
@@ -9,7 +10,9 @@ import { AuthService } from './auth.service';
 const SERVICES_API =
   'https://script.google.com/macros/s/AKfycbyNs3jIEwcxkMs6B5311wqt3gkbDseNf2zOQgpKu0vmskRE9mLTK0jqvDq8wPBl4XyS/exec';
 const PROFILES_API =
-  'https://script.google.com/macros/s/AKfycbx_Vvn6RD5TcfudfTzLA8AuqD3i7xo5l0VPos1nOOZ-1yl3TdQy9mqQ2qpBpXk-7cTVtQ/exec';
+  'https://script.google.com/macros/s/AKfycbx5Fyq1g3mRy3rgVqsJjO42_LNmEwzEb_-uRFdW5JfUyp-TZi4JWGRg8dgWqi5FChuyjw/exec';
+// Firebase function: lawyer approvals create logins, which only it can do
+const CHAT_API = 'https://europe-west1-website-ai-law.cloudfunctions.net/chat';
 
 // Plain text skips the browser's CORS pre-check, which Apps Script can't answer
 const HEADERS = new HttpHeaders({ 'Content-Type': 'text/plain;charset=utf-8' });
@@ -65,11 +68,37 @@ export class AdminService {
     return this.profiles('listUsers');
   }
 
-  setClientStatus(userId: string, status: 'active' | 'suspended'): Promise<Profile> {
+  setClientStatus(userId: string, status: 'active' | 'suspended' | 'deleted'): Promise<Profile> {
     return this.profiles('setUserStatus', { userId, status });
   }
 
+  // ---------- Lawyers ----------
+
+  listLawyers(): Promise<AdminLawyer[]> {
+    return this.chat('admin:lawyers');
+  }
+
+  // Creates their login and emails them a link to set a password
+  approveLawyer(lawyerId: string): Promise<AdminLawyer[]> {
+    return this.chat('admin:approveLawyer', { lawyerId });
+  }
+
+  rejectLawyer(lawyerId: string): Promise<AdminLawyer[]> {
+    return this.chat('admin:rejectLawyer', { lawyerId });
+  }
+
   // ---------- Helpers ----------
+
+  private async chat<T>(action: string, data: object = {}): Promise<T> {
+    const res = await fetch(CHAT_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, idToken: await this.auth.idToken(), data }),
+    });
+    const result = (await res.json()) as ProfilesResult<T>;
+    if (!result.ok) throw new Error(result.error);
+    return result.data;
+  }
 
   private async services<T>(action: string, operation: string, extra: object = {}): Promise<T> {
     const body = { idToken: await this.auth.idToken(), action, operation, ...extra };

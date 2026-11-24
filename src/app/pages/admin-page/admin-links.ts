@@ -18,6 +18,12 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     text: 'Services, prices, discounts and categories.',
   },
   { label: 'Clients', link: '/admin/clients', ready: true, text: 'Everyone with an account.' },
+  {
+    label: 'Lawyers',
+    link: '/admin/lawyers',
+    ready: true,
+    text: 'Lawyer applications: approve or decline.',
+  },
   { label: 'Orders', link: '/admin/orders', ready: true, text: 'Orders and their progress.' },
   { label: 'Blog', link: '/admin/blog', ready: true, text: 'Published articles.' },
   {

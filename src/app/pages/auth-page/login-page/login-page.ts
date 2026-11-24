@@ -37,9 +37,12 @@ export class LoginPage {
 
     try {
       await signIn();
-      const next = this.auth.needsVerification()
-        ? '/verify-email'
-        : safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
+      // Staff always start in their Workspace
+      const next = this.auth.isStaff()
+        ? '/workspace'
+        : this.auth.needsVerification()
+          ? '/verify-email'
+          : safeReturnUrl(this.route.snapshot.queryParamMap.get('returnUrl'));
       await this.router.navigateByUrl(next);
     } catch (error) {
       this.error.set(authErrorMessage(error));

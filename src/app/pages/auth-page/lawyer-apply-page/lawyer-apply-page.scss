@@ -1,0 +1,122 @@
+@use '../auth-shared' as *;
+
+@include auth-page;
+
+// A longer form than login: a little wider
+.auth {
+  grid-template-columns: minmax(0, 1fr) min(100%, 440px);
+}
+
+.form {
+  max-width: 440px;
+}
+
+// ---------- Pitch ----------
+
+.perks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 6px 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding-left: 14px;
+    border-left: 3px solid rgb(var(--yellow));
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+
+  strong {
+    color: var(--text);
+  }
+}
+
+// ---------- Form ----------
+
+.block-title {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+// Two fields side by side, one column on phones
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.area {
+  width: 100%;
+  padding: 12px 16px;
+  resize: vertical;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+
+  &:focus {
+    border-color: rgb(var(--yellow));
+    outline: none;
+  }
+
+  &::placeholder {
+    color: var(--text-muted);
+  }
+}
+
+.file {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  input {
+    padding: 10px 12px;
+    border: 1px dashed var(--card-border);
+    background: var(--card-bg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+  }
+
+  &:focus-within input {
+    border-color: rgb(var(--yellow));
+  }
+}
+
+.agree {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+
+  input {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    margin-top: 2px;
+    accent-color: rgb(var(--yellow));
+  }
+}
+
+// The bot trap: off screen, not just hidden, so bots still fill it
+.trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}

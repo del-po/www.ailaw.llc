@@ -17,6 +17,8 @@
             name="firstName"
             autocomplete="given-name"
             maxlength="80"
+            pattern="[A-Za-z][A-Za-z '.\-]*"
+            title="Please write your name in English letters"
             [value]="profile.FirstName"
           />
         </app-shape>
@@ -28,6 +30,8 @@
             name="lastName"
             autocomplete="family-name"
             maxlength="80"
+            pattern="[A-Za-z][A-Za-z '.\-]*"
+            title="Please write your name in English letters"
             [value]="profile.LastName"
           />
         </app-shape>

@@ -1,0 +1,176 @@
+<div class="page">
+  <app-header />
+
+  <main class="auth">
+    <section class="intro">
+      <div class="code" aria-hidden="true"><span class="code-tag">Careers</span></div>
+      <h1 class="title">Join as a lawyer</h1>
+      <p class="lead">
+        AI Law prepares the routine part of every case: the client's details, the first draft,
+        the checklist. You bring the judgement, review the work and sign it off.
+      </p>
+
+      <ul class="perks">
+        <li><strong>Fixed fee per task.</strong> You know what each assignment pays before you start.</li>
+        <li><strong>Your own hours.</strong> Work from anywhere and take as many assignments as you want.</li>
+        <li><strong>No client chasing.</strong> AI Law finds the clients, takes the payment and handles delivery.</li>
+        <li><strong>Tools built for the case.</strong> Each assignment comes with its own instructions, templates and research help.</li>
+      </ul>
+
+      <p class="small">
+        We review every application ourselves. If yours is approved, we will call you for an
+        interview.
+      </p>
+    </section>
+
+    @if (sent()) {
+      <section class="form" aria-live="polite">
+        <p class="message message--ok">
+          <strong>Application received.</strong> Thank you. We sent a confirmation to your email.
+          If your application is approved, we will call you to arrange an interview.
+        </p>
+        <a class="btn" routerLink="/"><app-shape name="field">Back to the home page</app-shape></a>
+      </section>
+    } @else {
+      <form #form class="form" (submit)="submit($event, form)">
+        <h2 class="block-title">About you</h2>
+
+        <div class="pair">
+          <label class="field">
+            <span class="field-label">First name</span>
+            <app-shape class="field-box" name="field">
+              <input name="firstName" autocomplete="given-name" maxlength="80" required
+                pattern="[A-Za-z][A-Za-z '.\-]*" title="Please write your name in English letters" />
+            </app-shape>
+          </label>
+          <label class="field">
+            <span class="field-label">Last name</span>
+            <app-shape class="field-box" name="field">
+              <input name="lastName" autocomplete="family-name" maxlength="80" required
+                pattern="[A-Za-z][A-Za-z '.\-]*" title="Please write your name in English letters" />
+            </app-shape>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Email</span>
+          <app-shape class="field-box" name="field">
+            <input name="email" type="email" autocomplete="email" maxlength="200" required />
+          </app-shape>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Phone</span>
+          <app-shape class="field-box" name="field">
+            <input name="phone" type="tel" autocomplete="tel" maxlength="30" required />
+          </app-shape>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Personal ID number</span>
+          <app-shape class="field-box" name="field">
+            <input name="personalId" maxlength="20" required />
+          </app-shape>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Address</span>
+          <app-shape class="field-box" name="field">
+            <input name="address" autocomplete="street-address" maxlength="300" required />
+          </app-shape>
+        </label>
+
+        <h2 class="block-title">Your practice</h2>
+
+        <div class="pair">
+          <label class="field">
+            <span class="field-label">Bar license number</span>
+            <app-shape class="field-box" name="field">
+              <input name="barLicenseNumber" maxlength="50" required />
+            </app-shape>
+          </label>
+          <label class="field">
+            <span class="field-label">Licensed since</span>
+            <app-shape class="field-box" name="field">
+              <input name="licensedSince" type="month" required />
+            </app-shape>
+          </label>
+        </div>
+
+        <label class="field">
+          <span class="field-label">Specializations · optional</span>
+          <app-shape class="field-box" name="field">
+            <input name="specializations" maxlength="500" placeholder="e.g. tax, contracts, litigation" />
+          </app-shape>
+        </label>
+
+        <label class="field">
+          <span class="field-label">Languages · optional</span>
+          <app-shape class="field-box" name="field">
+            <input name="languages" maxlength="200" placeholder="e.g. Georgian, English, Russian" />
+          </app-shape>
+        </label>
+
+        <label class="field">
+          <span class="field-label">About you · optional</span>
+          <textarea class="area" name="bio" rows="4" maxlength="2000"
+            placeholder="Your experience, the kind of work you enjoy"></textarea>
+        </label>
+
+        <label class="field">
+          <span class="field-label">IBAN · for your payouts</span>
+          <app-shape class="field-box" name="field">
+            <input name="iban" maxlength="40" required placeholder="GE00 XX00 0000 0000 0000 00" />
+          </app-shape>
+        </label>
+
+        <h2 class="block-title">Documents</h2>
+        <p class="small">PDF, JPG or PNG, up to {{ maxFileMb }} MB each.</p>
+
+        <label class="file">
+          <span class="field-label">ID document (passport or ID card)</span>
+          <input name="idDocument" type="file" accept=".pdf,.jpg,.jpeg,.png" required />
+        </label>
+        <label class="file">
+          <span class="field-label">Bar license</span>
+          <input name="barLicense" type="file" accept=".pdf,.jpg,.jpeg,.png" required />
+        </label>
+        <label class="file">
+          <span class="field-label">CV · optional</span>
+          <input name="cv" type="file" accept=".pdf,.jpg,.jpeg,.png" />
+        </label>
+        <label class="file">
+          <span class="field-label">Photo · optional</span>
+          <input name="photo" type="file" accept=".jpg,.jpeg,.png" />
+        </label>
+
+        <!-- Hidden from people; bots fill it in -->
+        <input class="trap" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" />
+
+        <label class="agree">
+          <input type="checkbox" name="consentData" required />
+          <span>
+            I agree that AI Law processes my personal data and documents to review my application,
+            as described in the <a class="link" routerLink="/privacy" target="_blank">Privacy Policy</a>.
+          </span>
+        </label>
+        <label class="agree">
+          <input type="checkbox" name="consentTruth" required />
+          <span>The information and documents I provide are true and up to date.</span>
+        </label>
+
+        @if (error()) {
+          <p class="message" role="alert">{{ error() }}</p>
+        }
+
+        <button type="submit" class="btn" [disabled]="busy()">
+          <app-shape name="field">{{ busy() ? 'Sending…' : 'Send application' }}</app-shape>
+        </button>
+
+        <p class="small">Looking for legal help instead? <a class="link" routerLink="/register">Create a client account</a></p>
+      </form>
+    }
+  </main>
+
+  <app-footer />
+</div>

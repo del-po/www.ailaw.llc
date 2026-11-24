@@ -49,12 +49,12 @@ export class HomePage {
 
   protected readonly background = computed(() =>
     this.theme.isDark()
-      ? '/images/home-img/background-dark.webp'
-      : '/images/home-img/background-light.webp',
+      ? 'images/home-img/background-dark.webp'
+      : 'images/home-img/background-light.webp',
   );
 
   protected readonly robot = computed(() =>
-    this.theme.isDark() ? '/images/home-img/robot-dark.webp' : '/images/home-img/robot-light.webp',
+    this.theme.isDark() ? 'images/home-img/robot-dark.webp' : 'images/home-img/robot-light.webp',
   );
 
   // ---------- Side menu ----------

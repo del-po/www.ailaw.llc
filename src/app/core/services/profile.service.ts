@@ -5,7 +5,7 @@ import { Profile, ProfileUpdate } from '../models/profile';
 
 // Google Apps Script web app writing the Users sheet (Drive → Profiles)
 const PROFILES_API =
-  'https://script.google.com/macros/s/AKfycbx_Vvn6RD5TcfudfTzLA8AuqD3i7xo5l0VPos1nOOZ-1yl3TdQy9mqQ2qpBpXk-7cTVtQ/exec';
+  'https://script.google.com/macros/s/AKfycbx5Fyq1g3mRy3rgVqsJjO42_LNmEwzEb_-uRFdW5JfUyp-TZi4JWGRg8dgWqi5FChuyjw/exec';
 
 // Sent as plain text: Apps Script can't answer the browser's CORS pre-check,
 // and plain text requests skip it

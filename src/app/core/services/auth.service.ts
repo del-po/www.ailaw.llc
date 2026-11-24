@@ -7,7 +7,9 @@ import { ProfileApiError, ProfileService } from './profile.service';
 
 type FirebaseSdk = typeof import('./firebase-sdk');
 
-// Firebase signs people in; the Profiles API keeps their row in the Users sheet.
+// Firebase signs people in; the Profiles API keeps their row in the Clients sheet.
+// Staff (lawyers) carry { staff: true, lawyerId } on their login instead and get
+// no client row: they work in the Workspace.
 // Firebase runs in the browser only: on the server nobody is signed in.
 @Service()
 export class AuthService {
@@ -20,6 +22,10 @@ export class AuthService {
 
   readonly user = signal<User | null>(null);
   readonly profile = signal<Profile | null>(null);
+
+  // Set when an admin approves their lawyer application
+  readonly isStaff = signal(false);
+  readonly lawyerId = signal<string | null>(null);
 
   // False until Firebase has said whether someone is signed in
   readonly ready = signal(false);
@@ -48,9 +54,11 @@ export class AuthService {
       }
 
       this.sdkPromise.then(({ auth, onAuthStateChanged }) =>
-        onAuthStateChanged(auth, (user) => {
+        onAuthStateChanged(auth, async (user) => {
           this.user.set(user);
           if (!user) this.profile.set(null);
+          // Known before the guards run, so staff land in the Workspace
+          await this.loadStaff().catch(() => undefined);
           this.ready.set(true);
           resolve();
         }),
@@ -74,13 +82,20 @@ export class AuthService {
   async signIn(email: string, password: string): Promise<void> {
     const { auth, signInWithEmailAndPassword } = await this.sdk();
     await signInWithEmailAndPassword(auth, email, password);
+    await this.loadStaff(true);
     await this.syncProfile();
   }
 
   async signInWithGoogle(): Promise<void> {
     const { auth, signInWithPopup, GoogleAuthProvider } = await this.sdk();
     await signInWithPopup(auth, new GoogleAuthProvider());
+    await this.loadStaff(true);
     await this.syncProfile();
+  }
+
+  // Where someone goes right after signing in
+  homeUrl(): string {
+    return this.isStaff() ? '/workspace' : '/profile';
   }
 
   async register(name: string, email: string, password: string): Promise<void> {
@@ -98,6 +113,8 @@ export class AuthService {
   async signOut(): Promise<void> {
     const { auth, signOut } = await this.sdk();
     await signOut(auth);
+    this.isStaff.set(false);
+    this.lawyerId.set(null);
   }
 
   // ---------- Email verification ----------
@@ -212,9 +229,26 @@ export class AuthService {
 
   // ---------- Helpers ----------
 
-  // Writes the Users row. A suspended account is signed out again; any other
+  // Staff and lawyer code from the login itself. force = fresh token, needed
+  // right after signing in, when the approval may be newer than the token.
+  private async loadStaff(force = false): Promise<void> {
+    const { auth } = await this.sdk();
+    const user = auth.currentUser;
+    if (!user) {
+      this.isStaff.set(false);
+      this.lawyerId.set(null);
+      return;
+    }
+    const { claims } = await user.getIdTokenResult(force);
+    this.isStaff.set(claims['staff'] === true);
+    this.lawyerId.set(typeof claims['lawyerId'] === 'string' ? claims['lawyerId'] : null);
+  }
+
+  // Writes the Clients row. A suspended account is signed out again; any other
   // failure doesn't block the sign-in and is retried at the next one.
+  // Staff have no client row.
   private async syncProfile(data = {}): Promise<void> {
+    if (this.isStaff()) return;
     try {
       const profile = await firstValueFrom(this.profiles.sync(await this.idToken(), data));
       this.profile.set(profile);

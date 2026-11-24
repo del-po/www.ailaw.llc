@@ -1,0 +1,171 @@
+@use 'page' as *;
+@use '../profile-shared' as *;
+@use 'order-list' as *;
+
+// ==========================================================
+// Profile documents: the client's folders and files, like Drive
+// ==========================================================
+
+@include page-theme;
+@include form-controls;
+@include section-head;
+@include order-list;
+
+:host {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+// Documents / 2026 / Contract Drafting
+.path {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.step {
+  color: var(--text-muted);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:hover {
+    color: var(--text);
+  }
+
+  &.is-current {
+    color: var(--text);
+    text-decoration: none;
+  }
+}
+
+.sep {
+  color: var(--text-muted);
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.up {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+
+  &:hover {
+    color: var(--text);
+  }
+}
+
+.search {
+  width: 300px;
+  max-width: 100%;
+
+  input {
+    font-size: 13px;
+  }
+}
+
+.order-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.entries {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+  transition: opacity var(--ease);
+
+  &.is-loading {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+}
+
+.entry {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+}
+
+button.entry:hover .entry-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.kind {
+  padding: 3px 0;
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+  color: var(--text-muted);
+
+  &--folder {
+    border-color: var(--ink-bg);
+    background: var(--ink-bg);
+    color: var(--ink-text);
+  }
+}
+
+.entry-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.entry-name {
+  overflow: hidden;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.go {
+  color: var(--text-muted);
+}
+
+.get {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+
+  &:disabled {
+    opacity: 0.6;
+  }
+}
+
+.empty {
+  padding: 14px 0;
+}

@@ -1,0 +1,92 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Lawyers</h1>
+  <p class="lead">
+    {{ pending() }} new application{{ pending() === 1 ? '' : 's' }}. Check the documents, hold
+    the interview, then approve: the lawyer gets a login and an email to set their password.
+  </p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="message message--ok" role="status">{{ notice() }}</p>
+}
+
+<div class="tools">
+  <div class="filters" role="tablist">
+    @for (f of filters; track f.id) {
+      <button
+        type="button"
+        class="filter"
+        role="tab"
+        [class.is-active]="filter() === f.id"
+        [attr.aria-selected]="filter() === f.id"
+        (click)="filter.set(f.id)"
+      >
+        {{ f.label }}
+      </button>
+    }
+  </div>
+
+  <label class="search">
+    <span class="visually-hidden">Search lawyers</span>
+    <app-shape class="field-box" name="field">
+      <input #box type="search" placeholder="Search by name, email or code…" (input)="search.set(box.value)" />
+    </app-shape>
+  </label>
+</div>
+
+@if (lawyers()) {
+  <div class="rows">
+    @for (lawyer of list(); track lawyer.lawyerId) {
+      <div class="row lawyer">
+        <button type="button" class="cell-main open" (click)="toggle(lawyer)">
+          <span class="cell-title">{{ lawyer.firstName }} {{ lawyer.lastName }}</span>
+          <span class="cell-sub">{{ lawyer.email }}{{ lawyer.phone ? ' · ' + lawyer.phone : '' }}</span>
+        </button>
+        <span class="cell-mono">
+          {{ lawyer.lawyerId }}<br />Applied {{ lawyer.appliedAt | date: 'MMM d, y' }}
+        </span>
+        <span class="status" [class.status--active]="lawyer.status === 'active' || lawyer.status === 'approved'">
+          {{ lawyer.status }}
+        </span>
+        @if (lawyer.status === 'applied') {
+          <span class="actions">
+            <button type="button" class="action" [disabled]="busyId() === lawyer.lawyerId" (click)="approve(lawyer)">
+              Approve
+            </button>
+            <button type="button" class="action action--muted" [disabled]="busyId() === lawyer.lawyerId" (click)="reject(lawyer)">
+              Decline
+            </button>
+          </span>
+        } @else {
+          <span></span>
+        }
+
+        @if (open() === lawyer.lawyerId) {
+          <dl class="details">
+            <div><dt>Bar license</dt><dd>{{ lawyer.barLicenseNumber }} · since {{ lawyer.licensedSince }}</dd></div>
+            <div><dt>Specializations</dt><dd>{{ lawyer.specializations || '—' }}</dd></div>
+            <div><dt>Languages</dt><dd>{{ lawyer.languages || '—' }}</dd></div>
+            <div><dt>About</dt><dd>{{ lawyer.bio || '—' }}</dd></div>
+            @if (lawyer.verifiedAt) {
+              <div><dt>Approved</dt><dd>{{ lawyer.verifiedAt | date: 'MMM d, y' }}</dd></div>
+            }
+            @if (lawyer.folderUrl) {
+              <div>
+                <dt>Documents</dt>
+                <dd><a class="link" [href]="lawyer.folderUrl" target="_blank" rel="noopener">Open folder in Drive</a></dd>
+              </div>
+            }
+          </dl>
+        }
+      </div>
+    } @empty {
+      <p class="small">No lawyers here.</p>
+    }
+  </div>
+} @else if (!error()) {
+  <div class="skeleton" aria-busy="true"></div>
+}

@@ -30,6 +30,8 @@ const MESSAGES: Record<string, string> = {
   PROFILE_REQUIRED: 'Your profile is still being set up. Log out, log in again and retry.',
   BUSY_TRY_AGAIN: 'Many orders at once. Please try again in a moment.',
   ORDER_NOT_FOUND: 'This order could not be found.',
+  VERIFICATION_REQUIRED:
+    'This service is for verified clients only. Contact our lawyer Gocha Okreshidze (https://t.me/ailawllc, info@ailaw.llc) to get verified.',
   FORBIDDEN: 'Only admins can do this.',
   CANNOT_CHANGE_OWN_ACCOUNT: "You can't suspend your own account.",
   PRIVILEGED_ACCOUNT: 'Admin and staff accounts are changed directly in the Users sheet.',

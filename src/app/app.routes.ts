@@ -3,6 +3,7 @@ import { authGuard } from './core/guards/auth-guard';
 import { adminGuard } from './core/guards/admin-guard';
 import { guestGuard } from './core/guards/guest-guard';
 import { authActionGuard } from './core/guards/auth-action-guard';
+import { staffGuard } from './core/guards/staff-guard';
 
 export const routes: Routes = [
   // Main
@@ -106,6 +107,15 @@ export const routes: Routes = [
   },
   { path: 'auth/action', canActivate: [authActionGuard], children: [] },
 
+  // Lawyer applications (public, no account needed)
+  {
+    path: 'join',
+    loadComponent: () =>
+      import('./pages/auth-page/lawyer-apply-page/lawyer-apply-page').then(
+        (m) => m.LawyerApplyPage,
+      ),
+  },
+
   // Legal
   {
     path: 'privacy',
@@ -170,6 +180,14 @@ export const routes: Routes = [
     ],
   },
 
+  // Workspace (approved lawyers only)
+  {
+    path: 'workspace',
+    canMatch: [staffGuard],
+    loadComponent: () =>
+      import('./pages/workspace-page/workspace-page').then((m) => m.WorkspacePage),
+  },
+
   // Bio
 
   { path: 'bio', loadComponent: () => import('./pages/bio-page/bio-page').then((m) => m.BioPage) },
@@ -200,6 +218,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./pages/admin-page/admin-clients-page/admin-clients-page').then(
             (m) => m.AdminClientsPage,
+          ),
+      },
+      {
+        path: 'lawyers',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-lawyers-page/admin-lawyers-page').then(
+            (m) => m.AdminLawyersPage,
           ),
       },
       {

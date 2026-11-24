@@ -1,0 +1,120 @@
+<div class="workspace">
+  <aside class="side" aria-label="Workspace">
+    <div class="brand">
+      <span class="brand-tag">AI Law</span>
+      <span class="brand-name">Workspace</span>
+    </div>
+
+    <nav class="list" aria-label="Assignments">
+      <div class="list-head">
+        <p class="list-title">Assignments</p>
+        <button type="button" class="refresh" (click)="refresh()" aria-label="Refresh">↻</button>
+      </div>
+
+      @if (!assignments()) {
+        <p class="small">Loading…</p>
+      } @else if (!assignments()!.length) {
+        <p class="small">No assignments yet.</p>
+      } @else {
+        @for (a of open(); track a.assignmentId) {
+          <button
+            type="button"
+            class="item"
+            [class.is-active]="a.assignmentId === selectedId()"
+            (click)="select(a)"
+          >
+            <span class="item-title">{{ a.service }}</span>
+            <span class="item-sub">{{ a.orderNumber }}</span>
+            <span class="item-meta">
+              <span class="pill" [class.pill--live]="a.status === 'in_progress'">{{
+                a.status === 'in_progress' ? 'in progress' : 'new'
+              }}</span>
+              @if (a.role !== 'lead') {
+                <span class="pill">{{ a.role }}</span>
+              }
+            </span>
+          </button>
+        }
+
+        @if (done().length) {
+          <p class="list-title list-title--done">Completed</p>
+          @for (a of done(); track a.assignmentId) {
+            <button
+              type="button"
+              class="item item--done"
+              [class.is-active]="a.assignmentId === selectedId()"
+              (click)="select(a)"
+            >
+              <span class="item-title">{{ a.service }}</span>
+              <span class="item-sub">{{ a.orderNumber }}</span>
+            </button>
+          }
+        }
+      }
+    </nav>
+
+    <!-- Profile menu: the profile page, earnings and settings come here -->
+    <div class="me">
+      <span class="avatar" aria-hidden="true">{{ me()?.firstName?.charAt(0) ?? '·' }}</span>
+      <span class="me-text">
+        <span class="me-name">{{ me() ? me()!.firstName + ' ' + me()!.lastName : '…' }}</span>
+        <span class="me-code">{{ me()?.lawyerId }}</span>
+      </span>
+      <button type="button" class="sign-out" (click)="signOut()">Log out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    @if (error()) {
+      <p class="message" role="alert">{{ error() }}</p>
+    } @else {
+      @if (selected(); as a) {
+      <article class="case">
+        <div class="code" aria-hidden="true">
+          <span class="code-tag">{{ a.role === 'lead' ? 'Lead lawyer' : a.role }}</span>
+        </div>
+        <h1 class="title">{{ a.service }}</h1>
+
+        <dl class="facts">
+          <div><dt>Order</dt><dd>{{ a.orderNumber }}</dd></div>
+          <div><dt>Client</dt><dd>{{ a.client || '—' }}</dd></div>
+          <div><dt>Assigned</dt><dd>{{ a.assignedAt | date: 'MMM d, y' }}</dd></div>
+          <div><dt>Payment</dt><dd>{{ a.paymentStatus || '—' }}</dd></div>
+          @if (a.fee !== null) {
+            <div><dt>Your fee</dt><dd>{{ a.fee | number: '1.0-2' }} {{ a.currency }}</dd></div>
+          }
+        </dl>
+
+        <section class="tasks">
+          <h2 class="block-title">Your tasks</h2>
+          @if (tasks(a).length) {
+            <ol>
+              @for (t of tasks(a); track $index) {
+                <li>{{ t }}</li>
+              }
+            </ol>
+          } @else {
+            <p class="small">No tasks listed for this assignment yet.</p>
+          }
+        </section>
+
+        <app-shape class="note" name="field">
+          <span>The case chat, documents and delivery for this assignment come here next.</span>
+        </app-shape>
+      </article>
+    } @else {
+      <div class="empty">
+        <div class="code" aria-hidden="true"><span class="code-tag">Workspace</span></div>
+        <h1 class="title">Welcome{{ me() ? ', ' + me()!.firstName : '' }}</h1>
+        <p class="lead">
+          Your assignments will appear on the left. Each one opens here with the case details,
+          its documents and an AI assistant set up for that task.
+        </p>
+        <app-shape class="note" name="field">
+          <span>When AI Law gives you an assignment, you'll also get an email.</span>
+        </app-shape>
+      </div>
+      }
+    }
+  </main>
+</div>

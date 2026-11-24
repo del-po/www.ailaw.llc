@@ -11,7 +11,7 @@ import {
 import { Shape } from '../../../shared/kit/shapes/shape';
 import { adminErrorMessage } from '../admin-links';
 
-type Filter = 'all' | 'unpaid' | OrderStatus;
+type Filter = 'all' | 'open' | 'unpaid' | OrderStatus;
 
 @Component({
   selector: 'app-admin-orders-page',
@@ -28,6 +28,7 @@ export class AdminOrdersPage {
   protected readonly paymentStatuses = Object.keys(PAYMENT_STATUS_LABELS) as PaymentStatus[];
 
   protected readonly filters: { value: Filter; label: string }[] = [
+    { value: 'open', label: 'Open' },
     { value: 'all', label: 'All' },
     { value: 'unpaid', label: 'Unpaid' },
     { value: 'placed', label: 'Placed' },
@@ -37,7 +38,7 @@ export class AdminOrdersPage {
   ];
 
   protected readonly all = signal<Order[] | null>(null);
-  protected readonly filter = signal<Filter>('all');
+  protected readonly filter = signal<Filter>('open');
   protected readonly search = signal('');
   protected readonly error = signal<string | null>(null);
   protected readonly busy = signal(false);
@@ -55,7 +56,20 @@ export class AdminOrdersPage {
         (order.paymentStatus !== 'unpaid' || order.orderStatus === 'cancelled')
       )
         return false;
-      if (filter !== 'all' && filter !== 'unpaid' && order.orderStatus !== filter) return false;
+      // Open = placed or in progress: everything not yet completed or cancelled
+      if (
+        filter === 'open' &&
+        order.orderStatus !== 'placed' &&
+        order.orderStatus !== 'in_progress'
+      )
+        return false;
+      if (
+        filter !== 'all' &&
+        filter !== 'open' &&
+        filter !== 'unpaid' &&
+        order.orderStatus !== filter
+      )
+        return false;
 
       const text = [order.orderNumber, order.customerName, order.customerEmail, order.customerPhone]
         .join(' ')

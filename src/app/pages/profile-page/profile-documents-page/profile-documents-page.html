@@ -1,2 +1,121 @@
-<!-- Replaced by the real page once documents have a backend -->
-<app-coming-soon link="/profile/documents" />
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Profile</span></div>
+  <h1 class="title">Documents</h1>
+  <p class="lead">Agreements, invoices and the work we prepared for you, in folders by year and order.</p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+
+@if (view(); as current) {
+  <!-- Where you are: each step takes you back to that folder -->
+  <nav class="path" aria-label="Folder path">
+    @for (step of current.path; track step.folderId; let last = $last) {
+      @if (last) {
+        <span class="step is-current" aria-current="page">{{ label(step.name).title }}</span>
+      } @else {
+        <button type="button" class="step" (click)="open(step.folderId)">
+          {{ label(step.name).title }}
+        </button>
+        <span class="sep" aria-hidden="true">/</span>
+      }
+    }
+  </nav>
+
+  <div class="toolbar">
+    @if (current.path.length > 1) {
+      <button
+        type="button"
+        class="up"
+        (click)="open(current.path[current.path.length - 2].folderId)"
+      >
+        ← Back
+      </button>
+    } @else {
+      <span></span>
+    }
+    <label class="search">
+      <span class="visually-hidden">Search this folder</span>
+      <app-shape class="field-box" name="field">
+        <input
+          #box
+          type="search"
+          placeholder="Search this folder…"
+          [value]="search()"
+          (input)="search.set(box.value)"
+        />
+      </app-shape>
+    </label>
+  </div>
+
+  @if (current.order; as order) {
+    <p class="order-info">
+      Order {{ order.orderNumber }}
+      <span class="status" [class.status--active]="order.orderStatus === 'completed'">
+        {{ orderLabels[order.orderStatus] }}
+      </span>
+      <span class="status" [class.status--active]="order.paymentStatus === 'paid'">
+        {{ paymentLabels[order.paymentStatus] }}
+      </span>
+    </p>
+  }
+
+  <ul class="entries" [class.is-loading]="loading()">
+    @for (folder of folders(); track folder.folderId) {
+      <li>
+        <button type="button" class="entry" (click)="open(folder.folderId)">
+          <span class="kind kind--folder" aria-hidden="true">DIR</span>
+          <span class="entry-main">
+            <span class="entry-name">{{ label(folder.name).title }}</span>
+            <span class="cell-sub">
+              @if (label(folder.name).date) {
+                {{ label(folder.name).date | date: 'MMM d, y, HH:mm' }}
+              }
+              @if (folder.order; as order) {
+                · {{ order.orderNumber }} · {{ paymentLabels[order.paymentStatus] }}
+              }
+            </span>
+          </span>
+          <span class="go" aria-hidden="true">→</span>
+        </button>
+      </li>
+    }
+    @for (file of files(); track file.fileId) {
+      <li class="entry">
+        <span class="kind">{{ kind(file) }}</span>
+        <span class="entry-main">
+          <span class="entry-name">{{ file.name }}</span>
+          <span class="cell-sub">
+            {{ file.updatedAt | date: 'MMM d, y' }}
+            @if (size(file.size)) {
+              · {{ size(file.size) }}
+            }
+          </span>
+        </span>
+        <button
+          type="button"
+          class="get"
+          [disabled]="downloading() === file.fileId"
+          (click)="download(file)"
+        >
+          {{ downloading() === file.fileId ? 'Downloading…' : 'Download' }}
+        </button>
+      </li>
+    }
+    @if (!folders().length && !files().length) {
+      <li class="small empty">
+        @if (search()) {
+          Nothing in this folder matches.
+        } @else if (current.path.length === 1) {
+          No documents yet. They appear here once you place an order.
+          <a class="link" routerLink="/services">Browse services</a>
+        } @else {
+          This folder is empty.
+        }
+      </li>
+    }
+  </ul>
+} @else if (loading() && !error()) {
+  <div class="skeleton" aria-busy="true"></div>
+}

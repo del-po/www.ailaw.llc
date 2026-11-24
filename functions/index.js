@@ -11,6 +11,9 @@
 //   GEMINI_API_KEY   Google AI Studio key   (Settings: Provider = gemini)
 //   OPENAI_API_KEY   OpenAI key             (Settings: Provider = openai)
 //   MAIL_SECRET      shared with the Chat Apps Script, which sends the emails
+//
+// Staff (lawyers) carry { staff: true, lawyerId } on their Firebase login,
+// set when the admin approves their application (staff.js).
 // ==========================================================
 
 import { onRequest } from 'firebase-functions/v2/https';
@@ -29,6 +32,13 @@ import {
   renameConversation,
   sendMessage,
 } from './engine.js';
+import {
+  adminApproveLawyer,
+  adminLawyers,
+  adminRejectLawyer,
+  staffAssignments,
+  staffMe,
+} from './staff.js';
 
 initializeApp();
 
@@ -39,20 +49,40 @@ const MAIL_SECRET = defineSecret('MAIL_SECRET');
 // Emails go out through the Chat Apps Script (MailApp), which already has
 // permission to send from your Gmail
 const MAIL_RELAY =
-  'https://script.google.com/macros/s/AKfycbw1OhIw-0aAg_S0ARYvqp9xtfLp-EeNgOLMEjV32-O2wrUe1Dq8HIJXX5RsQWfRyX8V/exec';
+  'https://script.google.com/macros/s/AKfycbz6eb8HgMdSWWl_5eoEguD_muPHZDcvuJq02bWZI3OQyo4b_f9rXF9ck1-7hISr-yfO7g/exec';
 
 // Sites allowed to call the chat
-const ORIGINS = [/^http:\/\/localhost(:\d+)?$/, 'https://ailaw.llc', 'https://www.ailaw.llc'];
+const ORIGINS = [
+  /^http:\/\/localhost(:\d+)?$/,
+  'https://ailaw.llc',
+  'https://www.ailaw.llc',
+  'https://del-po.github.io',
+];
 
 const ROUTES = {
   'chat:list': (caller) => listConversations(caller),
   'chat:get': (caller, data) => getConversation(caller, data),
   'chat:rename': (caller, data) => renameConversation(caller, data),
   'chat:delete': (caller, data) => deleteConversation(caller, data),
-  'orders:list': (caller) => listMyOrders(caller),
-  'admin:tasks': (caller) => adminTasks(requireAdmin(caller)),
+  'orders:list': (caller, data, env) => listMyOrders(caller, env),
+  'admin:tasks': (caller, data, env) => adminTasks(requireAdmin(caller), env),
   'admin:completeStep': (caller, data, env) => adminCompleteStep(requireAdmin(caller), data, env),
+  'admin:lawyers': (caller) => adminLawyers(requireAdmin(caller)),
+  'admin:approveLawyer': (caller, data, env) => adminApproveLawyer(requireAdmin(caller), data, env),
+  'admin:rejectLawyer': (caller, data, env) => adminRejectLawyer(requireAdmin(caller), data, env),
+  'staff:me': (caller) => staffMe(requireStaff(caller)),
+  'staff:assignments': (caller) => staffAssignments(requireStaff(caller)),
 };
+
+// Links in emails (e.g. the lawyer's invite) lead back to the site the
+// request came from: localhost while testing, www.ailaw.llc when live
+const SITE = 'https://www.ailaw.llc';
+function siteOrigin(req) {
+  const origin = String(req.headers.origin || '');
+  return ORIGINS.some((o) => (o instanceof RegExp ? o.test(origin) : o === origin))
+    ? origin
+    : SITE;
+}
 
 export const chat = onRequest(
   {
@@ -72,6 +102,7 @@ export const chat = onRequest(
     const env = {
       keys: { gemini: GEMINI_API_KEY.value(), openai: OPENAI_API_KEY.value() },
       sendMail: (mail) => sendMail(mail, MAIL_SECRET.value()),
+      origin: siteOrigin(req),
     };
 
     // ---------- Streamed answer ----------
@@ -128,7 +159,11 @@ async function identify(idToken, guestId) {
       email: account.email || '',
       name: user?.DisplayName || account.name || '',
       isAdmin: !!user && user.Role === 'admin' && status === 'active',
+      isStaff: account.staff === true,
+      lawyerId: account.lawyerId || '',
       signedIn: true,
+      // Passed on to the Orders Apps Script, which places chat orders as this client
+      idToken,
     };
   }
 
@@ -141,6 +176,11 @@ async function identify(idToken, guestId) {
 
 function requireAdmin(caller) {
   if (!caller.isAdmin) throw new ApiError('FORBIDDEN');
+  return caller;
+}
+
+function requireStaff(caller) {
+  if (!caller.isStaff || !caller.lawyerId) throw new ApiError('FORBIDDEN');
   return caller;
 }
 

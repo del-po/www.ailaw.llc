@@ -37,7 +37,13 @@ export class RegisterPage {
 
     try {
       await action();
-      await this.router.navigateByUrl(this.auth.needsVerification() ? '/verify-email' : '/profile');
+      // "Continue with Google" by an approved lawyer goes to their Workspace
+      const next = this.auth.isStaff()
+        ? '/workspace'
+        : this.auth.needsVerification()
+          ? '/verify-email'
+          : '/profile';
+      await this.router.navigateByUrl(next);
     } catch (error) {
       this.error.set(authErrorMessage(error));
     } finally {
