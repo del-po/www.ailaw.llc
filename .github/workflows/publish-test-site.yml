@@ -1,0 +1,54 @@
+# ==========================================================
+# Test site: every push to main rebuilds the website and publishes it to
+# https://del-po.github.io/www.ailaw.llc (the gh-pages branch).
+# The real address, www.ailaw.llc, is not touched by this.
+# ==========================================================
+
+name: Publish test site
+
+on:
+  push:
+    branches: [main]
+    # Backend-only changes don't change the site
+    paths-ignore:
+      - 'functions/**'
+      - 'firestore.rules'
+      - 'storage.rules'
+      - 'firestore.indexes.json'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# A newer push replaces a build still running
+concurrency:
+  group: test-site
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The site lives under /www.ailaw.llc/ on GitHub Pages
+      - run: npx ng build --base-href /www.ailaw.llc/
+
+      # GitHub Pages shows 404.html for pages it doesn't have as files
+      # (e.g. /profile/settings), so the app can open them itself
+      - run: |
+          cp dist/www.ailaw.llc/browser/index.csr.html dist/www.ailaw.llc/browser/404.html
+          touch dist/www.ailaw.llc/browser/.nojekyll
+
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: dist/www.ailaw.llc/browser
+          publish_branch: gh-pages
