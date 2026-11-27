@@ -46,7 +46,9 @@ export class ChatPage {
   protected readonly loggedIn = inject(AuthService).signedIn;
 
   protected readonly robot = computed(() =>
-    this.theme.isDark() ? 'images/home-img/robot-dark.webp' : 'images/home-img/robot-light.webp',
+    this.theme.isDark()
+      ? 'images/chat-img/robot-profile-dark.png'
+      : 'images/chat-img/robot-profile-light.png',
   );
 
   // History drawer on smaller screens

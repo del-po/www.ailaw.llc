@@ -1,18 +1,10 @@
 import { Service, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { firstValueFrom, map } from 'rxjs';
 import { Order, OrderPlaced, OrderRequest, OrderStatus, PaymentStatus } from '../models/order';
 import { DocumentDownload, FolderView } from '../models/document';
 import { AuthService } from './auth.service';
-
-// Google Apps Script web app writing the Orders spreadsheet (Drive → Orders)
-const ORDERS_API =
-  'https://script.google.com/macros/s/AKfycbyaIvPqskHw6eW_9IM43PHQd0YV2Y0gZJM7x6ZC--KHWeZZJplDGEmQ51JUKYy7tD2H/exec';
-
-// Plain text skips the browser's CORS pre-check, which Apps Script can't answer
-const HEADERS = new HttpHeaders({ 'Content-Type': 'text/plain;charset=utf-8' });
-
-type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string };
+import { DOORS, DoorResult } from './doors';
 
 @Service()
 export class OrderService {
@@ -39,7 +31,7 @@ export class OrderService {
     return this.call('getFolder', { folderId });
   }
 
-  // One file from those folders; the script checks it belongs to this client
+  // One file from those folders; the backend checks it belongs to this client
   document(fileId: string): Promise<DocumentDownload> {
     return this.call('getDocument', { fileId });
   }
@@ -47,26 +39,26 @@ export class OrderService {
   // ---------- Admin ----------
 
   adminList(): Promise<Order[]> {
-    return this.call('adminListOrders');
+    return this.call('adminListOrders', {}, DOORS.admin);
   }
 
   adminGet(orderId: string): Promise<Order> {
-    return this.call('adminGetOrder', { orderId });
+    return this.call('adminGetOrder', { orderId }, DOORS.admin);
   }
 
   adminUpdate(
     orderId: string,
     changes: { orderStatus?: OrderStatus; paymentStatus?: PaymentStatus },
   ): Promise<Order> {
-    return this.call('adminUpdateOrder', { orderId, ...changes });
+    return this.call('adminUpdateOrder', { orderId, ...changes }, DOORS.admin);
   }
 
   // ---------- Helpers ----------
 
-  private async call<T>(action: string, data: object = {}): Promise<T> {
+  private async call<T>(action: string, data: object = {}, door: string = DOORS.client): Promise<T> {
     const body = { action, idToken: await this.auth.idToken(), data };
     return firstValueFrom(
-      this.http.post<ApiResult<T>>(ORDERS_API, JSON.stringify(body), { headers: HEADERS }).pipe(
+      this.http.post<DoorResult<T>>(door, body).pipe(
         map((result) => {
           if (!result.ok) throw new Error(result.error);
           return result.data;

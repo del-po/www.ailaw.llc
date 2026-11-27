@@ -1,6 +1,11 @@
 // ==========================================================
 // AI Law — Firebase Functions
 //
+// The new backend (core + plugins + doors, on Firestore and Storage):
+//   client, lawyer, admin, onOrderPaid, daily — see doors/index.js
+// The functions below (chat, on Google Sheets) keep the current site
+// working until the website switches to the doors; then they go.
+//
 // chat: the chat backend (moved here from Apps Script so answers can stream).
 //   POST { action, idToken | guestId, data }
 //   - "chat:send" streams newline-separated JSON events:
@@ -18,7 +23,7 @@
 
 import { onRequest } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
-import { initializeApp } from 'firebase-admin/app';
+import { getApps, initializeApp } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { ApiError } from './ai.js';
 import {
@@ -40,7 +45,7 @@ import {
   staffMe,
 } from './staff.js';
 
-initializeApp();
+if (!getApps().length) initializeApp();
 
 const GEMINI_API_KEY = defineSecret('GEMINI_API_KEY');
 const OPENAI_API_KEY = defineSecret('OPENAI_API_KEY');
@@ -206,3 +211,5 @@ function safeJson(text) {
     return {};
   }
 }
+
+export { admin, client, daily, lawyer, onOrderPaid } from './doors/index.js';

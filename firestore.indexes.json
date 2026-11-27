@@ -1,0 +1,30 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "Steps",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "capability", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "Steps",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "owner", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "Assignments",
+      "fieldPath": "lawyerId",
+      "indexes": [
+        { "order": "ASCENDING", "queryScope": "COLLECTION" },
+        { "order": "ASCENDING", "queryScope": "COLLECTION_GROUP" }
+      ]
+    }
+  ]
+}

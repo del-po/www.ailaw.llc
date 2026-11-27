@@ -1,17 +1,8 @@
 import { Service, inject } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { Profile, ProfileUpdate } from '../models/profile';
-
-// Google Apps Script web app writing the Users sheet (Drive → Profiles)
-const PROFILES_API =
-  'https://script.google.com/macros/s/AKfycbx5Fyq1g3mRy3rgVqsJjO42_LNmEwzEb_-uRFdW5JfUyp-TZi4JWGRg8dgWqi5FChuyjw/exec';
-
-// Sent as plain text: Apps Script can't answer the browser's CORS pre-check,
-// and plain text requests skip it
-const HEADERS = new HttpHeaders({ 'Content-Type': 'text/plain;charset=utf-8' });
-
-type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string };
+import { DOORS, DoorResult } from './doors';
 
 export interface DeletionTicket {
   userId: string;
@@ -26,7 +17,7 @@ export class ProfileApiError extends Error {}
 export class ProfileService {
   private readonly http = inject(HttpClient);
 
-  // Creates or refreshes the Users row after every sign-in
+  // Creates or refreshes the client record after every sign-in
   sync(
     idToken: string,
     data: { firstName?: string; lastName?: string; displayName?: string } = {},
@@ -47,14 +38,14 @@ export class ProfileService {
     return this.post<DeletionTicket>({ action: 'prepareAccountDeletion', idToken });
   }
 
-  // Step 3, after the Firebase account is gone: removes the Users row
+  // Step 3, after the Firebase account is gone: unlinks the client record
   finalizeDeletion(ticket: DeletionTicket): Observable<{ deleted: boolean }> {
     return this.post<{ deleted: boolean }>({ action: 'finalizeAccountDeletion', ticket });
   }
 
   private post<T>(body: object): Observable<T> {
     return this.http
-      .post<ApiResult<T>>(PROFILES_API, JSON.stringify(body), { headers: HEADERS })
+      .post<DoorResult<T>>(DOORS.client, body)
       .pipe(
         map((result) => {
           if (!result.ok) throw new ProfileApiError(result.error);

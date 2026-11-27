@@ -242,7 +242,9 @@
   position: relative;
   width: 44%;
   height: 44%;
-  object-fit: contain;
+  object-fit: cover;
+  border-radius: 50%;
+  overflow: hidden;
   filter: drop-shadow(0 12px 18px rgb(0 0 0 / 0.18));
 }
 

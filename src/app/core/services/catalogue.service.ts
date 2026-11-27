@@ -2,10 +2,7 @@ import { Service, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import { LegalService, ServiceCategory } from '../models/legal-service';
-
-// Google Apps Script web app reading the Products and Categories sheets
-const SERVICES_API =
-  'https://script.google.com/macros/s/AKfycbyNs3jIEwcxkMs6B5311wqt3gkbDseNf2zOQgpKu0vmskRE9mLTK0jqvDq8wPBl4XyS/exec';
+import { DOORS, DoorResult } from './doors';
 
 // Field names as the API sends them
 interface ApiService {
@@ -27,8 +24,6 @@ interface ApiCategory {
   ID: number;
   Name: string;
 }
-
-type ApiResult<T> = T | { error: string };
 
 @Service()
 export class CatalogueService {
@@ -54,7 +49,7 @@ export class CatalogueService {
   }
 
   private get<T>(params: Record<string, string>): Observable<T> {
-    return this.http.get<ApiResult<T>>(SERVICES_API, { params }).pipe(map(unwrap));
+    return this.http.get<DoorResult<T>>(DOORS.client, { params }).pipe(map(unwrap));
   }
 }
 
@@ -75,10 +70,8 @@ function toLegalService(s: ApiService): LegalService {
   };
 }
 
-// The API reports problems as { error } with a 200 status, so turn those into real errors
-function unwrap<T>(result: ApiResult<T>): T {
-  if (result && typeof result === 'object' && 'error' in result) {
-    throw new Error(result.error);
-  }
-  return result as T;
+// Problems come back as { ok: false, error } with a 200 status: turn them into real errors
+function unwrap<T>(result: DoorResult<T>): T {
+  if (!result.ok) throw new Error(result.error);
+  return result.data;
 }

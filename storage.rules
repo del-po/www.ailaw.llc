@@ -1,0 +1,12 @@
+rules_version = '2';
+
+// Storage: clients' documents, lawyers' files, agreements. Nothing is read
+// or written from the browser; downloads go through the doors. Public
+// pictures (blog covers) use download-token links, which these rules allow.
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

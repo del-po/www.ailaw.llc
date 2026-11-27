@@ -1,11 +1,7 @@
 import { Service, inject } from '@angular/core';
 import { Assignment, StaffMe } from '../models/lawyer';
 import { AuthService } from './auth.service';
-
-// The chat function also serves the Workspace (staff: actions)
-const CHAT_API = 'https://europe-west1-website-ai-law.cloudfunctions.net/chat';
-
-type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string };
+import { DOORS, DoorResult } from './doors';
 
 @Service()
 export class WorkspaceService {
@@ -22,12 +18,12 @@ export class WorkspaceService {
   }
 
   private async call<T>(action: string, data: object = {}): Promise<T> {
-    const res = await fetch(CHAT_API, {
+    const res = await fetch(DOORS.lawyer, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, idToken: await this.auth.idToken(), data }),
     });
-    const result = (await res.json()) as ApiResult<T>;
+    const result = (await res.json()) as DoorResult<T>;
     if (!result.ok) throw new Error(result.error);
     return result.data;
   }

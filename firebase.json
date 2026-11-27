@@ -4,7 +4,21 @@
       "source": "functions",
       "codebase": "ailaw",
       "runtime": "nodejs22",
-      "ignore": ["node_modules", ".git", "*.log"]
+      "ignore": [
+        "node_modules",
+        ".git",
+        "*.log"
+      ]
     }
-  ]
+  ],
+  "firestore": [
+    {
+      "database": "ailaw",
+      "rules": "firestore.rules",
+      "indexes": "firestore.indexes.json"
+    }
+  ],
+  "storage": {
+    "rules": "storage.rules"
+  }
 }

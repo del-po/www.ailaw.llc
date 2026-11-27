@@ -2,14 +2,10 @@ import { Service, PLATFORM_ID, computed, effect, inject, signal } from '@angular
 import { isPlatformBrowser } from '@angular/common';
 import { ChatMessage, Conversation, LawyerTask, MessagePart } from '../models/chat';
 import { AuthService } from './auth.service';
-
-// Firebase Function "chat" (functions/index.js); data lives in Drive → Chat
-const CHAT_API = 'https://europe-west1-website-ai-law.cloudfunctions.net/chat';
+import { DOORS, DoorResult } from './doors';
 
 // Visitors who aren't signed in get a random id, kept in this browser
 const GUEST_KEY = 'ailaw.guest';
-
-type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string };
 
 interface ServerConversation {
   id: string;
@@ -153,14 +149,14 @@ export class ChatService {
     await this.ask(question, [{ type: 'text', text: question }], messageId);
   }
 
-  // ---------- Lawyer (admin) ----------
+  // ---------- Lawyer tasks (admin door) ----------
 
   tasks(): Promise<LawyerTask[]> {
-    return this.call('admin:tasks');
+    return this.call('admin:tasks', {}, DOORS.admin);
   }
 
   completeStep(orderId: string, stepNo: number, result = '', note = ''): Promise<LawyerTask[]> {
-    return this.call('admin:completeStep', { orderId, stepNo, result, note });
+    return this.call('admin:completeStep', { orderId, stepNo, result, note }, DOORS.admin);
   }
 
   // ---------- Internals ----------
@@ -314,20 +310,20 @@ export class ChatService {
     );
   }
 
-  private async call<T>(action: string, data: object = {}): Promise<T> {
-    const res = await fetch(CHAT_API, {
+  private async call<T>(action: string, data: object = {}, door: string = DOORS.client): Promise<T> {
+    const res = await fetch(door, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: await this.body(action, data),
     });
-    const result = (await res.json()) as ApiResult<T>;
+    const result = (await res.json()) as DoorResult<T>;
     if (!result.ok) throw new Error(result.error);
     return result.data;
   }
 
   // Reads the answer as it is written: one JSON event per line
   private async stream(data: object, onEvent: (event: SendEvent) => void): Promise<void> {
-    const res = await fetch(CHAT_API, {
+    const res = await fetch(DOORS.client, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: await this.body('chat:send', data),
