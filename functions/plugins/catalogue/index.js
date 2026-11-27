@@ -10,6 +10,7 @@
 
 import { ApiError, COMPANY, db, formatDate, now, slugify, toDate } from '../../core/app.js';
 import { addPart } from '../../core/chat.js';
+import { publicUrl } from '../../core/files.js';
 import { pluginRecords } from '../../core/loader.js';
 import { clientByUid, forget, priceOf, serviceBySlug, services, setting } from '../../core/records.js';
 
@@ -17,10 +18,18 @@ const STATUSES = { active: 'Active', inactive: 'Inactive', draft: 'Draft' };
 const fromLabel = (label) => String(label || '').toLowerCase();
 const dateText = (value) => (toDate(value) ? formatDate(value) : '');
 
-// Accepts a Drive share link, a bare Drive file id or any image URL
-function imageUrl(value) {
+// A Storage path (services/….jpg) becomes a picture link; Drive links and ids
+// and other URLs still work
+async function imageUrl(value) {
   const text = String(value ?? '').trim();
   if (!text) return '';
+  if (/^services\//.test(text)) {
+    try {
+      return await publicUrl(text);
+    } catch {
+      return '';
+    }
+  }
   const id = text.match(/\/d\/([\w-]{20,})/) || text.match(/[?&]id=([\w-]{20,})/);
   if (id) return 'https://lh3.googleusercontent.com/d/' + id[1];
   if (/^[\w-]{20,}$/.test(text)) return 'https://lh3.googleusercontent.com/d/' + text;
@@ -29,7 +38,7 @@ function imageUrl(value) {
 
 // ---------- Public ----------
 
-function toPublic(s) {
+async function toPublic(s) {
   const { price, finalPrice, onSale } = priceOf(s);
   return {
     ID: Number(s.number),
@@ -38,7 +47,7 @@ function toPublic(s) {
     ShortDescription: s.shortDescription || '',
     Description: s.description || '',
     Category: s.category || '',
-    Image: imageUrl(s.image),
+    Image: await imageUrl(s.image),
     Currency: s.currency || 'GEL',
     Price: price,
     FinalPrice: finalPrice,
@@ -259,7 +268,7 @@ export default {
   sides: ['client', 'admin'],
   actions: {
     client: {
-      services: { public: true, run: async () => (await activeServices()).map(toPublic) },
+      services: { public: true, run: async () => Promise.all((await activeServices()).map(toPublic)) },
       service: {
         public: true,
         run: async (_, data) => {
