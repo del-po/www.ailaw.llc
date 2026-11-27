@@ -12,7 +12,11 @@
 //                      order's "Internal" folder (never shown to the client)
 //   staff:deliver      the lead lawyer's result → the client's order folder
 //                      (their Documents page) and to the client by email;
-//                      the assignment is done
+//                      the assignment is done. The result is an uploaded
+//                      file, or (path) a file already in the case — how the
+//                      case chat delivers
+// Case chat tools: case_overview (answers), deliver_case_file (proposes;
+// runs staff:deliver on Confirm).
 // The case chat is scoped to the assignment (chatScope): one thread per
 // assignment, with the case in the AI's instructions and only the
 // service's own know-how.
@@ -24,6 +28,7 @@ import { scopedConversation } from '../../core/chat.js';
 import { join, listFolder, readFile, saveFile } from '../../core/files.js';
 import { lawyerById, orderByNumber, orderItems, orderSteps, serviceBySlug } from '../../core/records.js';
 import { completeStep, mail } from '../../core/steps.js';
+import { proposeAction } from '../../core/chat-actions.js';
 
 const INTERNAL = 'Internal';
 const MAX_BYTES = 15 * 1024 * 1024;
@@ -152,6 +157,15 @@ async function upload(caller, data) {
   return caseDocuments(order);
 }
 
+// A file already in the case (e.g. the lawyer's own working folder), as an upload
+async function caseFile(order, relative) {
+  const parts = insideCase(relative);
+  const stored = await readFile(join(order.folder, ...parts));
+  if (!stored) throw new ApiError('DOCUMENT_NOT_FOUND');
+  if (stored.size > MAX_BYTES) throw new ApiError('FILE_TOO_LARGE');
+  return { name: cleanName(parts.at(-1)), type: stored.contentType, content: stored.content };
+}
+
 // ---------- Delivery ----------
 
 async function deliver(caller, data, env) {
@@ -159,7 +173,7 @@ async function deliver(caller, data, env) {
   if (assignment.role !== 'lead') throw new ApiError('ONLY_LEAD_DELIVERS');
   if (assignment.status === 'done') throw new ApiError('ALREADY_DELIVERED');
   if (!order.folder || order.folder.startsWith('drive:')) throw new ApiError('ORDER_HAS_NO_FOLDER');
-  const file = checkUpload(data.file);
+  const file = data.path ? await caseFile(order, data.path) : checkUpload(data.file);
   const note = cleanText(data.note, 2000);
   const path = await saveFile(join(order.folder, file.name), file.content, file.type);
 
@@ -241,6 +255,72 @@ async function chatScope(caller, data) {
   return { key: 'assignment:' + assignment.id, prompt, pluginIds: service?.plugin ? [service.plugin] : [] };
 }
 
+// ---------- Case chat tools ----------
+
+// The assignment a case-chat thread belongs to ("assignment:<id>")
+function scopedId(ctx) {
+  const key = String(ctx.scope?.key || '');
+  if (!key.startsWith('assignment:')) throw new ApiError('NOT_IN_A_CASE');
+  return key.slice('assignment:'.length);
+}
+
+const caseTool = (description, parameters, run) => ({
+  sides: ['lawyer'],
+  description,
+  parameters,
+  run: async (ctx, args) => {
+    try {
+      return await run(ctx, args || {});
+    } catch (err) {
+      if (err instanceof ApiError) return { error: err.code };
+      throw err;
+    }
+  },
+});
+
+const tools = {
+  case_overview: caseTool(
+    'This case now: the steps and their status, the client details, and every document with its path ' +
+      '(paths are what deliver_case_file needs).',
+    { type: 'object', properties: {} },
+    async (ctx) => {
+      // Read only: unlike opening the case, this changes nothing
+      const { order, assignment } = await ownAssignment(ctx.caller, scopedId(ctx));
+      const steps = await orderSteps(order.orderNumber);
+      return {
+        assignment: toAssignment(assignment.id, assignment, order),
+        details: order.details || {},
+        notes: order.customerNotes || '',
+        steps: steps.map((st) => ({ label: st.clientLabel, owner: st.owner, status: st.status, task: st.lawyerTask || '' })),
+        documents: (await caseDocuments(order)).flatMap((g) => g.files.map((f) => ({ group: g.title, name: f.name, path: f.path }))),
+      };
+    },
+  ),
+  deliver_case_file: caseTool(
+    "Proposes delivering a file already in the case (path from case_overview, usually the lawyer's own folder) to " +
+      'the client as the result, with an optional note: it goes to their Documents page and by email, and the ' +
+      'assignment is done. Only the lead lawyer delivers. Shows a Confirm card; nothing happens until they confirm.',
+    { type: 'object', properties: { path: { type: 'string' }, note: { type: 'string' } }, required: ['path'] },
+    async (ctx, a) => {
+      const id = scopedId(ctx);
+      const { order, assignment } = await ownAssignment(ctx.caller, id);
+      if (assignment.role !== 'lead') return { error: 'ONLY_LEAD_DELIVERS' };
+      if (assignment.status === 'done') return { error: 'ALREADY_DELIVERED' };
+      await caseFile(order, a.path);
+      return proposeAction(ctx, {
+        action: 'staff:deliver',
+        data: { assignmentId: id, path: a.path, note: a.note || '' },
+        title: `Deliver "${a.path.split('/').pop()}" to the client`,
+        lines: [
+          `${order.serviceName} · ${order.orderNumber}`,
+          "It goes to the client's Documents page and by email; your assignment is done.",
+          ...(a.note ? [`Note: ${a.note}`] : []),
+        ],
+      });
+    },
+  ),
+};
+
 export default {
   id: 'assignments',
   sides: ['lawyer'],
@@ -255,4 +335,5 @@ export default {
     },
   },
   chatScope,
+  tools,
 };

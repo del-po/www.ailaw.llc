@@ -73,7 +73,15 @@ export interface ActionState {
   error: string;
 }
 
+// A download button for one of the client's own files
+export interface DocumentPart {
+  type: 'document';
+  fileId: string; // inside the client's documents
+  name: string;
+}
+
 export type MessagePart =
+  | DocumentPart
   | TextPart
   | FilePart
   | ServicePart

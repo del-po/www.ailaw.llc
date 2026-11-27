@@ -60,6 +60,19 @@ export default {
     },
   },
   tools: {
+    my_order_details: {
+      sides: ['client'],
+      description: 'One of the signed-in client\'s orders in full (by its number AIL-…): services, prices, statuses, payment reference.',
+      parameters: { type: 'object', properties: { order: { type: 'string' } }, required: ['order'] },
+      run: async (ctx, args) => {
+        if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
+        const wanted = String(args.order || '').trim().toUpperCase();
+        const order = (await myOrders(ctx.caller)).find((o) => o.orderNumber === wanted);
+        if (!order) return { error: 'ORDER_NOT_FOUND' };
+        addPart(ctx, await orderCard(order.orderNumber));
+        return toOrder(order, await orderItems(order.orderNumber));
+      },
+    },
     get_my_orders: {
       sides: ['client'],
       description: "The signed-in client's orders with the progress of each.",

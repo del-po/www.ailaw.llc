@@ -330,6 +330,9 @@
                         ></div>
                       }
                     }
+                    @if (part.type === 'action') {
+                      <app-action-card [part]="part" [chat]="workspace" />
+                    }
                   }
                 </div>
               } @empty {

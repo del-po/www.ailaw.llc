@@ -16,6 +16,7 @@ import { WorkspaceService } from '../../core/services/workspace.service';
 import { ChatMessage } from '../../core/models/chat';
 import { Assignment, CaseView, Earnings, LawyerProfile, StaffMe } from '../../core/models/lawyer';
 import { ChatInput, ChatSubmit } from '../../shared/components/chat-input/chat-input';
+import { ActionCard } from '../../shared/components/action-card/action-card';
 import { Shape } from '../../shared/kit/shapes/shape';
 import { formatMessage } from '../chat-page/format-message';
 
@@ -24,13 +25,13 @@ import { formatMessage } from '../chat-page/format-message';
 // chat, delivery) or the lawyer's own profile and earnings.
 @Component({
   selector: 'app-workspace-page',
-  imports: [DatePipe, DecimalPipe, Shape, ChatInput],
+  imports: [DatePipe, DecimalPipe, Shape, ChatInput, ActionCard],
   templateUrl: './workspace-page.html',
   styleUrl: './workspace-page.scss',
 })
 export class WorkspacePage {
   private readonly auth = inject(AuthService);
-  private readonly workspace = inject(WorkspaceService);
+  protected readonly workspace = inject(WorkspaceService);
   private readonly router = inject(Router);
   private readonly thread = viewChild<ElementRef<HTMLElement>>('thread');
 

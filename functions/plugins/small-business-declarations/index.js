@@ -12,6 +12,8 @@
 //   declarations:report    report last month's income (the profile form)
 //   declarations:draft     a chat draft, to fill the form ("Edit")
 //   declarations:confirm   the client presses Confirm on a chat draft
+//   declarations:cancelMine  the client ends their ongoing service (their
+//                          agreement lets either side cancel any time)
 // The chat never saves income itself: it drafts, shows a card with every
 // entry and the total, and only the client's Confirm saves it.
 // Admin (a client is named by key: registration ID, or ID-… code):
@@ -690,6 +692,11 @@ export default {
         return { month: d.month, status: d.status, entries: d.entries.map(({ date, currency, amount }) => ({ date, currency, amount })) };
       },
       'declarations:confirm': (caller, data) => confirmDraft(caller, data),
+      'declarations:cancelMine': async (caller) => {
+        const client = await ownClient(caller);
+        await clientRef(client.id).update({ status: 'ended', endedAt: now(), endedBy: 'client', updatedAt: now() });
+        return { status: 'ended' };
+      },
     },
     admin: {
       'declarations:list': (caller, data) => list(data),
@@ -708,6 +715,32 @@ export default {
   },
   tools: {
     ...adminTools,
+    cancel_my_declarations: {
+      sides: ['client'],
+      description:
+        "Proposes ending the signed-in client's ongoing 1% declarations service (they may cancel any time; declarations " +
+        'already filed stay in their documents). Shows a Confirm card; nothing changes until they confirm.',
+      parameters: { type: 'object', properties: {} },
+      run: async (ctx) => {
+        if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
+        try {
+          const client = await ownClient(ctx.caller);
+          return proposeAction(ctx, {
+            action: 'declarations:cancelMine',
+            data: {},
+            title: 'End your 1% declarations service',
+            lines: [
+              `For ${client.name}${client.registrationId ? ' (' + client.registrationId + ')' : ''}`,
+              'We stop filing your monthly declarations. Declarations already filed stay in your documents.',
+            ],
+            danger: true,
+          });
+        } catch (err) {
+          if (err instanceof ApiError) return { error: err.code };
+          throw err;
+        }
+      },
+    },
     draft_declaration_income: {
       sides: ['client'],
       description:

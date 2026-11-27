@@ -14,7 +14,9 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ChatService } from '../../core/services/chat.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { ChatMessage, DeclarationPart } from '../../core/models/chat';
+import { ChatMessage, DeclarationPart, DocumentPart } from '../../core/models/chat';
+import { OrderService } from '../../core/services/order.service';
+import { ActionCard } from '../../shared/components/action-card/action-card';
 import { DeclarationsService } from '../../core/services/declarations.service';
 import { authErrorMessage } from '../../core/services/auth-errors';
 import { ChatInput, ChatSubmit } from '../../shared/components/chat-input/chat-input';
@@ -28,7 +30,7 @@ const STICK_DISTANCE = 80;
 
 @Component({
   selector: 'app-chat-page',
-  imports: [RouterLink, DecimalPipe, ChatInput, Icon, Header, BankTransfer],
+  imports: [RouterLink, DecimalPipe, ChatInput, Icon, Header, BankTransfer, ActionCard],
   templateUrl: './chat-page.html',
   styleUrl: './chat-page.scss',
   host: {
@@ -68,6 +70,29 @@ export class ChatPage {
   protected readonly copiedId = signal<string | null>(null);
 
   protected readonly format = formatMessage;
+
+  // ---------- A client's file the chat shows ----------
+
+  private readonly orders = inject(OrderService);
+  protected readonly downloading = signal<string | null>(null);
+
+  protected async download(part: DocumentPart): Promise<void> {
+    this.downloading.set(part.fileId);
+    try {
+      const result = await this.orders.document(part.fileId);
+      const bytes = Uint8Array.from(atob(result.data), (c) => c.charCodeAt(0));
+      const url = URL.createObjectURL(new Blob([bytes], { type: result.mimeType }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = result.name;
+      link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 10_000);
+    } catch {
+      // The chat stays as it is; the file is also on the Documents page
+    } finally {
+      this.downloading.set(null);
+    }
+  }
 
   // ---------- 1% declarations cards ----------
 

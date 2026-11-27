@@ -249,6 +249,20 @@
                     }
                   </div>
                 }
+                @if (part.type === 'action') {
+                  <app-action-card [part]="part" [chat]="chat" />
+                }
+                @if (part.type === 'document') {
+                  <button
+                    type="button"
+                    class="msg-file msg-file--download"
+                    [disabled]="downloading() === part.fileId"
+                    (click)="download(part)"
+                  >
+                    <app-icon name="file" />
+                    <span>{{ downloading() === part.fileId ? 'Opening…' : part.name }}</span>
+                  </button>
+                }
                 @if (part.type === 'payment') {
                   <app-bank-transfer
                     class="msg-payment"

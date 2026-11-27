@@ -1,6 +1,6 @@
 import { Service, inject } from '@angular/core';
 import { Upload } from '../models/admin';
-import { ChatMessage } from '../models/chat';
+import { ActionState, ChatMessage } from '../models/chat';
 import {
   Assignment,
   CaseFolder,
@@ -108,6 +108,20 @@ export class WorkspaceService {
     }
     // The connection closed before the answer was complete
     if (!finished) throw new Error('SERVER_ERROR');
+  }
+
+  // ---------- Proposed actions (cards with Confirm / Cancel) ----------
+
+  confirmAction(actionId: string): Promise<ActionState> {
+    return this.call('chat:confirmAction', { actionId });
+  }
+
+  cancelAction(actionId: string): Promise<ActionState> {
+    return this.call('chat:cancelAction', { actionId });
+  }
+
+  actionStatus(actionId: string): Promise<ActionState> {
+    return this.call('chat:actionStatus', { actionId });
   }
 
   private async call<T>(action: string, data: object = {}): Promise<T> {

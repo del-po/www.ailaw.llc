@@ -1,11 +1,17 @@
 import { Component, afterNextRender, input, signal } from '@angular/core';
 import { ActionPart, ActionState } from '../../../core/models/chat';
-import { ChatService } from '../../../core/services/chat.service';
 import { authErrorMessage } from '../../../core/services/auth-errors';
 
 // A change the chat proposed: what will happen, and Confirm / Cancel. Only
 // Confirm runs it (through the same door action as its button would). Used
 // by every side's chat; `chat` is that side's chat service.
+// What the card needs from a side's chat service (client, lawyer, admin)
+export interface ActionDoor {
+  confirmAction(actionId: string): Promise<ActionState>;
+  cancelAction(actionId: string): Promise<ActionState>;
+  actionStatus(actionId: string): Promise<ActionState>;
+}
+
 @Component({
   selector: 'app-action-card',
   templateUrl: './action-card.html',
@@ -13,7 +19,7 @@ import { authErrorMessage } from '../../../core/services/auth-errors';
 })
 export class ActionCard {
   readonly part = input.required<ActionPart>();
-  readonly chat = input.required<ChatService>();
+  readonly chat = input.required<ActionDoor>();
 
   protected readonly state = signal<ActionState | null>(null);
   protected readonly busy = signal(false);

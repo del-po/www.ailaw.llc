@@ -10,6 +10,7 @@
 import { ApiError, db, iso } from '../../core/app.js';
 import { folderTime, join, listFolder, readFile } from '../../core/files.js';
 import { clientByUid, docs } from '../../core/records.js';
+import { addPart } from '../../core/chat.js';
 
 const INTERNAL = 'Internal';
 const MAX_BYTES = 25 * 1024 * 1024;
@@ -85,6 +86,49 @@ async function getDocument(caller, data) {
   return { name: parts[parts.length - 1], mimeType: file.contentType, data: file.content.toString('base64') };
 }
 
+// ---------- Chat tools ----------
+
+const chatError = (err) => {
+  if (err instanceof ApiError) return { error: err.code };
+  throw err;
+};
+
+const tools = {
+  my_documents: {
+    sides: ['client'],
+    description:
+      "The signed-in client's documents: a folder's subfolders and files (folderId '' = the top; then a folderId " +
+      'from the answer). Files have a fileId for show_my_document.',
+    parameters: { type: 'object', properties: { folderId: { type: 'string' } } },
+    run: async (ctx, args) => {
+      if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
+      try {
+        const f = await getFolder(ctx.caller, { folderId: args?.folderId || '' });
+        return { folderId: f.folderId, folders: f.folders, files: f.files };
+      } catch (err) {
+        return chatError(err);
+      }
+    },
+  },
+  show_my_document: {
+    sides: ['client'],
+    description: 'Shows the client a download button for one of their files (fileId from my_documents).',
+    parameters: { type: 'object', properties: { fileId: { type: 'string' } }, required: ['fileId'] },
+    run: async (ctx, args) => {
+      if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
+      try {
+        const parts = inside(args.fileId, 'DOCUMENT_NOT_FOUND');
+        const file = await readFile(join(await root(ctx.caller), ...parts));
+        if (!file) return { error: 'DOCUMENT_NOT_FOUND' };
+        addPart(ctx, { type: 'document', fileId: parts.join('/'), name: parts.at(-1) });
+        return { shown: true };
+      } catch (err) {
+        return chatError(err);
+      }
+    },
+  },
+};
+
 export default {
   id: 'documents',
   sides: ['client'],
@@ -94,4 +138,5 @@ export default {
       getDocument: (caller, data) => getDocument(caller, data),
     },
   },
+  tools,
 };

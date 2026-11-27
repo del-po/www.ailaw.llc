@@ -26,6 +26,7 @@
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { ApiError, cleanKey, cleanText, db, iso, newCode, now, titleCase } from '../../core/app.js';
 import { makeFolder, moveFolder } from '../../core/files.js';
+import { proposeAction } from '../../core/chat-actions.js';
 import { clientById, clientByUid, docs } from '../../core/records.js';
 import { getAuth } from 'firebase-admin/auth';
 
@@ -349,6 +350,41 @@ async function linkAccount(data) {
   return toProfile({ ...target, ...changes });
 }
 
+// ---------- Client chat tools ----------
+
+const PROFILE_FIELDS = ['firstName', 'lastName', 'displayName', 'phone'];
+
+const tools = {
+  my_profile: {
+    sides: ['client'],
+    description: "The signed-in client's own details: name, email, phone, client code, whether they are verified.",
+    parameters: { type: 'object', properties: {} },
+    run: async (ctx) => {
+      if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
+      const p = toProfile(await ownClient(ctx.caller));
+      return { name: p.DisplayName, firstName: p.FirstName, lastName: p.LastName, email: p.Email, phone: p.Phone, clientCode: p.ClientID, type: p.Type };
+    },
+  },
+  update_my_profile: {
+    sides: ['client'],
+    description:
+      "Proposes changing the signed-in client's own name (firstName, lastName, displayName) or phone; the email is " +
+      'changed in Profile → Settings. Shows a Confirm card; nothing changes until they confirm.',
+    parameters: { type: 'object', properties: Object.fromEntries(PROFILE_FIELDS.map((f) => [f, { type: 'string' }])) },
+    run: async (ctx, args) => {
+      if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
+      const data = Object.fromEntries(PROFILE_FIELDS.filter((f) => typeof args?.[f] === 'string').map((f) => [f, args[f]]));
+      if (!Object.keys(data).length) return { error: 'NOTHING_TO_CHANGE' };
+      return proposeAction(ctx, {
+        action: 'updateProfile',
+        data,
+        title: 'Change your details',
+        lines: Object.entries(data).map(([k, v]) => `${k}: ${v || '(empty)'}`),
+      });
+    },
+  },
+};
+
 export default {
   id: 'accounts',
   sides: ['client', 'admin'],
@@ -369,4 +405,5 @@ export default {
       'admin:linkAccount': (caller, data) => linkAccount(data),
     },
   },
+  tools,
 };

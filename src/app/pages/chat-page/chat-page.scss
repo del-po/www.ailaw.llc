@@ -595,6 +595,13 @@
   text-transform: uppercase;
 }
 
+// A file the chat offers: the same chip as an attachment, clickable
+.msg-file--download {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--yellow));
+}
+
 // ---------- 1% declaration card ----------
 
 // The income the chat read, waiting for the client's Confirm
