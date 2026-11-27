@@ -74,8 +74,8 @@
       @for (label of monthLabels; track label) {
         <span class="num" role="columnheader">{{ label }}</span>
       }
-      <span class="num" role="columnheader">Total</span>
-      <span class="num" role="columnheader">Debt</span>
+      <span class="num pin-total" role="columnheader">Total</span>
+      <span class="num pin-debt" role="columnheader">Debt</span>
     </div>
 
     @for (row of rows(); track row.client.key) {
@@ -118,8 +118,10 @@
               {{ v !== null ? (v | number: '1.2-2') : '—' }}
             </button>
           }
-          <span class="num total" role="cell">{{ row.incomeTotal | number: '1.2-2' }}</span>
-          <span class="num" role="cell" [class.is-debt]="c.outstandingDebt > 0">{{
+          <span class="num total pin-total" role="cell">{{
+            row.incomeTotal | number: '1.2-2'
+          }}</span>
+          <span class="num pin-debt" role="cell" [class.is-debt]="c.outstandingDebt > 0">{{
             c.outstandingDebt | number: '1.2-2'
           }}</span>
         </div>
@@ -131,8 +133,8 @@
               {{ v !== null ? (v | number: '1.2-2') : '—' }}
             </button>
           }
-          <span class="num total" role="cell">{{ row.taxTotal | number: '1.2-2' }}</span>
-          <span class="num" role="cell"></span>
+          <span class="num total pin-total" role="cell">{{ row.taxTotal | number: '1.2-2' }}</span>
+          <span class="num pin-debt" role="cell"></span>
         </div>
 
         @if (openKey() === c.key && openClient(); as oc) {
@@ -327,8 +329,10 @@
           @for (v of totals().income; track $index) {
             <span class="num" role="cell">{{ v | number: '1.2-2' }}</span>
           }
-          <span class="num total" role="cell">{{ totals().incomeTotal | number: '1.2-2' }}</span>
-          <span class="num" role="cell">{{ totals().debt | number: '1.2-2' }}</span>
+          <span class="num total pin-total" role="cell">{{
+            totals().incomeTotal | number: '1.2-2'
+          }}</span>
+          <span class="num pin-debt" role="cell">{{ totals().debt | number: '1.2-2' }}</span>
         </div>
         <div class="line line--sum line--tax" role="row">
           <span class="name" role="rowheader"></span>
@@ -336,8 +340,10 @@
           @for (v of totals().tax; track $index) {
             <span class="num" role="cell">{{ v | number: '1.2-2' }}</span>
           }
-          <span class="num total" role="cell">{{ totals().taxTotal | number: '1.2-2' }}</span>
-          <span class="num" role="cell"></span>
+          <span class="num total pin-total" role="cell">{{
+            totals().taxTotal | number: '1.2-2'
+          }}</span>
+          <span class="num pin-debt" role="cell"></span>
         </div>
       </div>
     }

@@ -109,6 +109,41 @@ $columns: 170px 48px repeat(12, 78px) 92px 76px;
   padding-top: 6px;
 }
 
+// Total and Debt stay pinned on the right, so the year's sums are always in view
+.pin-total,
+.pin-debt {
+  position: sticky;
+  z-index: 1;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  background: var(--sticky-bg);
+}
+
+.pin-total {
+  right: 78px;
+  border-left: 1px solid var(--line);
+  // Covers the 2px gap to Debt, where scrolled months would peek through
+  box-shadow: 2px 0 0 var(--sticky-bg);
+}
+
+.pin-debt {
+  right: 0;
+}
+
+.client-block.is-open,
+.client-block:hover {
+  .pin-total,
+  .pin-debt {
+    background: var(--sticky-open);
+  }
+
+  .pin-total {
+    box-shadow: 2px 0 0 var(--sticky-open);
+  }
+}
+
 // The page background is see-through, so the frozen cells get a solid copy of it
 :host {
   --sticky-bg: color-mix(in srgb, rgb(var(--grey)) 40%, white);
