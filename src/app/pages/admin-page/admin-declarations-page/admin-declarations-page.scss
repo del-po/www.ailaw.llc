@@ -1,0 +1,180 @@
+@use 'mixins' as *;
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin 1% declarations
+// ==========================================================
+
+@include admin-page;
+@include admin-editor;
+@include admin-filters;
+
+.sending {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 0 8px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  border: 1px solid var(--text);
+  color: var(--text);
+
+  &.is-live {
+    border-color: rgb(var(--yellow));
+    background: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.search {
+  width: 300px;
+  margin-left: auto;
+
+  input {
+    font-size: 13px;
+  }
+}
+
+// ---------- The year table ----------
+
+// One client per line: the name, then twelve months
+.table {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line);
+  overflow-x: auto;
+}
+
+.line {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) repeat(12, 64px);
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-width: 1000px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+
+  &--head {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  &:not(.line--head):hover,
+  &.is-open {
+    background: var(--card-bg);
+  }
+}
+
+.name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  padding-left: 8px;
+
+  .status {
+    margin-top: 4px;
+  }
+}
+
+// A month: reported (outlined) or delivered (yellow); "—" when nothing came in
+.month {
+  padding: 2px 4px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+  color: var(--text-muted);
+  border: 1px solid transparent;
+
+  &.is-reported {
+    border-color: var(--text);
+    color: var(--text);
+  }
+
+  &.is-delivered {
+    background: rgb(var(--yellow) / 0.35);
+    color: var(--text);
+  }
+}
+
+// ---------- A client's panel ----------
+
+.client-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 1000px;
+  padding: 16px 8px 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.month-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.month-pick {
+  width: 200px;
+}
+
+.field--action {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+
+  .btn {
+    width: 200px;
+  }
+}
+
+.file {
+  margin-top: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.settings {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+
+  .editor {
+    align-self: stretch;
+  }
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet) {
+  .search {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .panel {
+    min-width: 0;
+  }
+}

@@ -30,6 +30,12 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     text: 'Lawyer applications: approve or decline.',
   },
   { label: 'Orders', link: '/admin/orders', ready: true, text: 'Orders and their progress.' },
+  {
+    label: '1% Declarations',
+    link: '/admin/declarations',
+    ready: true,
+    text: 'Monthly income, declarations and delivery.',
+  },
   { label: 'Blog', link: '/admin/blog', ready: true, text: 'Write and publish articles.' },
   {
     label: 'Review',

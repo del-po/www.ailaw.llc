@@ -1,0 +1,326 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">1% Declarations</h1>
+  @if (data(); as d) {
+    <p class="lead">
+      {{ counts().total }} clients. Clients now report {{ monthName(d.reportingMonth) }}:
+      {{ counts().missing }} not reported, {{ counts().waiting }} to file{{
+        counts().pending ? ', ' + counts().pending + ' to verify' : ''
+      }}.
+      <span class="sending" [class.is-live]="d.sending === 'live'">{{
+        d.sending === 'live' ? 'Live' : 'Test mode: everything is sent to you'
+      }}</span>
+    </p>
+  }
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="message message--ok" role="status">{{ notice() }}</p>
+}
+
+<div class="toolbar">
+  <nav class="filters" aria-label="Year">
+    @for (y of years(); track y) {
+      <button
+        type="button"
+        class="filter"
+        [class.is-active]="year() === y"
+        [attr.aria-pressed]="year() === y"
+        (click)="pickYear(y)"
+      >
+        {{ y }}
+      </button>
+    }
+  </nav>
+
+  @if (showsReporting()) {
+    <nav class="filters" aria-label="Filter clients">
+      @for (item of filters; track item.value) {
+        <button
+          type="button"
+          class="filter"
+          [class.is-active]="filter() === item.value"
+          [attr.aria-pressed]="filter() === item.value"
+          (click)="filter.set(item.value)"
+        >
+          {{ item.label }}
+        </button>
+      }
+    </nav>
+  }
+
+  <label class="search">
+    <span class="visually-hidden">Search clients</span>
+    <app-shape class="field-box" name="field">
+      <input
+        #box
+        type="search"
+        placeholder="Name, registration ID, code…"
+        (input)="search.set(box.value)"
+      />
+    </app-shape>
+  </label>
+</div>
+
+@if (data()) {
+  <div class="table" role="table" [attr.aria-label]="'Income by month, ' + year()">
+    <div class="line line--head" role="row">
+      <span class="name" role="columnheader">Client</span>
+      @for (label of monthLabels; track label) {
+        <span class="month" role="columnheader">{{ label }}</span>
+      }
+    </div>
+
+    @for (client of list(); track client.registrationId) {
+      <div class="client-block">
+        <button
+          type="button"
+          class="line"
+          role="row"
+          [class.is-open]="openId() === client.registrationId"
+          [attr.aria-expanded]="openId() === client.registrationId"
+          (click)="toggle(client)"
+        >
+          <span class="name" role="cell">
+            <span class="cell-title">{{ client.name }}</span>
+            <span class="cell-sub"
+              >{{ client.registrationId
+              }}{{
+                client.outstandingDebt > 0
+                  ? ' · debt ' + (client.outstandingDebt | number: '1.2-2')
+                  : ''
+              }}</span
+            >
+            @if (client.status === 'pending') {
+              <span class="status status--draft">To verify</span>
+            }
+          </span>
+          @for (label of monthLabels; track label; let i = $index) {
+            @let m = cell(client, i);
+            <span
+              class="month"
+              role="cell"
+              [class.is-delivered]="!!m?.deliveredAt || !!m?.declarationFile"
+              [class.is-reported]="
+                m?.income !== null &&
+                m?.income !== undefined &&
+                !m?.deliveredAt &&
+                !m?.declarationFile
+              "
+              [attr.title]="
+                m
+                  ? 'Tax ' +
+                    (m.tax | number: '1.2-2') +
+                    (m.deliveredVia ? ' · ' + m.deliveredVia : '')
+                  : null
+              "
+            >
+              {{ m && m.income !== null ? (m.income | number: '1.0-0') : '—' }}
+            </span>
+          }
+        </button>
+
+        @if (openId() === client.registrationId && openClient(); as c) {
+          <div class="panel">
+            <p class="cell-sub">
+              {{ c.clientId || 'No client record yet' }} · Telegram
+              {{ c.telegramUsername ? '@' + c.telegramUsername : '' }} {{ c.telegramId || '—' }} ·
+              {{ c.email || 'no email' }}{{ c.serviceStart ? ' · since ' + c.serviceStart : '' }}
+            </p>
+
+            @if (c.status === 'pending') {
+              <div class="editor">
+                <h2 class="block-title">Registered through Telegram</h2>
+                <p class="small">
+                  Check {{ c.name }}'s identity, then verify: they get a client record and folder
+                  and can report income.
+                </p>
+                <div class="editor-actions">
+                  <button type="button" class="btn" [disabled]="busy()" (click)="verify(c)">
+                    <app-shape name="bar-notch">Verify</app-shape>
+                  </button>
+                </div>
+              </div>
+            } @else {
+              <!-- One month: income, then the filed declaration -->
+              <div class="editor">
+                <div class="month-head">
+                  <h2 class="block-title">Month</h2>
+                  <app-shape class="field-box month-pick" name="field">
+                    <input
+                      #monthBox
+                      type="month"
+                      [value]="month()"
+                      (change)="month.set(monthBox.value)"
+                    />
+                  </app-shape>
+                </div>
+
+                @let om = openMonth();
+                <p class="cell-sub">
+                  @if (om && om.income !== null) {
+                    Income {{ om.income | number: '1.2-2' }} GEL · tax
+                    {{ om.tax | number: '1.2-2' }} GEL · from {{ om.source
+                    }}{{ om.reportedAt ? ', ' + (om.reportedAt | date: 'MMM d, HH:mm') : '' }}
+                  } @else {
+                    No income reported for {{ monthName(month()) }}.
+                  }
+                  @if (om?.deliveredAt) {
+                    <br />Delivered {{ om!.deliveredAt | date: 'MMM d, HH:mm' }} by
+                    {{ om!.deliveredVia }}
+                  } @else if (om?.declarationFile) {
+                    <br />Declaration is in the folder but was not sent from here (e.g. filed in the
+                    old system)
+                  }
+                </p>
+
+                <div class="grid">
+                  <label class="field">
+                    <span class="field-label">Income, GEL (by hand)</span>
+                    <app-shape class="field-box" name="field">
+                      <input #income type="number" min="0" step="0.01" [value]="om?.income ?? ''" />
+                    </app-shape>
+                  </label>
+                  <div class="field field--action">
+                    <button
+                      type="button"
+                      class="btn btn--light"
+                      [disabled]="busy()"
+                      (click)="saveIncome(c, income.value)"
+                    >
+                      <app-shape name="bar-notch">Save income</app-shape>
+                    </button>
+                  </div>
+
+                  <label class="field">
+                    <span class="field-label">Filed declaration (PDF)</span>
+                    <input #pdf class="file" type="file" accept="application/pdf" />
+                  </label>
+                  <div class="field field--action">
+                    <button type="button" class="btn" [disabled]="busy()" (click)="deliver(c, pdf)">
+                      <app-shape name="bar-notch">{{
+                        busy() ? 'Working…' : 'Upload & deliver'
+                      }}</app-shape>
+                    </button>
+                    @if (om?.declarationFile) {
+                      <button type="button" class="action" [disabled]="busy()" (click)="resend(c)">
+                        Send again
+                      </button>
+                    }
+                  </div>
+                </div>
+              </div>
+
+              <!-- The client: debt from rs.ge and how to reach them -->
+              <form #contacts class="editor" (submit)="saveContacts(c, contacts, $event)">
+                <h2 class="block-title">Client</h2>
+                <div class="grid">
+                  <label class="field">
+                    <span class="field-label">Outstanding debt on rs.ge, GEL</span>
+                    <app-shape class="field-box" name="field">
+                      <input #debt type="number" min="0" step="0.01" [value]="c.outstandingDebt" />
+                    </app-shape>
+                  </label>
+                  <div class="field field--action">
+                    <button
+                      type="button"
+                      class="btn btn--light"
+                      [disabled]="busy()"
+                      (click)="saveDebt(c, debt.value)"
+                    >
+                      <app-shape name="bar-notch">Save debt</app-shape>
+                    </button>
+                  </div>
+                  <label class="field">
+                    <span class="field-label">Telegram chat id</span>
+                    <app-shape class="field-box" name="field">
+                      <input name="telegramId" maxlength="20" [value]="c.telegramId" />
+                    </app-shape>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Email</span>
+                    <app-shape class="field-box" name="field">
+                      <input name="email" type="email" maxlength="200" [value]="c.email" />
+                    </app-shape>
+                  </label>
+                </div>
+                <div class="editor-actions">
+                  <button type="submit" class="btn btn--light" [disabled]="busy()">
+                    <app-shape name="bar-notch">Save contacts</app-shape>
+                  </button>
+                </div>
+              </form>
+            }
+          </div>
+        }
+      </div>
+    } @empty {
+      <p class="small">No clients match.</p>
+    }
+  </div>
+
+  <!-- Settings -->
+  <section class="settings">
+    <button type="button" class="action" (click)="settingsOpen.set(!settingsOpen())">
+      {{ settingsOpen() ? 'Close settings' : 'Settings' }}
+    </button>
+    @if (settingsOpen() && settings(); as s) {
+      <form #settingsForm class="editor" (submit)="saveSettings(settingsForm, $event)">
+        <h2 class="block-title">Settings</h2>
+        <div class="grid">
+          <label class="field">
+            <span class="field-label">Sending</span>
+            <app-shape class="field-box" name="field">
+              <select name="sending">
+                <option value="test" [selected]="s.sending === 'test'">
+                  Test: everything comes to you
+                </option>
+                <option value="live" [selected]="s.sending === 'live'">Live: to clients</option>
+              </select>
+            </app-shape>
+          </label>
+          <label class="field">
+            <span class="field-label">Fee per declaration, GEL</span>
+            <app-shape class="field-box" name="field">
+              <input name="feePerDeclaration" type="number" min="0" [value]="s.feePerDeclaration" />
+            </app-shape>
+          </label>
+          <label class="field wide">
+            <span class="field-label">Bank account (in the delivery message)</span>
+            <app-shape class="field-box" name="field">
+              <input name="bankAccount" maxlength="40" [value]="s.bankAccount" />
+            </app-shape>
+          </label>
+          <label class="field">
+            <span class="field-label">Test Telegram chat id</span>
+            <app-shape class="field-box" name="field">
+              <input name="testTelegramId" maxlength="20" [value]="s.testTelegramId" />
+            </app-shape>
+          </label>
+          <label class="field">
+            <span class="field-label">Test email</span>
+            <app-shape class="field-box" name="field">
+              <input name="testEmail" type="email" [value]="s.testEmail" />
+            </app-shape>
+          </label>
+          <label class="field wide">
+            <span class="field-label">New registrations are emailed to</span>
+            <app-shape class="field-box" name="field">
+              <input name="notifyEmail" type="email" [value]="s.notifyEmail" />
+            </app-shape>
+          </label>
+        </div>
+        <div class="editor-actions">
+          <button type="submit" class="btn" [disabled]="busy()">
+            <app-shape name="bar-notch">Save settings</app-shape>
+          </button>
+        </div>
+      </form>
+    }
+  </section>
+} @else if (!error()) {
+  <div class="skeleton" aria-busy="true"></div>
+}

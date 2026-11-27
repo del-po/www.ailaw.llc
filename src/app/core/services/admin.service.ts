@@ -8,6 +8,13 @@ import {
   AdminServiceRow,
   Upload,
 } from '../models/admin';
+import {
+  DeclarationClient,
+  DeclarationMonth,
+  DeclarationSettings,
+  DeclarationsList,
+  DeliveryResult,
+} from '../models/declarations';
 import { AdminLawyer } from '../models/lawyer';
 import { Order } from '../models/order';
 import { Profile } from '../models/profile';
@@ -138,6 +145,51 @@ export class AdminService {
 
   deletePost(slug: string): Promise<unknown> {
     return this.call('blog:delete', { slug });
+  }
+
+  // ---------- 1% declarations ----------
+
+  listDeclarations(year: string): Promise<DeclarationsList> {
+    return this.call('declarations:list', { year });
+  }
+
+  setDeclarationIncome(
+    registrationId: string,
+    month: string,
+    income: number,
+  ): Promise<DeclarationMonth> {
+    return this.call('declarations:setIncome', { registrationId, month, income });
+  }
+
+  setDeclarationDebt(registrationId: string, amount: number): Promise<unknown> {
+    return this.call('declarations:setDebt', { registrationId, amount });
+  }
+
+  setDeclarationContacts(
+    registrationId: string,
+    contacts: { telegramId: string; email: string },
+  ): Promise<DeclarationClient> {
+    return this.call('declarations:setContacts', { registrationId, ...contacts });
+  }
+
+  // A self-registered (pending) client gets a client record and folder
+  verifyDeclarationClient(registrationId: string): Promise<DeclarationClient> {
+    return this.call('declarations:verify', { registrationId });
+  }
+
+  // With a file: saved in the client's folder, then sent. Without: the
+  // month's file already there is sent again
+  deliverDeclaration(
+    registrationId: string,
+    month: string,
+    file?: Upload,
+  ): Promise<DeliveryResult> {
+    return this.call('declarations:deliver', { registrationId, month, file: file ?? null });
+  }
+
+  // Called with nothing, it only reads the settings
+  declarationSettings(changes: Partial<DeclarationSettings> = {}): Promise<DeclarationSettings> {
+    return this.call('declarations:settings', changes);
   }
 
   // ---------- Helpers ----------

@@ -235,6 +235,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'declarations',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-declarations-page/admin-declarations-page').then(
+            (m) => m.AdminDeclarationsPage,
+          ),
+      },
+      {
         path: 'blog',
         loadComponent: () =>
           import('./pages/admin-page/admin-blog-page/admin-blog-page').then((m) => m.AdminBlogPage),
