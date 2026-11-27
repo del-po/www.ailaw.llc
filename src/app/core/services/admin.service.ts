@@ -17,6 +17,7 @@ import {
   NewDeclarationClient,
 } from '../models/declarations';
 import { AdminLawyer } from '../models/lawyer';
+import { LawyerTask } from '../models/chat';
 import { Order } from '../models/order';
 import { Profile } from '../models/profile';
 import { AuthService } from './auth.service';
@@ -114,6 +115,13 @@ export class AdminService {
     return this.call('admin:linkAccount', { clientId, userId });
   }
 
+  // ---------- Review ----------
+
+  // Order steps waiting for AI Law
+  reviewTasks(): Promise<LawyerTask[]> {
+    return this.call('admin:tasks');
+  }
+
   // ---------- Orders ----------
 
   createOrder(order: AdminNewOrder): Promise<Order> {
@@ -156,6 +164,16 @@ export class AdminService {
 
   // ---------- 1% declarations ----------
   // A client is named by key: their registration ID, or ID-… code
+
+  // What waits for the reporting month: for the sidebar
+  declarationCounts(): Promise<{
+    reportingMonth: string;
+    notReported: number;
+    toFile: number;
+    toVerify: number;
+  }> {
+    return this.call('declarations:counts');
+  }
 
   listDeclarations(year: string): Promise<DeclarationsList> {
     return this.call('declarations:list', { year });

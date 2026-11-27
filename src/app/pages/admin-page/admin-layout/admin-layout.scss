@@ -2,111 +2,241 @@
 @use 'page' as *;
 
 // ==========================================================
-// Admin frame: section menu + content
+// Admin Workspace: sidebar (chat, sections, profile menu) and the main
+// area, like the lawyers' Workspace
 // ==========================================================
 
 @include page-theme;
 
-.page {
-  @include page-shell;
+// Solid copies of the see-through page colours, for the menu that floats
+:host {
+  --menu-bg: color-mix(in srgb, rgb(var(--grey)) 40%, white);
 }
 
-.admin {
+:host-context(body.dark) {
+  --menu-bg: rgb(var(--black));
+}
+
+.workspace {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  align-items: start;
-  gap: clamp(32px, 5vw, 72px);
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+
+  @include below(tablet) {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
-// ---------- Section menu ----------
+// ---------- Sidebar ----------
 
-.menu {
+.side {
   position: sticky;
-  top: 32px;
-  display: flex;
-  flex-direction: column;
-  border-top: 1px solid var(--line);
-}
-
-.menu-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 12px;
-  border-bottom: 1px solid var(--line);
-
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  white-space: nowrap;
-
-  transition:
-    color var(--ease),
-    background-color var(--ease);
-
-  &:hover {
-    color: var(--text);
-    background: var(--card-bg);
-  }
-
-  &.is-active {
-    color: var(--ink-text);
-    background: var(--ink-bg);
-
-    .menu-num {
-      color: rgb(var(--yellow));
-    }
-  }
-}
-
-.menu-num {
-  font-size: 10px;
-  color: var(--text-muted);
-}
-
-.menu-soon {
-  margin-left: auto;
-  font-size: 9px;
-  letter-spacing: 1px;
-  opacity: 0.7;
-}
-
-// ---------- Content ----------
-
-.content {
+  top: 0;
   display: flex;
   flex-direction: column;
   gap: 24px;
+  height: 100vh;
+  height: 100dvh;
+  padding: 20px 16px;
+  overflow-y: auto;
+  border-right: 1px solid var(--line);
+  background: var(--card-bg);
+
+  @include below(tablet) {
+    position: static;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid var(--line);
+  }
+}
+
+.brand {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-decoration: none;
+  color: inherit;
+}
+
+.brand-tag {
+  @include tag;
+  align-self: flex-start;
+}
+
+.brand-name {
+  @include page-title;
+  font-size: 28px;
+}
+
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.block-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.list-title {
+  margin-bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+// A section, or the chat: text with what is waiting on the right
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text);
+
+  &:hover {
+    background: var(--line);
+  }
+
+  &.is-active {
+    background: var(--ink-bg);
+    color: var(--ink-text);
+  }
+}
+
+.badge {
+  min-width: 20px;
+  padding: 0 6px;
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.new {
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  font-family: var(--font-mono);
+  font-size: 16px;
+
+  &:hover {
+    border-color: var(--text);
+  }
+}
+
+// One past conversation
+.talk {
+  overflow: hidden;
+  padding: 5px 10px;
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text-muted);
+
+  &:hover,
+  &.is-active {
+    color: var(--text);
+  }
+
+  &.is-active {
+    box-shadow: inset 2px 0 0 rgb(var(--yellow));
+  }
+}
+
+// ---------- Profile menu ----------
+
+.me {
+  position: relative;
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.me-open {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  font-family: var(--font-mono);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.me-text {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
 }
 
-// ==========================================================
-// Responsive (largest → smallest)
-// ==========================================================
+.me-name {
+  overflow: hidden;
+  font-weight: 700;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
 
-// Menu becomes a scrolling row above the content
-@include below(tablet-wide) {
-  .admin {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.me-code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
 
-  .menu {
-    position: static;
-    flex-direction: row;
-    overflow-x: auto;
-    border-top: none;
-    border-bottom: 1px solid var(--line);
-    scrollbar-width: none;
-  }
+.me-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  border: 1px solid var(--card-border);
+  background: var(--menu-bg);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+}
 
-  .menu-link {
-    border-bottom: none;
-  }
+.me-link {
+  padding: 8px 10px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: left;
+  text-decoration: none;
+  color: var(--text);
 
-  .menu-soon {
-    display: none;
+  &:hover {
+    background: var(--line);
   }
+}
+
+// ---------- Main area ----------
+
+.main {
+  min-width: 0;
+  padding: clamp(24px, 4vw, 48px);
 }

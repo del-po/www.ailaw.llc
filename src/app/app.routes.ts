@@ -206,8 +206,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/admin-page/admin-layout/admin-layout').then((m) => m.AdminLayout),
     children: [
+      // The admin Workspace opens on the chat
       {
         path: '',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-chat-page/admin-chat-page').then((m) => m.AdminChatPage),
+      },
+      {
+        path: 'overview',
         loadComponent: () =>
           import('./pages/admin-page/admin-dashboard-page/admin-dashboard-page').then(
             (m) => m.AdminDashboardPage,

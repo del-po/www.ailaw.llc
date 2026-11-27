@@ -1,0 +1,35 @@
+<section class="chat">
+  <div #thread class="thread" aria-live="polite">
+    @for (m of messages(); track m.id) {
+      <article class="msg" [class.msg--user]="m.role === 'user'" [class.msg--failed]="m.failed">
+        @for (part of m.parts; track $index) {
+          @if (part.type === 'text') {
+            @if (m.role === 'user') {
+              <p class="msg-text">{{ part.text }}</p>
+            } @else {
+              <div
+                class="msg-text"
+                [innerHTML]="format(part.text || (m.streaming ? '…' : ''))"
+              ></div>
+            }
+          }
+        }
+      </article>
+    } @empty {
+      <div class="start">
+        <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+        <h1 class="title">What needs doing?</h1>
+        <p class="lead">
+          Ask about clients, orders and 1% declarations, or tell the assistant what to do. Anything
+          that changes or sends something asks you to confirm first.
+        </p>
+      </div>
+    }
+  </div>
+
+  <app-chat-input
+    placeholder="Ask or tell the assistant…"
+    [disabled]="chat.busy()"
+    (submitted)="send($event)"
+  />
+</section>

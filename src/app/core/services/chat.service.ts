@@ -33,6 +33,8 @@ const ERRORS: Record<string, string> = {
 
 @Service()
 export class ChatService {
+  // Which side's chat this is: the website's (client) or another door's
+  protected readonly door: string = DOORS.client;
   private readonly auth = inject(AuthService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
 
@@ -310,7 +312,7 @@ export class ChatService {
     );
   }
 
-  private async call<T>(action: string, data: object = {}, door: string = DOORS.client): Promise<T> {
+  private async call<T>(action: string, data: object = {}, door: string = this.door): Promise<T> {
     const res = await fetch(door, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -323,7 +325,7 @@ export class ChatService {
 
   // Reads the answer as it is written: one JSON event per line
   private async stream(data: object, onEvent: (event: SendEvent) => void): Promise<void> {
-    const res = await fetch(DOORS.client, {
+    const res = await fetch(this.door, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: await this.body('chat:send', data),

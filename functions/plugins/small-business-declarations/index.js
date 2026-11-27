@@ -16,6 +16,8 @@
 // entry and the total, and only the client's Confirm saves it.
 // Admin (a client is named by key: registration ID, or ID-… code):
 //   declarations:list           the year's clients with their months
+//   declarations:counts         for the admin sidebar: the reporting month's
+//                               not reported / to file / to verify
 //   declarations:setMonth       a month's income and/or tax, by hand (the
 //                               tax is always typed in from rs.ge)
 //   declarations:setDebt        outstanding debt, as shown on rs.ge
@@ -248,6 +250,24 @@ async function list(data) {
   };
 }
 
+async function counts() {
+  const month = reportingMonth();
+  const cfg = await settings();
+  const result = { reportingMonth: month, notReported: 0, toFile: 0, toVerify: 0 };
+  for (const c of await allClients()) {
+    if (c.status === 'ended') continue;
+    if (c.id === cfg.testRegistrationId && cfg.sending === 'live') continue;
+    if (c.status === 'pending') {
+      result.toVerify++;
+      continue;
+    }
+    const m = (await monthRef(c.id, month).get()).data();
+    if (!m || m.income == null) result.notReported++;
+    else if (!m.deliveredAt && !m.declarationFile) result.toFile++;
+  }
+  return result;
+}
+
 async function byKey(data) {
   const client = await findClient({ key: String(data.key || '') });
   if (!client) throw new ApiError('CLIENT_NOT_FOUND');
@@ -364,6 +384,7 @@ export default {
     },
     admin: {
       'declarations:list': (caller, data) => list(data),
+      'declarations:counts': () => counts(),
       'declarations:setMonth': (caller, data) => setMonth(caller, data),
       'declarations:setDebt': (caller, data) => setDebt(data),
       'declarations:setContacts': (caller, data) => setContacts(data),

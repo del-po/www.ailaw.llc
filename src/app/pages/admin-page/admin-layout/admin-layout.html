@@ -1,28 +1,75 @@
-<div class="page">
-  <app-header />
+<div class="workspace">
+  <aside class="side" aria-label="Admin">
+    <a class="brand" routerLink="/admin">
+      <span class="brand-tag">AI Law</span>
+      <span class="brand-name">Admin</span>
+    </a>
 
-  <main class="admin">
-    <nav class="menu" aria-label="Admin">
-      @for (section of sections; track section.link; let i = $index) {
+    <!-- ---------- Chat ---------- -->
+    <nav class="block" aria-label="Chat">
+      <div class="block-head">
         <a
-          class="menu-link"
-          [routerLink]="section.link"
+          class="item item--main"
+          routerLink="/admin"
           routerLinkActive="is-active"
           [routerLinkActiveOptions]="{ exact: true }"
         >
-          <span class="menu-num">{{ (i + 1).toString().padStart(2, '0') }}</span>
-          {{ section.label }}
-          @if (!section.ready) {
-            <span class="menu-soon">Soon</span>
+          Chat
+        </a>
+        <button type="button" class="new" (click)="newChat()" aria-label="New chat">+</button>
+      </div>
+      @for (c of chat.conversations().slice(0, 8); track c.id) {
+        <button
+          type="button"
+          class="talk"
+          [class.is-active]="c.id === chat.activeId()"
+          (click)="openChat(c.id)"
+        >
+          {{ c.title || 'New chat' }}
+        </button>
+      }
+    </nav>
+
+    <!-- ---------- Sections ---------- -->
+    <nav class="block" aria-label="Sections">
+      <p class="list-title">Work</p>
+      @for (section of sections; track section.link) {
+        <a class="item" [routerLink]="section.link" routerLinkActive="is-active">
+          <span>{{ section.label }}</span>
+          @if (count(section)) {
+            <span class="badge" [attr.aria-label]="count(section) + ' waiting'">{{
+              count(section)
+            }}</span>
           }
         </a>
       }
     </nav>
 
-    <div class="content">
-      <router-outlet />
+    <!-- ---------- Profile menu ---------- -->
+    <div class="me">
+      <button
+        type="button"
+        class="me-open"
+        (click)="menuOpen.set(!menuOpen())"
+        [attr.aria-expanded]="menuOpen()"
+      >
+        <span class="avatar" aria-hidden="true">{{ name().charAt(0) }}</span>
+        <span class="me-text">
+          <span class="me-name">{{ name() }}</span>
+          <span class="me-code">{{ auth.profile()?.ClientID }}</span>
+        </span>
+      </button>
+      @if (menuOpen()) {
+        <div class="me-menu">
+          <a class="me-link" routerLink="/profile/settings">Settings</a>
+          <a class="me-link" routerLink="/">Back to the website</a>
+          <button type="button" class="me-link" (click)="signOut()">Log out</button>
+        </div>
+      }
     </div>
-  </main>
+  </aside>
 
-  <app-footer />
+  <main class="main">
+    <router-outlet />
+  </main>
 </div>

@@ -1,21 +1,38 @@
 import { authErrorMessage } from '../../core/services/auth-errors';
 
-// Sections of the admin area, in menu order. `ready` is false until the
-// section has a backend; those pages show a short "coming soon" note.
+// Sections of the admin Workspace, in sidebar order. The chat is the start
+// page; each section opens in the main area. `count` names the number the
+// sidebar shows next to it (see AdminLayout.counts).
 export interface AdminSection {
   label: string;
   link: string;
   ready: boolean;
   text: string;
+  count?: 'declarations' | 'orders' | 'review' | 'lawyers';
 }
 
 export const ADMIN_SECTIONS: AdminSection[] = [
-  { label: 'Dashboard', link: '/admin', ready: true, text: 'The site at a glance.' },
+  { label: 'Overview', link: '/admin/overview', ready: true, text: 'The site at a glance.' },
   {
-    label: 'Services',
-    link: '/admin/services',
+    label: '1% Declarations',
+    link: '/admin/declarations',
     ready: true,
-    text: 'Services, prices, discounts and categories.',
+    text: 'Monthly income, declarations and delivery.',
+    count: 'declarations',
+  },
+  {
+    label: 'Orders',
+    link: '/admin/orders',
+    ready: true,
+    text: 'Orders and their progress.',
+    count: 'orders',
+  },
+  {
+    label: 'Review',
+    link: '/admin/review',
+    ready: true,
+    text: 'Order steps waiting for you.',
+    count: 'review',
   },
   {
     label: 'Clients',
@@ -28,21 +45,15 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     link: '/admin/lawyers',
     ready: true,
     text: 'Lawyer applications: approve or decline.',
+    count: 'lawyers',
   },
-  { label: 'Orders', link: '/admin/orders', ready: true, text: 'Orders and their progress.' },
   {
-    label: '1% Declarations',
-    link: '/admin/declarations',
+    label: 'Services',
+    link: '/admin/services',
     ready: true,
-    text: 'Monthly income, declarations and delivery.',
+    text: 'Services, prices, discounts and categories.',
   },
   { label: 'Blog', link: '/admin/blog', ready: true, text: 'Write and publish articles.' },
-  {
-    label: 'Review',
-    link: '/admin/review',
-    ready: true,
-    text: 'Order steps waiting for you.',
-  },
 ];
 
 // Known codes get a friendly message; anything else is the script's own wording,
