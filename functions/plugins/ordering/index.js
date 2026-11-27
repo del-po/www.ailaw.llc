@@ -31,7 +31,7 @@ import {
   titleCase,
   validEmail,
 } from '../../core/app.js';
-import { addPart } from '../../core/chat.js';
+import { addPart, openService } from '../../core/chat.js';
 import { buildPdf, join, makeFolder, readFile, saveFile } from '../../core/files.js';
 import { pluginRecords } from '../../core/loader.js';
 import { createOrder, orderCard, paymentInfo, toOrder } from '../../core/orders.js';
@@ -226,6 +226,7 @@ const startOrder = {
     if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
     const service = await serviceBySlug(String(args.service_id || ''));
     if (!service) throw new ApiError('SERVICE_NOT_FOUND');
+    if (ctx.activeService !== service.serviceId) await openService(ctx, service.serviceId);
     const plugin = (await pluginRecords())[service.plugin] || {};
     const details = checkDetails(plugin.fields || [], parseJson(args.details, {}));
 

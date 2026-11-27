@@ -4,11 +4,19 @@
 //   1. A record in Firestore (Plugins/{id}), always:
 //        enabled   on/off switch
 //        sides     which doors use it: client, lawyer, admin
+//        kind      "service" for a service's own plugin; everything else
+//                  is a general plugin, always loaded for its sides
+//        menu      a service's one line in the client chat's service menu
 //        version   which code version runs, when the code has several
 //        items     [{ audience: [sides], title, text }]: know-how the AI
 //                  reads; each item only reaches the sides it names
 //        fields    details the chat collects before ordering
 //        steps     the work, copied into each order
+//        tools     { client: [names], lawyer: [names] }: shared tools
+//                  (marked onDemand) this service switches on
+// A service plugin's know-how and tools reach the AI only while that
+// service is in play: opened in the client chat, or the service of a
+// lawyer's assignment (ctx.services: the plugin ids in play).
 //   2. A code folder (plugins/{id}), only when it needs its own tools,
 //      actions or step types. Code with several versions exports
 //      { versions: { v1: {...}, v2: {...} }, defaultVersion }.
@@ -60,14 +68,24 @@ export function actionsOf(plugins, side) {
   return routes;
 }
 
-// AI tools this side may use
-export function toolsOf(plugins, side) {
-  const tools = {};
-  plugins.forEach((p) =>
-    Object.entries(p.tools || {}).forEach(([name, tool]) => {
-      if (!tool.sides || tool.sides.includes(side)) tools[name] = tool;
-    }),
+const inPlay = (p, ctx) => p.record.kind !== 'service' || (ctx.services || []).includes(p.id);
+
+// AI tools this side may use now: general plugins' tools, the tools of the
+// services in play, and shared on-demand tools those services switch on
+export function toolsOf(plugins, ctx) {
+  const side = ctx.side;
+  const switchedOn = new Set(
+    plugins.filter((p) => p.record.kind === 'service' && inPlay(p, ctx)).flatMap((p) => p.record.tools?.[side] || []),
   );
+  const tools = {};
+  plugins.forEach((p) => {
+    if (!inPlay(p, ctx)) return;
+    Object.entries(p.tools || {}).forEach(([name, tool]) => {
+      if (tool.sides && !tool.sides.includes(side)) return;
+      if (tool.onDemand && !switchedOn.has(name)) return;
+      tools[name] = tool;
+    });
+  });
   return tools;
 }
 
@@ -84,6 +102,7 @@ export async function buildPrompt(plugins, ctx) {
   parts.push(...own);
 
   for (const p of plugins) {
+    if (!inPlay(p, ctx)) continue;
     if (p.prompt) {
       const text = await p.prompt(ctx, p.record);
       if (text) parts.push(text);

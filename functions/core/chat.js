@@ -7,15 +7,18 @@
 // chats and their own client chats never mix.
 // A scope ties a conversation to one piece of work (e.g. a lawyer's
 // assignment): one thread per person and scope, with that work's context
-// in the instructions and only that work's plugins. The door supplies it.
+// in the instructions and only that work's service. The door supplies it.
 //   scope = { key, prompt, pluginIds }
+// Without a scope, the client chat opens one service at a time
+// (openService): the conversation remembers it as activeService, and its
+// plugin's know-how and tools come along from then on.
 // ==========================================================
 
 import { ApiError, db, now, parseJson, today, toDate } from './app.js';
 import { streamTurn } from './ai.js';
 import { countQuestion } from './guard.js';
 import { buildPrompt, toolsOf } from './loader.js';
-import { chatSettings } from './records.js';
+import { chatSettings, serviceBySlug } from './records.js';
 
 const TITLE_LENGTH = 40;
 const MAX_QUESTION_LENGTH = 4000;
@@ -105,11 +108,10 @@ export async function answer(caller, side, data, emit, env, plugins, scope = nul
   const settings = await chatSettings();
   await countQuestion(caller, settings);
 
-  // A scoped thread is found by its scope; only the scope's own plugins take part
+  // A scoped thread is found by its scope
   if (scope) {
     const thread = await scopedConversation(caller, side, scope.key);
     if (thread.id) data = { ...data, conversationId: thread.id };
-    plugins = plugins.filter((p) => p.actions || p.tools || p.prompt || (scope.pluginIds || []).includes(p.id));
   }
 
   let conversation;
@@ -153,15 +155,28 @@ export async function answer(caller, side, data, emit, env, plugins, scope = nul
     .filter((m) => m.content)
     .concat({ role: 'user', content: question });
 
-  const ctx = { caller, side, conversationId: conversation.id, parts: [], settings, env, emit, plugins, scope };
+  const ctx = {
+    caller,
+    side,
+    conversationId: conversation.id,
+    parts: [],
+    settings,
+    env,
+    emit,
+    plugins,
+    scope,
+    activeService: conversation.activeService || '',
+    services: [],
+  };
+  await settleServices(ctx);
   const text = await runAssistant(ctx, history);
 
   // Saved after the answer, so a failed first question leaves no empty chat behind
   if (conversation.isNew) {
     const { id, isNew, ...record } = conversation;
-    await chatRef.set(record);
+    await chatRef.set({ ...record, activeService: ctx.activeService });
   } else {
-    await chatRef.update({ updatedAt: now() });
+    await chatRef.update({ updatedAt: now(), activeService: ctx.activeService });
   }
   const { id: userId, ...userRecord } = userMessage;
   await chatRef.collection('Messages').doc(userId).set(userRecord);
@@ -171,6 +186,24 @@ export async function answer(caller, side, data, emit, env, plugins, scope = nul
   emit({ type: 'done', reply: toClientMessage({ id: replyRef.id, ...reply }) });
 }
 
+// The service plugins in play: the scope's, or the client's open service
+export async function settleServices(ctx) {
+  if (ctx.scope) {
+    ctx.services = ctx.scope.pluginIds || [];
+    return;
+  }
+  const service = ctx.activeService ? await serviceBySlug(ctx.activeService) : null;
+  ctx.services = service?.plugin ? [service.plugin] : [];
+}
+
+// Opens a service in this conversation: its know-how and tools are loaded
+// for the rest of the turn and for every later message
+export async function openService(ctx, slug) {
+  ctx.activeService = slug;
+  await settleServices(ctx);
+  if (ctx.plugins) ctx.tools = toolsOf(ctx.plugins, ctx);
+}
+
 // Cards go into the saved message and straight to the page
 export function addPart(ctx, part) {
   ctx.parts.push(part);
@@ -178,7 +211,7 @@ export function addPart(ctx, part) {
 }
 
 async function runAssistant(ctx, history) {
-  const tools = toolsOf(ctx.plugins, ctx.side);
+  ctx.tools = toolsOf(ctx.plugins, ctx);
   const prompt = (await buildPrompt(ctx.plugins, ctx)) + (ctx.scope?.prompt ? '\n\n' + ctx.scope.prompt : '');
   const who = ctx.caller.signedIn
     ? `The person is signed in${ctx.caller.name ? ' as ' + ctx.caller.name : ''}.`
@@ -187,12 +220,14 @@ async function runAssistant(ctx, history) {
     { role: 'system', content: `${prompt}\n\n## Context\nToday is ${today()} (Tbilisi). ${who}` },
     ...history,
   ];
-  const toolList = Object.entries(tools).map(([name, tool]) => ({
-    type: 'function',
-    function: tool.parameters
-      ? { name, description: tool.description, parameters: tool.parameters }
-      : { name, description: tool.description },
-  }));
+  // The tool list is rebuilt each round: opening a service adds its tools
+  const toolList = () =>
+    Object.entries(ctx.tools).map(([name, tool]) => ({
+      type: 'function',
+      function: tool.parameters
+        ? { name, description: tool.description, parameters: tool.parameters }
+        : { name, description: tool.description },
+    }));
 
   // Text from every round is kept: models often write part of the answer in
   // the same turn as a tool call
@@ -206,7 +241,7 @@ async function runAssistant(ctx, history) {
     let first = true;
     const { content, toolCalls } = await streamTurn({
       messages,
-      tools: toolList,
+      tools: toolList(),
       settings: ctx.settings,
       keys: ctx.env.keys,
       onText: (text) => {
@@ -221,7 +256,7 @@ async function runAssistant(ctx, history) {
     for (const call of toolCalls) {
       let result;
       try {
-        const tool = tools[call.function.name];
+        const tool = ctx.tools[call.function.name];
         if (!tool) throw new ApiError('UNKNOWN_TOOL');
         result = await tool.run(ctx, parseJson(call.function.arguments, {}));
       } catch (err) {

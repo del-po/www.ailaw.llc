@@ -1,8 +1,9 @@
 // ==========================================================
 // Plugin: catalogue (client + admin)
 // Client (public):  services, service, categories — the services pages
-// Client (chat):    the services list in the AI's instructions, and the
-//                   offer_service tool, which shows a service card
+// Client (chat):    the service menu in the AI's instructions; open_service
+//                   loads one service for the conversation; offer_service
+//                   shows a service card
 // Admin:            services and categories: list, create, update, archive;
 //                   services:image uploads a service's picture
 // Services/{slug} is the catalogue record; the work behind a service lives
@@ -10,7 +11,7 @@
 // ==========================================================
 
 import { ApiError, COMPANY, db, formatDate, now, slugify, toDate } from '../../core/app.js';
-import { addPart } from '../../core/chat.js';
+import { addPart, openService } from '../../core/chat.js';
 import { publicUrl, savePicture } from '../../core/files.js';
 import { pluginRecords } from '../../core/loader.js';
 import { clientByUid, forget, priceOf, serviceBySlug, services, setting } from '../../core/records.js';
@@ -245,22 +246,32 @@ async function archiveCategory(id) {
 
 // ---------- Chat ----------
 
-// The services list in the AI's instructions, with the details each needs
+// The service menu: one line per service, every message. The open
+// service (activeService) comes with its details: price, what to collect,
+// and its client know-how.
 async function servicesPrompt(ctx) {
   const plugins = await pluginRecords();
-  const list = (await activeServices()).map((s) => {
-    const fields = (plugins[s.plugin]?.fields || [])
-      .map((f) => `  - ${f.field} (${f.label}${f.hint ? '; ' + f.hint : ''})${f.required ? '' : ' — optional'}`)
-      .join('\n');
+  const menu = (await activeServices()).map((s) => {
     const { finalPrice } = priceOf(s);
+    const line = plugins[s.plugin]?.menu || s.chatSummary || s.shortDescription;
     return (
-      `- id: ${s.serviceId} — ${s.name}, ${finalPrice} ${s.currency}` +
+      `- ${s.serviceId}: ${s.name}, ${finalPrice} ${s.currency}` +
       (s.requires === 'verified' ? ' (verified clients only)' : '') +
-      `\n  ${s.chatSummary || s.shortDescription}` +
-      (s.whenToOffer ? `\n  Offer when: ${s.whenToOffer}` : '') +
-      (fields ? `\n  Details needed to order:\n${fields}` : '')
+      ` — ${line}` +
+      (s.whenToOffer ? ` Offer when: ${s.whenToOffer}` : '')
     );
   });
+
+  const parts = [
+    '## Service menu\n' +
+      'When the client asks about or wants one of these services, call open_service first: it gives the ' +
+      "service's details and what to collect, and shows its card. offer_service shows a card on its own.\n" +
+      (menu.join('\n') || '(no services yet)'),
+  ];
+  if (ctx.activeService) {
+    const open = await openDetails(ctx.activeService, plugins);
+    if (open) parts.push('## Open service\n' + open);
+  }
 
   const client = ctx.caller.signedIn ? await clientByUid(ctx.caller.uid) : null;
   const status = !ctx.caller.signedIn
@@ -269,8 +280,46 @@ async function servicesPrompt(ctx) {
       ? 'The client is verified, so they can order every service.'
       : `The client is not verified: services marked "verified clients only" can't be ordered yet; ` +
         `for those, tell them to contact ${COMPANY.verifyContact} to get verified.`;
+  parts.push('## Client status\n' + status);
+  return parts.join('\n\n');
+}
 
-  return `## Services list\n${list.join('\n') || '(no services yet)'}\n\n## Client status\n${status}`;
+// One service in full, as the AI needs it to help and to take the order
+async function openDetails(slug, plugins) {
+  const s = await serviceBySlug(slug);
+  if (!s || s.status !== 'active') return '';
+  const plugin = plugins[s.plugin] || {};
+  const { finalPrice } = priceOf(s);
+  const fields = (plugin.fields || [])
+    .map((f) => `- ${f.field} (${f.label}${f.hint ? '; ' + f.hint : ''})${f.required ? '' : ' — optional'}`)
+    .join('\n');
+  const knowHow = (plugin.items || [])
+    .filter((i) => i.active !== false && (i.audience || []).includes('client') && i.text)
+    .map((i) => `${i.title}: ${i.text}`)
+    .join('\n');
+  return [
+    `${s.name} (id ${s.serviceId}), ${finalPrice} ${s.currency}` + (s.requires === 'verified' ? ', verified clients only' : ''),
+    s.description || s.chatSummary || s.shortDescription,
+    fields ? 'Details needed to order:\n' + fields : 'No details needed to order.',
+    knowHow ? 'Know-how:\n' + knowHow : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
+async function showCard(ctx, slug) {
+  const s = await serviceBySlug(slug);
+  if (!s || s.status !== 'active') throw new ApiError('SERVICE_NOT_FOUND');
+  if (ctx.parts.some((p) => p.type === 'service' && p.id === s.serviceId)) return;
+  const { finalPrice } = priceOf(s);
+  addPart(ctx, {
+    type: 'service',
+    id: s.serviceId,
+    title: s.name,
+    summary: s.chatSummary || s.shortDescription,
+    price: `${finalPrice} ${s.currency}`,
+    link: s.link || `/services/${s.serviceId}`,
+  });
 }
 
 export default {
@@ -303,6 +352,25 @@ export default {
     },
   },
   tools: {
+    open_service: {
+      sides: ['client'],
+      description:
+        "Open a service from the service menu for this conversation: returns its details, what to collect to order it, and its know-how.",
+      parameters: {
+        type: 'object',
+        properties: { service_id: { type: 'string', description: 'id from the service menu' } },
+        required: ['service_id'],
+      },
+      run: async (ctx, args) => {
+        const slug = String(args.service_id || '');
+        const details = await openDetails(slug, await pluginRecords());
+        if (!details) throw new ApiError('SERVICE_NOT_FOUND');
+        // A service opened for the first time also shows its card
+        if (ctx.activeService !== slug) await showCard(ctx, slug);
+        await openService(ctx, slug);
+        return { opened: slug, details, card: 'shown to the client under your answer' };
+      },
+    },
     offer_service: {
       sides: ['client'],
       description: 'Show the card of a service that fits the client, so they can see it and order.',
@@ -312,17 +380,7 @@ export default {
         required: ['service_id'],
       },
       run: async (ctx, args) => {
-        const s = await serviceBySlug(String(args.service_id || ''));
-        if (!s || s.status !== 'active') throw new ApiError('SERVICE_NOT_FOUND');
-        const { finalPrice } = priceOf(s);
-        addPart(ctx, {
-          type: 'service',
-          id: s.serviceId,
-          title: s.name,
-          summary: s.chatSummary || s.shortDescription,
-          price: `${finalPrice} ${s.currency}`,
-          link: s.link || `/services/${s.serviceId}`,
-        });
+        await showCard(ctx, String(args.service_id || ''));
         return { shown: true };
       },
     },
