@@ -7,7 +7,8 @@
 //       name, registrationId (may be filled in later), clientId (ID-… of
 //       the client record), telegramId, telegramUsername, email,
 //       status (active | pending | ended), serviceStart, endedAt,
-//       outstandingDebt, orderNumber (the enrolment order, if any)
+//       outstandingDebt, orderNumber (the enrolment order, if any),
+//       deliveryMethod (telegram | email: how declarations are sent)
 //   Clients/{…}/Months/{yyyy-MM}
 //       income, entries (one per income received), source, note,
 //       reportedAt; tax (typed in by AI Law from rs.ge when filing),
@@ -20,7 +21,7 @@
 // ==========================================================
 
 import { ApiError, cleanText, db, formatDate, newCode, now } from '../../core/app.js';
-import { makeFolder } from '../../core/files.js';
+import { makeFolder, removeFolder } from '../../core/files.js';
 
 export const TOOL = db.doc('ServiceTools/SmallBusinessDeclarations');
 export const FOLDER = 'SmallBusinessDeclarations';
@@ -149,6 +150,7 @@ export async function register({ registrationId, name, telegramId, telegramUsern
   if (fullName.length < 3 || !/\p{L}/u.test(fullName)) throw new ApiError('INVALID_NAME');
   const record = {
     name: fullName,
+    deliveryMethod: 'telegram',
     registrationId: rid,
     clientId: '',
     email: '',
@@ -202,6 +204,110 @@ export async function verify(key) {
   return { ...client, ...changes };
 }
 
+// ---------- Added or removed by AI Law ----------
+
+// A new verified client record with its folder, for someone who isn't a
+// client yet (same shape as accounts makes)
+async function newClientRecord(name, idNumber, email, note) {
+  const clientId = await newCode('ID', 'Clients');
+  const words = name.split(/\s+/);
+  const folder = `clients/verified/${clientId} - ${name}`;
+  await db.doc('Clients/' + clientId).set({
+    clientId,
+    type: 'verified',
+    status: 'active',
+    role: 'client',
+    firstName: words.length > 1 ? words[0] : name,
+    lastName: words.length > 1 ? words.slice(1).join(' ') : '',
+    displayName: name,
+    email: email || '',
+    emailVerified: false,
+    phone: '',
+    passport: '',
+    idNumber: idNumber || '',
+    address: '',
+    notes: note,
+    userId: '',
+    providers: {},
+    photoUrl: '',
+    folder,
+    createdAt: now(),
+    updatedAt: now(),
+    lastLoginAt: null,
+  });
+  return { id: clientId, folder, displayName: name };
+}
+
+// input: name, registrationId, clientId (an existing ID-… record, or empty
+// for a new one), telegramId, email, serviceStart (yyyy-MM), deliveryMethod
+export async function addClient(input) {
+  const registrationId = cleanText(input.registrationId ?? '', 20).replace(/\s+/g, '');
+  if (registrationId && !/^\d{9,11}$/.test(registrationId)) throw new ApiError('INVALID_REGISTRATION_ID');
+  if (registrationId && (await findClient({ registrationId }))) throw new ApiError('ALREADY_ON_LIST');
+  const telegramId = cleanText(input.telegramId ?? '', 20);
+  if (telegramId && !/^-?\d+$/.test(telegramId)) throw new ApiError('INVALID_TELEGRAM_ID');
+  const email = cleanText(input.email ?? '', 200).toLowerCase();
+  const start = String(input.serviceStart || formatDate(now(), 'yyyy-MM'));
+  checkMonth(start);
+  const deliveryMethod = input.deliveryMethod === 'email' ? 'email' : 'telegram';
+
+  let record;
+  if (input.clientId) {
+    const snap = await db.doc('Clients/' + cleanText(input.clientId, 20)).get();
+    if (!snap.exists) throw new ApiError('CLIENT_NOT_FOUND');
+    record = { id: snap.id, ...snap.data() };
+    if (await findClient({ clientId: record.id })) throw new ApiError('ALREADY_ON_LIST');
+  } else {
+    const name = cleanText(input.name, 100, 'INVALID_NAME').replace(/\s+/g, ' ');
+    if (name.length < 3) throw new ApiError('INVALID_NAME');
+    record = await newClientRecord(name, registrationId, email, 'Added to 1% declarations by AI Law');
+  }
+  const name = cleanText(input.name || record.displayName || '', 100, 'INVALID_NAME').replace(/\s+/g, ' ');
+  if (record.folder) await makeFolder(`${record.folder}/${FOLDER}`);
+
+  const key = registrationId || record.id;
+  const client = {
+    name,
+    registrationId,
+    clientId: record.id,
+    email: email || record.email || '',
+    telegramId,
+    telegramUsername: '',
+    deliveryMethod,
+    status: 'active',
+    active: true,
+    serviceStart: start,
+    endedAt: null,
+    outstandingDebt: 0,
+    orderNumber: '',
+    duplicateOf: '',
+    createdAt: now(),
+  };
+  await clientRef(key).set(client);
+  return { id: key, ...client };
+}
+
+// Off the list completely, with every month; the client record stays (it
+// may have other orders). files: also the client's SmallBusinessDeclarations folder
+export async function deleteClient(key, files) {
+  const client = await findClient({ key });
+  if (!client) throw new ApiError('CLIENT_NOT_FOUND');
+  const monthsSnap = await clientRef(client.id).collection('Months').get();
+  for (let i = 0; i < monthsSnap.docs.length; i += 400) {
+    const batch = db.batch();
+    monthsSnap.docs.slice(i, i + 400).forEach((d) => batch.delete(d.ref));
+    await batch.commit();
+  }
+  const drafts = await TOOL.collection('Drafts').where('key', '==', client.id).get();
+  for (const d of drafts.docs) await d.ref.delete();
+  await clientRef(client.id).delete();
+  if (files && client.clientId) {
+    const record = (await db.doc('Clients/' + client.clientId).get()).data();
+    if (record?.folder) await removeFolder(`${record.folder}/${FOLDER}`);
+  }
+  return { deleted: client.id, months: monthsSnap.size, files: !!files };
+}
+
 // ---------- Enrolling from an order ----------
 
 // A signed-in client ordered the service: they go on the list at once,
@@ -229,6 +335,8 @@ export async function enrol(order, client, details = {}) {
     email: order.customerEmail || client.email || '',
     telegramId: '',
     telegramUsername: '',
+    // A website client has an email, not (yet) a Telegram chat
+    deliveryMethod: 'email',
     status: 'active',
     active: true,
     serviceStart: month,

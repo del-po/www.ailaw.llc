@@ -22,6 +22,7 @@ export interface DeclarationClient {
   telegramId: string;
   telegramUsername: string;
   email: string;
+  deliveryMethod: 'telegram' | 'email';
   serviceStart: string;
   endedAt: string;
   // Another record has the same registration ID: to sort out by hand
@@ -82,4 +83,15 @@ export interface MyDeclarations {
 export interface IncomeSaved {
   month: string;
   income: number;
+}
+
+// What the admin's "Add client" form sends
+export interface NewDeclarationClient {
+  name: string;
+  registrationId: string;
+  clientId: string; // an existing ID-… record, or '' for a new one
+  telegramId: string;
+  email: string;
+  serviceStart: string; // yyyy-MM
+  deliveryMethod: 'telegram' | 'email';
 }

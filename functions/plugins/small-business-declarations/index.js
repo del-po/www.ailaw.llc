@@ -21,6 +21,9 @@
 //   declarations:setDebt        outstanding debt, as shown on rs.ge
 //   declarations:setContacts    registration ID, Telegram chat id, email
 //   declarations:setStatus      active / ended (the client cancelled)
+//   declarations:add            put a client on the list by hand
+//   declarations:delete         take a client off the list completely
+//                               (e.g. a test), optionally with their files
 //   declarations:verify         a pending (self-registered) client → active
 //   declarations:deliver        upload a declaration → folder → client
 //   declarations:settings       sending test/live, fee, bank account …
@@ -37,7 +40,9 @@ import {
   TOOL,
   allClients,
   checkMonth,
+  addClient,
   clientRef,
+  deleteClient,
   enrol,
   findClient,
   monthRef,
@@ -49,7 +54,7 @@ import {
   settings,
   verify,
 } from './data.js';
-import { deliver, monthName } from './delivery.js';
+import { deliver, methodOf, monthName } from './delivery.js';
 import { CURRENCIES, gelRate } from './rates.js';
 import { sendMessage } from './telegram-api.js';
 
@@ -83,6 +88,7 @@ function toClient(c, list = []) {
     telegramId: c.telegramId || '',
     telegramUsername: c.telegramUsername || '',
     email: c.email || '',
+    deliveryMethod: methodOf(c),
     serviceStart: c.serviceStart || '',
     endedAt: iso(c.endedAt),
     duplicateOf: c.duplicateOf || '',
@@ -219,8 +225,8 @@ async function myDeclarations(caller, data) {
 // ---------- Admin ----------
 
 // The year's clients: everyone with figures in that year, plus, for the
-// current year, every active client (a new one has no figures yet). An ended
-// client drops off from the year after.
+// current year, every active client (a new one has no figures yet). Ended
+// clients come too, marked: the page keeps them under its Ended filter.
 async function list(data) {
   const year = /^\d{4}$/.test(String(data.year || '')) ? String(data.year) : reportingMonth().slice(0, 4);
   const current = reportingMonth().slice(0, 4);
@@ -231,8 +237,7 @@ async function list(data) {
     if (c.id === cfg.testRegistrationId && cfg.sending === 'live') continue;
     const list = await months(c.id, year);
     const started = !c.serviceStart || c.serviceStart.slice(0, 4) <= year;
-    const ended = c.status === 'ended' && iso(c.endedAt).slice(0, 4) < year;
-    const listed = list.length || (year >= current && started && !ended && c.status !== 'ended');
+    const listed = list.length || c.status === 'ended' || (year >= current && started);
     if (listed) rows.push(toClient(c, list));
   }
   return {
@@ -292,6 +297,10 @@ async function setContacts(data) {
     const id = cleanText(data.telegramId, 20);
     if (id && !/^-?\d+$/.test(id)) throw new ApiError('INVALID_TELEGRAM_ID');
     changes.telegramId = id;
+  }
+  if (data.deliveryMethod !== undefined) {
+    if (!['telegram', 'email'].includes(data.deliveryMethod)) throw new ApiError('INVALID_REQUEST');
+    changes.deliveryMethod = data.deliveryMethod;
   }
   if (data.registrationId !== undefined) {
     const rid = cleanText(data.registrationId, 20).replace(/\s+/g, '');
@@ -359,6 +368,8 @@ export default {
       'declarations:setDebt': (caller, data) => setDebt(data),
       'declarations:setContacts': (caller, data) => setContacts(data),
       'declarations:setStatus': (caller, data) => setStatus(data),
+      'declarations:add': async (caller, data) => toClient(await addClient(data)),
+      'declarations:delete': (caller, data) => deleteClient(String(data.key || ''), data.files === true),
       'declarations:verify': (caller, data, env) => verifyPending(data, env),
       'declarations:deliver': (caller, data, env) =>
         deliver(String(data.key || ''), String(data.month || ''), data.file || null, env),

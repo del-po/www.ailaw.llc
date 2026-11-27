@@ -65,6 +65,77 @@
   </label>
 </div>
 
+<!-- ---------- Add client ---------- -->
+<div class="add-row">
+  <button type="button" class="action" (click)="openAdd()">
+    {{ adding() ? 'Close' : '+ Add client' }}
+  </button>
+</div>
+@if (adding()) {
+  <form #addForm class="editor" (submit)="add(addForm, $event)">
+    <h2 class="block-title">Add a client to the 1% list</h2>
+    <div class="grid">
+      <label class="field wide">
+        <span class="field-label">Client record · existing, or a new one</span>
+        <app-shape class="field-box" name="field">
+          <select #record name="clientId" (change)="pickRecord(addForm, record.value)">
+            <option value="">New client record</option>
+            @for (r of records(); track r.ClientID) {
+              <option [value]="r.ClientID">
+                {{ r.DisplayName || '—' }} · {{ r.ClientID }}{{ r.Email ? ' · ' + r.Email : '' }}
+              </option>
+            }
+          </select>
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Full name</span>
+        <app-shape class="field-box" name="field">
+          <input name="name" maxlength="100" required />
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Registration ID (rs.ge tax ID) · optional</span>
+        <app-shape class="field-box" name="field">
+          <input name="registrationId" maxlength="11" />
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Telegram chat id · optional</span>
+        <app-shape class="field-box" name="field">
+          <input name="telegramId" maxlength="20" />
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Email · optional</span>
+        <app-shape class="field-box" name="field">
+          <input name="email" type="email" maxlength="200" />
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Send declarations by</span>
+        <app-shape class="field-box" name="field">
+          <select name="deliveryMethod">
+            <option value="telegram">Telegram</option>
+            <option value="email">Email</option>
+          </select>
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Service from (month)</span>
+        <app-shape class="field-box" name="field">
+          <input name="serviceStart" type="month" [value]="reportingMonth()" />
+        </app-shape>
+      </label>
+    </div>
+    <div class="editor-actions">
+      <button type="submit" class="btn" [disabled]="busy()">
+        <app-shape name="bar-notch">{{ busy() ? 'Adding…' : 'Add client' }}</app-shape>
+      </button>
+    </div>
+  </form>
+}
+
 @if (data()) {
   <!-- One block per client: an Income line and a Tax line, like the old sheet -->
   <div class="sheet" role="table" [attr.aria-label]="'Income and tax by month, ' + year()">
@@ -264,6 +335,19 @@
                       <input name="email" type="email" maxlength="200" [value]="oc.email" />
                     </app-shape>
                   </label>
+                  <label class="field">
+                    <span class="field-label">Send declarations by</span>
+                    <app-shape class="field-box" name="field">
+                      <select name="deliveryMethod">
+                        <option value="telegram" [selected]="oc.deliveryMethod === 'telegram'">
+                          Telegram
+                        </option>
+                        <option value="email" [selected]="oc.deliveryMethod === 'email'">
+                          Email
+                        </option>
+                      </select>
+                    </app-shape>
+                  </label>
                 </div>
                 <div class="editor-actions">
                   <button type="submit" class="btn btn--light" [disabled]="busy()">
@@ -310,6 +394,21 @@
                       End the service (client cancelled)
                     </button>
                   }
+                </div>
+
+                <div class="danger">
+                  <label class="check">
+                    <input #withFiles type="checkbox" />
+                    also delete their declaration files
+                  </label>
+                  <button
+                    type="button"
+                    class="action"
+                    [disabled]="busy()"
+                    (click)="remove(oc, withFiles.checked)"
+                  >
+                    Delete from the 1% list
+                  </button>
                 </div>
               </form>
             }

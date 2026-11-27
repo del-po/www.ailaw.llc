@@ -2,9 +2,10 @@
 // Small business declarations: delivering a declaration
 // The filed declaration (PDF) is saved in the client's own folder
 //   clients/verified/ID-… - Name/SmallBusinessDeclarations/yyyy.MM.pdf
-// linked to its month, and sent to the client: by Telegram when they have
-// it, otherwise by email. Sending "test" (tool settings) sends everything
-// to AI Law's own Telegram and email instead of the client's.
+// linked to its month, and sent the way set for the client (deliveryMethod:
+// telegram or email; unset = Telegram when they have a chat id, else email).
+// A missing contact stops the delivery, never switches channel. Sending
+// "test" (tool settings) sends to AI Law's own Telegram / email instead.
 // ==========================================================
 
 import { ApiError, COMPANY, db, now } from '../../core/app.js';
@@ -71,30 +72,35 @@ function caption(client, month, tax, cfg, html) {
 // ---------- Sending ----------
 
 // To the client (or, while testing, to AI Law). Returns how it went out.
+// telegram or email, as set for the client
+export const methodOf = (client) => client.deliveryMethod || (client.telegramId ? 'telegram' : 'email');
+
 async function send(client, month, file, cfg, env) {
   const tax = (await monthRef(client.id, month).get()).data()?.tax;
   const testing = cfg.sending !== 'live';
-  const telegramId = testing ? cfg.testTelegramId : client.telegramId;
-  const email = testing ? cfg.testEmail : client.email;
   const label = testing ? `[TEST — for ${client.name}]\n` : '';
+  const method = methodOf(client);
 
-  if (telegramId && env.telegramToken) {
-    await sendDocument(env.telegramToken, telegramId, file, label + caption(client, month, tax, cfg, true));
+  if (method === 'telegram') {
+    // The client's own contact must exist even while testing
+    if (!client.telegramId) throw new ApiError('NO_TELEGRAM_ID');
+    if (!env.telegramToken) throw new ApiError('NO_TELEGRAM_BOT');
+    const chat = testing ? cfg.testTelegramId : client.telegramId;
+    await sendDocument(env.telegramToken, chat, file, label + caption(client, month, tax, cfg, true));
     return testing ? 'telegram (test)' : 'telegram';
   }
-  if (email) {
-    await sendMail(
-      {
-        to: email,
-        subject: `${label ? '[TEST] ' : ''}Your tax declaration for ${monthName(month)}`,
-        text: label + caption(client, month, tax, cfg, false),
-        attachments: [{ filename: file.name, content: file.content, contentType: 'application/pdf' }],
-      },
-      env.secrets,
-    );
-    return testing ? 'email (test)' : 'email';
-  }
-  throw new ApiError('NO_WAY_TO_REACH_CLIENT');
+
+  if (!client.email) throw new ApiError('NO_EMAIL');
+  await sendMail(
+    {
+      to: testing ? cfg.testEmail : client.email,
+      subject: `${label ? '[TEST] ' : ''}Your tax declaration for ${monthName(month)}`,
+      text: label + caption(client, month, tax, cfg, false),
+      attachments: [{ filename: file.name, content: file.content, contentType: 'application/pdf' }],
+    },
+    env.secrets,
+  );
+  return testing ? 'email (test)' : 'email';
 }
 
 // upload: { name, type, data (base64) } from the admin page; without it, the

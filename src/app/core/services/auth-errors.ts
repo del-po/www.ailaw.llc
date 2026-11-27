@@ -45,6 +45,18 @@ const MESSAGES: Record<string, string> = {
   DRAFT_EXPIRED: 'This report was for an earlier month. Report the current month instead.',
   DRAFT_NOT_FOUND: 'This report could not be found.',
   ALREADY_LINKED: 'This client already has a website account.',
+  NO_TELEGRAM_ID:
+    'This client is set to get declarations by Telegram but has no Telegram chat id. Add it, or switch them to email.',
+  NO_EMAIL:
+    'This client is set to get declarations by email but has no email. Add it, or switch them to Telegram.',
+  NO_TELEGRAM_BOT: 'No Telegram bot is connected.',
+  ALREADY_ON_LIST: 'This client is already on the 1% list.',
+  INVALID_REGISTRATION_ID: 'A registration ID has 9 to 11 digits.',
+  INVALID_TELEGRAM_ID: 'A Telegram chat id is a number.',
+  SERVICE_ENDED: 'The 1% declarations service has ended for this client.',
+  ONGOING_ALONE:
+    '1% Declarations is an ongoing service: order it on its own, without other services in the cart.',
+  PAYMENT_METHOD_UNAVAILABLE: 'For now we only accept invoice payments.',
   CANNOT_CHANGE_OWN_ACCOUNT: "You can't suspend your own account.",
   PRIVILEGED_ACCOUNT: 'Admin and staff accounts are changed directly in Firestore (Clients).',
   INVALID_PROFILE_DATA: 'Some details are too long or contain invalid characters.',

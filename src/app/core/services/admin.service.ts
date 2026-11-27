@@ -14,6 +14,7 @@ import {
   DeclarationSettings,
   DeclarationsList,
   DeliveryResult,
+  NewDeclarationClient,
 } from '../models/declarations';
 import { AdminLawyer } from '../models/lawyer';
 import { Order } from '../models/order';
@@ -175,7 +176,12 @@ export class AdminService {
 
   setDeclarationContacts(
     key: string,
-    contacts: { registrationId: string; telegramId: string; email: string },
+    contacts: {
+      registrationId: string;
+      telegramId: string;
+      email: string;
+      deliveryMethod: 'telegram' | 'email';
+    },
   ): Promise<DeclarationClient> {
     return this.call('declarations:setContacts', { key, ...contacts });
   }
@@ -183,6 +189,15 @@ export class AdminService {
   // ended: the client cancelled the service
   setDeclarationStatus(key: string, status: 'active' | 'ended'): Promise<DeclarationClient> {
     return this.call('declarations:setStatus', { key, status });
+  }
+
+  addDeclarationClient(client: NewDeclarationClient): Promise<DeclarationClient> {
+    return this.call('declarations:add', client);
+  }
+
+  // Off the list with every month; files: also their declarations folder
+  deleteDeclarationClient(key: string, files: boolean): Promise<unknown> {
+    return this.call('declarations:delete', { key, files });
   }
 
   // A self-registered (pending) client gets a client record and folder

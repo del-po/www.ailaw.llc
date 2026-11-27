@@ -1,4 +1,5 @@
 import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
+import { Profile } from '../../../core/models/profile';
 import { DatePipe, DecimalPipe } from '@angular/common';
 import { AdminService } from '../../../core/services/admin.service';
 import {
@@ -11,8 +12,9 @@ import { readUpload } from '../../../core/services/read-upload';
 import { Shape } from '../../../shared/kit/shapes/shape';
 import { adminErrorMessage } from '../admin-links';
 
-// Where each client stands for the month clients report now
-type Filter = 'all' | 'missing' | 'waiting' | 'delivered' | 'pending';
+// Where each client stands for the month clients report now; ended clients
+// only show under their own filter
+type Filter = 'all' | 'missing' | 'waiting' | 'delivered' | 'pending' | 'ended';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const FIRST_YEAR = 2022;
@@ -46,6 +48,7 @@ export class AdminDeclarationsPage {
     { value: 'waiting', label: 'To file' },
     { value: 'delivered', label: 'Delivered' },
     { value: 'pending', label: 'To verify' },
+    { value: 'ended', label: 'Ended' },
   ];
 
   protected readonly data = signal<DeclarationsList | null>(null);
@@ -60,6 +63,9 @@ export class AdminDeclarationsPage {
   protected readonly month = signal('');
   protected readonly settings = signal<DeclarationSettings | null>(null);
   protected readonly settingsOpen = signal(false);
+  // The "Add client" form, and the client records it can attach to
+  protected readonly adding = signal(false);
+  protected readonly records = signal<Profile[]>([]);
 
   protected readonly years = computed(() => {
     const last = Math.max(
@@ -78,7 +84,12 @@ export class AdminDeclarationsPage {
     const filter = this.filter();
     const words = this.search().toLowerCase().split(/\s+/).filter(Boolean);
     return (this.data()?.clients ?? [])
-      .filter((c) => filter === 'all' || !this.showsReporting() || this.stage(c) === filter)
+      .filter((c) =>
+        filter === 'ended'
+          ? c.status === 'ended'
+          : c.status !== 'ended' &&
+            (filter === 'all' || !this.showsReporting() || this.stage(c) === filter),
+      )
       .filter((c) => {
         const text = [c.name, c.key, c.registrationId, c.clientId, c.telegramUsername, c.email]
           .join(' ')
@@ -112,7 +123,7 @@ export class AdminDeclarationsPage {
 
   // Counts for the reporting month, shown in the heading
   protected readonly counts = computed(() => {
-    const all = this.data()?.clients ?? [];
+    const all = (this.data()?.clients ?? []).filter((c) => c.status !== 'ended');
     const count = (f: Filter) => all.filter((c) => this.stage(c) === f).length;
     return {
       total: all.length,
@@ -157,7 +168,7 @@ export class AdminDeclarationsPage {
 
   protected pickYear(year: string): void {
     this.year.set(year);
-    this.filter.set('all');
+    if (this.filter() !== 'ended') this.filter.set('all');
     this.openKey.set(null);
     this.data.set(null);
     this.load();
@@ -302,8 +313,72 @@ export class AdminDeclarationsPage {
         registrationId: field('registrationId'),
         telegramId: field('telegramId'),
         email: field('email'),
+        deliveryMethod: field('deliveryMethod') === 'email' ? 'email' : 'telegram',
       }),
     );
+  }
+
+  // ---------- Adding and deleting ----------
+
+  protected async openAdd(): Promise<void> {
+    this.adding.set(!this.adding());
+    if (this.adding() && !this.records().length) {
+      try {
+        const all = await this.admin.allClients();
+        this.records.set(
+          all
+            .filter((c) => c.Role === 'client' && c.Status !== 'deleted')
+            .sort((a, b) => (a.DisplayName || a.Email).localeCompare(b.DisplayName || b.Email)),
+        );
+      } catch {
+        // The form still works with "new client record"
+      }
+    }
+  }
+
+  // A chosen client record fills in the name and email
+  protected pickRecord(form: HTMLFormElement, clientId: string): void {
+    const record = this.records().find((r) => r.ClientID === clientId);
+    if (!record) return;
+    (form.elements.namedItem('name') as HTMLInputElement).value = record.DisplayName;
+    const email = form.elements.namedItem('email') as HTMLInputElement;
+    if (!email.value) email.value = record.Email;
+  }
+
+  protected async add(form: HTMLFormElement, event: Event): Promise<void> {
+    event.preventDefault();
+    const field = (name: string) =>
+      (form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement).value.trim();
+    const done = await this.run(`${field('name')} is on the list.`, () =>
+      this.admin.addDeclarationClient({
+        name: field('name'),
+        registrationId: field('registrationId'),
+        clientId: field('clientId'),
+        telegramId: field('telegramId'),
+        email: field('email'),
+        serviceStart: field('serviceStart'),
+        deliveryMethod: field('deliveryMethod') === 'email' ? 'email' : 'telegram',
+      }),
+    );
+    if (done) {
+      form.reset();
+      this.adding.set(false);
+    }
+  }
+
+  protected async remove(client: DeclarationClient, files: boolean): Promise<void> {
+    const what = files ? ' and delete their declaration files' : '';
+    if (
+      !confirm(
+        `Delete ${client.name} from the 1% list, with every month's figures${what}?\n\nThis can't be undone. ` +
+          'To keep their history, use "End the service" instead.',
+      )
+    )
+      return;
+    const done = await this.run(`${client.name} is deleted from the list.`, () =>
+      this.admin.deleteDeclarationClient(client.key, files),
+    );
+    if (done) this.openKey.set(null);
   }
 
   protected async setStatus(client: DeclarationClient, status: 'active' | 'ended'): Promise<void> {
