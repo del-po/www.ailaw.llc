@@ -10,7 +10,7 @@
 //   admin:remakeAgreement  a fresh PDF from the order as it is now
 //   admin:resendEmail      the confirmation email again
 // After every order (setupOrder, retried by the daily job when it fails):
-//   1. its Storage folder: the client's folder/2026/…, or guests/2026/…
+//   1. its Storage folder: the client's folder/2026/…, or clients/guests/2026/…
 //   2. the Legal Services Agreement PDF (+ invoice page when paying by invoice)
 //   3. the confirmation email with the PDF attached
 // sendReceipt is used by the on-paid job.
@@ -68,7 +68,7 @@ export async function setupOrder(orderNumber, env) {
     order.folder =
       client?.folder && !client.folder.startsWith('drive:') && client.type !== 'guest'
         ? join(client.folder, year, `${stamp} - ${service}`)
-        : join('guests', year, `${stamp} - ${service} - ${order.clientId}${order.customerName ? ' - ' + cleanName(order.customerName) : ''}`);
+        : join('clients/guests', year, `${stamp} - ${service} - ${order.clientId}${order.customerName ? ' - ' + cleanName(order.customerName) : ''}`);
     await makeFolder(order.folder);
     await ref.update({ folder: order.folder, updatedAt: now() });
   }

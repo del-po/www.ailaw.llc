@@ -111,6 +111,17 @@ export async function removeFolder(path) {
   await bucket().deleteFiles({ prefix: path.endsWith('/') ? path : path + '/' });
 }
 
+// Moves everything inside from/ to to/ (Storage has no real folders, so
+// each file is copied and the original deleted)
+export async function moveFolder(from, to) {
+  const prefix = from.endsWith('/') ? from : from + '/';
+  const [files] = await bucket().getFiles({ prefix });
+  for (const file of files) {
+    await file.move(join(to, file.name.slice(prefix.length)));
+  }
+  return to;
+}
+
 export const join = (...parts) =>
   parts
     .map((p) => String(p).replace(/^\/+|\/+$/g, ''))

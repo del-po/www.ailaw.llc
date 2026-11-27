@@ -14,13 +14,15 @@
 //                              passport / ID number / address; a client
 //                              without an account gets a permanent folder
 //   admin:unverifyClient       back to user (with an account) or guest
+// Folders: clients/users/ID-… - Name or clients/verified/ID-… - Name; the
+// folder moves between the two when the type changes.
 // A guest or verified client who signs up with a confirmed email matching
 // their record becomes a user and keeps their code and folder.
 // ==========================================================
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { ApiError, cleanKey, cleanText, db, iso, newCode, now, titleCase } from '../../core/app.js';
-import { makeFolder } from '../../core/files.js';
+import { makeFolder, moveFolder } from '../../core/files.js';
 import { clientByEmail, clientById, clientByUid, docs } from '../../core/records.js';
 import { getAuth } from 'firebase-admin/auth';
 
@@ -54,9 +56,63 @@ function toProfile(c) {
   };
 }
 
-// "ID-7K3Q9X - Gocha Okreshidze": the client's own Storage folder
-export function clientFolder(clientId, name) {
-  return `clients/${clientId}${name ? ' - ' + titleCase(name) : ''}`;
+// "clients/users/ID-7K3Q9X - Gocha Okreshidze": the client's own Storage
+// folder, under users or verified by the client's type
+export function clientFolder(clientId, name, type) {
+  return `${clientGroup(type)}/${clientId}${name ? ' - ' + titleCase(name) : ''}`;
+}
+
+const clientGroup = (type) => (type === 'verified' ? 'clients/verified' : 'clients/users');
+
+// ---------- Moving a client's folder ----------
+
+// When a client's type changes (user ↔ verified) their folder moves to the
+// matching group, with their order folders inside; every path stored on the
+// client and their orders (folders, agreements, step results) moves with it
+async function moveClientFolder(client, type) {
+  const from = client.folder;
+  if (!from || from.startsWith('drive:')) return from;
+  // The folder keeps its name ("ID-… - Name"); only the group changes
+  const target = clientGroup(type) + '/' + from.split('/').pop();
+  if (from === target) return from;
+  await moveFolder(from, target);
+  const swap = (value) => rewritePaths(value, from, target);
+  const orders = await db.collection('Orders').where('clientId', '==', client.id).get();
+  for (const order of orders.docs) {
+    await rewriteDoc(order.ref, swap);
+    for (const sub of ['Items', 'Steps', 'Assignments']) {
+      const inner = await order.ref.collection(sub).get();
+      for (const d of inner.docs) await rewriteDoc(d.ref, swap);
+    }
+  }
+  return target;
+}
+
+// Every text starting with the old folder (or "file:" + it) gets the new one;
+// lists and plain objects are gone through, anything else is left as it is
+function rewritePaths(value, from, to) {
+  if (typeof value === 'string') {
+    for (const head of ['', 'file:']) {
+      const old = head + from;
+      if (value === old || value.startsWith(old + '/')) return head + to + value.slice(old.length);
+    }
+    return value;
+  }
+  if (Array.isArray(value)) return value.map((v) => rewritePaths(v, from, to));
+  if (value && Object.getPrototypeOf(value) === Object.prototype) {
+    return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, rewritePaths(v, from, to)]));
+  }
+  return value;
+}
+
+async function rewriteDoc(ref, swap) {
+  const data = (await ref.get()).data() || {};
+  const changes = {};
+  for (const [key, value] of Object.entries(data)) {
+    const next = swap(value);
+    if (JSON.stringify(next) !== JSON.stringify(value)) changes[key] = next;
+  }
+  if (Object.keys(changes).length) await ref.update(changes);
 }
 
 async function syncProfile(caller, input) {
@@ -102,7 +158,7 @@ async function syncProfile(caller, input) {
   const clientId = client?.id || (await newCode('ID', 'Clients'));
   // Records copied from Drive point to a Drive folder: they get a Storage one
   if (!record.folder || record.folder.startsWith('drive:')) {
-    record.folder = await makeFolder(clientFolder(clientId, [record.firstName, record.lastName].join(' ')));
+    record.folder = await makeFolder(clientFolder(clientId, [record.firstName, record.lastName].join(' '), record.type));
   }
   delete record.id;
   record.clientId = clientId;
@@ -222,9 +278,11 @@ async function verifyClient(caller, data) {
     updatedAt: now(),
   };
   if (!changes.passport && !changes.idNumber) throw new ApiError('PASSPORT_OR_ID_REQUIRED');
-  // A verified client keeps one folder for all their orders
+  // A verified client keeps one folder for all their orders, under verified
   if (!client.folder || client.folder.startsWith('drive:')) {
-    changes.folder = await makeFolder(clientFolder(client.id, client.displayName));
+    changes.folder = await makeFolder(clientFolder(client.id, client.displayName, 'verified'));
+  } else {
+    changes.folder = await moveClientFolder(client, 'verified');
   }
   await db.doc('Clients/' + client.id).update(changes);
   return toProfile({ ...client, ...changes });
@@ -234,6 +292,9 @@ async function unverifyClient(caller, data) {
   const client = await clientById(cleanKey(data.clientId));
   if (!client) throw new ApiError('CLIENT_NOT_FOUND');
   const changes = { type: client.userId ? 'user' : 'guest', updatedAt: now() };
+  // Back to a user: the folder returns to users. A client without an account
+  // keeps the folder where it is (their documents stay legal records)
+  if (changes.type === 'user') changes.folder = await moveClientFolder(client, 'user');
   await db.doc('Clients/' + client.id).update(changes);
   return toProfile({ ...client, ...changes });
 }
