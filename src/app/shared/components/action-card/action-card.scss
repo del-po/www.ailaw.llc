@@ -1,0 +1,83 @@
+// ==========================================================
+// A proposed change in a chat, waiting for Confirm
+// ==========================================================
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(100%, 460px);
+  padding: 16px 18px;
+  border: 1px solid var(--card-border);
+  border-left: 4px solid rgb(var(--yellow));
+  background: var(--card-bg);
+
+  &--danger {
+    border-left-color: var(--text);
+  }
+
+  &.is-closed {
+    opacity: 0.75;
+  }
+}
+
+.tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.title {
+  font-weight: 700;
+}
+
+.lines {
+  margin: 0;
+  padding-left: 18px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.buttons {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.btn-main,
+.btn-plain {
+  padding: 8px 16px;
+  border: 1px solid var(--card-border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
+.btn-main {
+  border-color: rgb(var(--yellow));
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+}
+
+.outcome {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 1px;
+
+  &--failed {
+    font-weight: 400;
+  }
+}

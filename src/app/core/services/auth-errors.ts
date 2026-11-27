@@ -45,6 +45,8 @@ const MESSAGES: Record<string, string> = {
   DRAFT_EXPIRED: 'This report was for an earlier month. Report the current month instead.',
   DRAFT_NOT_FOUND: 'This report could not be found.',
   ALREADY_LINKED: 'This client already has a website account.',
+  ACTION_NOT_FOUND: 'This proposal could not be found.',
+  UNKNOWN_ACTION: 'This action is not available here.',
   NO_TELEGRAM_ID:
     'This client is set to get declarations by Telegram but has no Telegram chat id. Add it, or switch them to email.',
   NO_EMAIL:

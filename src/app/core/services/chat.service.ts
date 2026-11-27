@@ -1,6 +1,6 @@
 import { Service, PLATFORM_ID, computed, effect, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { ChatMessage, Conversation, LawyerTask, MessagePart } from '../models/chat';
+import { ActionState, ChatMessage, Conversation, LawyerTask, MessagePart } from '../models/chat';
 import { AuthService } from './auth.service';
 import { DOORS, DoorResult } from './doors';
 
@@ -149,6 +149,20 @@ export class ChatService {
       messages: c.messages.slice(0, index),
     }));
     await this.ask(question, [{ type: 'text', text: question }], messageId);
+  }
+
+  // ---------- Proposed actions (cards with Confirm / Cancel) ----------
+
+  confirmAction(actionId: string): Promise<ActionState> {
+    return this.call('chat:confirmAction', { actionId });
+  }
+
+  cancelAction(actionId: string): Promise<ActionState> {
+    return this.call('chat:cancelAction', { actionId });
+  }
+
+  actionStatus(actionId: string): Promise<ActionState> {
+    return this.call('chat:actionStatus', { actionId });
   }
 
   // ---------- Lawyer tasks (admin door) ----------

@@ -57,8 +57,30 @@ export interface DeclarationPart {
   previousIncome: number | null;
 }
 
+// A change the chat proposes: it only happens when the person presses Confirm
+export interface ActionPart {
+  type: 'action';
+  actionId: string;
+  title: string;
+  lines: string[];
+  danger: boolean;
+}
+
+export type ActionStatus = 'pending' | 'running' | 'done' | 'failed' | 'cancelled';
+export interface ActionState {
+  status: ActionStatus;
+  result: unknown;
+  error: string;
+}
+
 export type MessagePart =
-  TextPart | FilePart | ServicePart | OrderPart | PaymentPart | DeclarationPart;
+  | TextPart
+  | FilePart
+  | ServicePart
+  | OrderPart
+  | PaymentPart
+  | DeclarationPart
+  | ActionPart;
 
 export interface ChatMessage {
   id: string;

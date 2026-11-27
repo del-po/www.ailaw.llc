@@ -1,13 +1,14 @@
 import { Component, ElementRef, computed, effect, inject, viewChild } from '@angular/core';
 import { AdminChatService } from '../../../core/services/admin-chat.service';
 import { ChatInput, ChatSubmit } from '../../../shared/components/chat-input/chat-input';
+import { ActionCard } from '../../../shared/components/action-card/action-card';
 import { formatMessage } from '../../chat-page/format-message';
 
 // The admin's chat: the start page of the admin Workspace. Conversations
 // are listed in the sidebar (AdminLayout); this shows the open one.
 @Component({
   selector: 'app-admin-chat-page',
-  imports: [ChatInput],
+  imports: [ChatInput, ActionCard],
   templateUrl: './admin-chat-page.html',
   styleUrl: './admin-chat-page.scss',
 })

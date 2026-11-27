@@ -35,6 +35,7 @@
 
 import { ApiError, cleanKey, cleanText, now, validEmail } from '../../core/app.js';
 import { addPart } from '../../core/chat.js';
+import { proposeAction } from '../../core/chat-actions.js';
 import { onOrderPlaced } from '../../core/orders.js';
 import { clientByUid } from '../../core/records.js';
 import {
@@ -362,6 +363,281 @@ async function updateSettings(data) {
   return Object.fromEntries(EDITABLE.map((k) => [k, cfg[k]]));
 }
 
+// ---------- The admin's chat ----------
+// Questions are answered straight away; every change is proposed as a card
+// and runs the admin action above only when the admin presses Confirm.
+
+const keyProp = { type: 'string', description: 'the client key from declarations_find (registration ID or ID-… code)' };
+const monthProp = { type: 'string', description: 'yyyy-MM' };
+const money2 = (n) => (n == null ? '—' : `${Number(n).toFixed(2)} GEL`);
+
+async function adminTool(run) {
+  try {
+    return await run();
+  } catch (err) {
+    if (err instanceof ApiError) return { error: err.code };
+    throw err;
+  }
+}
+
+// The client a proposal is about, named on its card
+async function named(key) {
+  const client = await findClient({ key: String(key || '') });
+  if (!client) throw new ApiError('CLIENT_NOT_FOUND');
+  return client;
+}
+const who = (c) => `${c.name}${c.registrationId ? ' (' + c.registrationId + ')' : ''}`;
+
+const adminTools = {
+  declarations_overview: {
+    sides: ['admin'],
+    description:
+      '1% declarations at a glance for the month clients report now: who has not reported, whose declaration ' +
+      'is still to file, who registered and waits for verification, and the sending mode (test or live).',
+    parameters: { type: 'object', properties: {} },
+    run: () =>
+      adminTool(async () => {
+        const month = reportingMonth();
+        const cfg = await settings();
+        const groups = { notReported: [], toFile: [], toVerify: [] };
+        for (const c of await allClients()) {
+          if (c.status === 'ended') continue;
+          if (c.id === cfg.testRegistrationId && cfg.sending === 'live') continue;
+          if (c.status === 'pending') {
+            groups.toVerify.push({ key: c.id, name: c.name });
+            continue;
+          }
+          const m = (await monthRef(c.id, month).get()).data();
+          if (!m || m.income == null) groups.notReported.push({ key: c.id, name: c.name });
+          else if (!m.deliveredAt && !m.declarationFile) groups.toFile.push({ key: c.id, name: c.name, income: m.income });
+        }
+        return { reportingMonth: month, sending: cfg.sending, ...groups };
+      }),
+  },
+  declarations_find: {
+    sides: ['admin'],
+    description:
+      'Finds 1% declarations clients by name, registration ID, ID-… code, Telegram username or email ' +
+      '(empty = everyone). Gives each one\'s key (needed by the other tools), status, contacts, delivery method and debt.',
+    parameters: { type: 'object', properties: { query: { type: 'string' } } },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const words = String(args?.query || '').toLowerCase().split(/\s+/).filter(Boolean);
+        return (await allClients())
+          .filter((c) => {
+            const text = [c.name, c.id, c.registrationId, c.clientId, c.telegramUsername, c.email].join(' ').toLowerCase();
+            return words.every((w) => text.includes(w));
+          })
+          .slice(0, 30)
+          .map((c) => {
+            const t = toClient(c);
+            const { months: _, ...rest } = t;
+            return rest;
+          });
+      }),
+  },
+  declarations_months: {
+    sides: ['admin'],
+    description: "One client's months for a year: income, tax, where the report came from, and whether the declaration was delivered.",
+    parameters: { type: 'object', properties: { key: keyProp, year: { type: 'string' } }, required: ['key'] },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const client = await named(args.key);
+        const year = /^\d{4}$/.test(String(args.year || '')) ? String(args.year) : reportingMonth().slice(0, 4);
+        const list = (await months(client.id, year)).map(toMonth).sort((a, b) => a.month.localeCompare(b.month));
+        const total = (k) => round2(list.reduce((t, m) => t + (m[k] || 0), 0));
+        return { client: who(client), year, months: list, incomeTotal: total('income'), taxTotal: total('tax') };
+      }),
+  },
+  declarations_set_month: {
+    sides: ['admin'],
+    description:
+      "Proposes setting a month's income and/or tax (GEL) for a client; leave out a figure to keep it. The tax is " +
+      'what rs.ge shows when filing. Shows a Confirm card; nothing changes until the admin confirms.',
+    parameters: {
+      type: 'object',
+      properties: { key: keyProp, month: monthProp, income: { type: 'number' }, tax: { type: 'number' } },
+      required: ['key', 'month'],
+    },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const c = await named(args.key);
+        checkMonth(args.month);
+        const data = { key: c.id, month: args.month };
+        const lines = [];
+        if (typeof args.income === 'number') {
+          data.income = args.income;
+          lines.push(`Income: ${money2(args.income)}`);
+        }
+        if (typeof args.tax === 'number') {
+          data.tax = args.tax;
+          lines.push(`Tax: ${money2(args.tax)}`);
+        }
+        if (!lines.length) return { error: 'NOTHING_TO_CHANGE' };
+        const old = (await monthRef(c.id, args.month).get()).data() || {};
+        lines.push(`Before: income ${money2(old.income)}, tax ${money2(old.tax)}`);
+        return proposeAction(ctx, { action: 'declarations:setMonth', data, title: `${monthName(args.month)} for ${who(c)}`, lines });
+      }),
+  },
+  declarations_set_status: {
+    sides: ['admin'],
+    description:
+      "Proposes ending a client's 1% service (they cancelled: status ended, they leave the table) or starting it again " +
+      '(active). Shows a Confirm card.',
+    parameters: { type: 'object', properties: { key: keyProp, status: { type: 'string', enum: ['active', 'ended'] } }, required: ['key', 'status'] },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const c = await named(args.key);
+        const ending = args.status === 'ended';
+        return proposeAction(ctx, {
+          action: 'declarations:setStatus',
+          data: { key: c.id, status: ending ? 'ended' : 'active' },
+          title: ending ? `End the 1% service for ${who(c)}` : `Start the 1% service again for ${who(c)}`,
+          lines: ending
+            ? ['They can no longer report income.', 'They move to the Ended filter; their months and files stay.']
+            : ['They can report income again and show in the table.'],
+        });
+      }),
+  },
+  declarations_set_debt: {
+    sides: ['admin'],
+    description: "Proposes setting a client's outstanding debt on rs.ge (GEL). Shows a Confirm card.",
+    parameters: { type: 'object', properties: { key: keyProp, amount: { type: 'number' } }, required: ['key', 'amount'] },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const c = await named(args.key);
+        return proposeAction(ctx, {
+          action: 'declarations:setDebt',
+          data: { key: c.id, amount: args.amount },
+          title: `Outstanding debt for ${who(c)}`,
+          lines: [`New: ${money2(args.amount)}`, `Before: ${money2(c.outstandingDebt)}`],
+        });
+      }),
+  },
+  declarations_set_contacts: {
+    sides: ['admin'],
+    description:
+      "Proposes changing a client's registration ID, Telegram chat id, email and/or how declarations are sent " +
+      '(deliveryMethod telegram or email). Only the fields given change. Shows a Confirm card.',
+    parameters: {
+      type: 'object',
+      properties: {
+        key: keyProp,
+        registrationId: { type: 'string' },
+        telegramId: { type: 'string' },
+        email: { type: 'string' },
+        deliveryMethod: { type: 'string', enum: ['telegram', 'email'] },
+      },
+      required: ['key'],
+    },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const c = await named(args.key);
+        const data = { key: c.id };
+        const lines = [];
+        const labels = { registrationId: 'Registration ID', telegramId: 'Telegram chat id', email: 'Email', deliveryMethod: 'Send declarations by' };
+        for (const k of Object.keys(labels)) {
+          if (args[k] === undefined) continue;
+          data[k] = args[k];
+          lines.push(`${labels[k]}: ${args[k] || '(empty)'}  (was ${(k === 'deliveryMethod' ? methodOf(c) : c[k]) || 'empty'})`);
+        }
+        if (!lines.length) return { error: 'NOTHING_TO_CHANGE' };
+        return proposeAction(ctx, { action: 'declarations:setContacts', data, title: `Details of ${who(c)}`, lines });
+      }),
+  },
+  declarations_add_client: {
+    sides: ['admin'],
+    description:
+      'Proposes putting a client on the 1% list: name, and optionally registration ID, Telegram chat id, email, ' +
+      'serviceStart (yyyy-MM), deliveryMethod (telegram/email), clientId (an existing ID-… client record; without it ' +
+      'a new client record and folder are made). Shows a Confirm card.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        registrationId: { type: 'string' },
+        telegramId: { type: 'string' },
+        email: { type: 'string' },
+        serviceStart: monthProp,
+        deliveryMethod: { type: 'string', enum: ['telegram', 'email'] },
+        clientId: { type: 'string' },
+      },
+      required: ['name'],
+    },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const data = { ...args, serviceStart: args.serviceStart || reportingMonth() };
+        return proposeAction(ctx, {
+          action: 'declarations:add',
+          data,
+          title: `Add ${args.name} to the 1% list`,
+          lines: [
+            `Registration ID: ${args.registrationId || '—'}`,
+            `Telegram: ${args.telegramId || '—'} · Email: ${args.email || '—'}`,
+            `Send by: ${args.deliveryMethod || 'telegram'} · From: ${data.serviceStart}`,
+            args.clientId ? `Client record: ${args.clientId}` : 'A new client record and folder are made',
+          ],
+        });
+      }),
+  },
+  declarations_delete_client: {
+    sides: ['admin'],
+    description:
+      'Proposes deleting a client from the 1% list completely, with every month (for tests and mistakes; for a client ' +
+      'who cancelled use declarations_set_status ended). files=true also deletes their declaration PDFs. Shows a Confirm card.',
+    parameters: { type: 'object', properties: { key: keyProp, files: { type: 'boolean' } }, required: ['key'] },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const c = await named(args.key);
+        return proposeAction(ctx, {
+          action: 'declarations:delete',
+          data: { key: c.id, files: args.files === true },
+          title: `Delete ${who(c)} from the 1% list`,
+          lines: [
+            'Every month\'s figures are deleted. This can\'t be undone.',
+            args.files === true ? 'Their declaration PDFs are deleted too.' : 'Their declaration PDFs stay in their folder.',
+          ],
+          danger: true,
+        });
+      }),
+  },
+  declarations_resend: {
+    sides: ['admin'],
+    description:
+      "Proposes sending a month's declaration again (the PDF already in the client's folder), by the client's delivery " +
+      'method. New PDFs are uploaded on the 1% Declarations page. Shows a Confirm card.',
+    parameters: { type: 'object', properties: { key: keyProp, month: monthProp }, required: ['key', 'month'] },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const c = await named(args.key);
+        checkMonth(args.month);
+        const cfg = await settings();
+        return proposeAction(ctx, {
+          action: 'declarations:deliver',
+          data: { key: c.id, month: args.month },
+          title: `Send ${monthName(args.month)} to ${who(c)} again`,
+          lines: [`By ${methodOf(c)}${cfg.sending !== 'live' ? ' (test mode: it comes to you)' : ''}`],
+        });
+      }),
+  },
+  declarations_verify: {
+    sides: ['admin'],
+    description: 'Proposes verifying a client who registered through the Telegram bot (status pending). Shows a Confirm card.',
+    parameters: { type: 'object', properties: { key: keyProp }, required: ['key'] },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const c = await named(args.key);
+        if (c.status !== 'pending') return { error: 'NOT_PENDING' };
+        return proposeAction(ctx, {
+          action: 'declarations:verify',
+          data: { key: c.id },
+          title: `Verify ${who(c)}`,
+          lines: ['They get a client record and folder and can report income.', 'Check their identity first.'],
+        });
+      }),
+  },
+};
+
 // ---------- Ordering the service ----------
 
 // A signed-in client's order puts them on the list (see enrol)
@@ -398,6 +674,7 @@ export default {
     },
   },
   tools: {
+    ...adminTools,
     draft_declaration_income: {
       sides: ['client'],
       description:

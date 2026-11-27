@@ -1,0 +1,41 @@
+@let s = state();
+<div
+  class="card"
+  [class.card--danger]="part().danger"
+  [class.is-closed]="s && s.status !== 'pending'"
+>
+  <span class="tag">{{ part().danger ? 'Confirm · can’t be undone' : 'Confirm' }}</span>
+  <p class="title">{{ part().title }}</p>
+  @if (part().lines.length) {
+    <ul class="lines">
+      @for (line of part().lines; track $index) {
+        <li>{{ line }}</li>
+      }
+    </ul>
+  }
+
+  @switch (s?.status) {
+    @case ('done') {
+      <p class="outcome outcome--done">✓ Done</p>
+    }
+    @case ('cancelled') {
+      <p class="outcome">Cancelled</p>
+    }
+    @case ('failed') {
+      <p class="outcome outcome--failed" role="alert">Not done: {{ message(s!.error) }}</p>
+    }
+    @case ('running') {
+      <p class="outcome">Working…</p>
+    }
+    @default {
+      <div class="buttons">
+        <button type="button" class="btn-main" [disabled]="busy() || !s" (click)="confirm()">
+          {{ busy() ? 'Working…' : 'Confirm' }}
+        </button>
+        <button type="button" class="btn-plain" [disabled]="busy() || !s" (click)="cancel()">
+          Cancel
+        </button>
+      </div>
+    }
+  }
+</div>

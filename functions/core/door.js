@@ -16,6 +16,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { ApiError, log } from './app.js';
 import { allowed, identify } from './guard.js';
 import { actionsOf, loadPlugins } from './loader.js';
+import { actionRoutes } from './chat-actions.js';
 import {
   answer,
   deleteConversation,
@@ -100,7 +101,9 @@ export function door(side, modules, options = {}) {
       // ---------- Everything else ----------
       try {
         const plugins = await loadPlugins(side, modules);
-        const routes = { ...chatRoutes(side), ...actionsOf(plugins, side) };
+        const own = { ...chatRoutes(side), ...actionsOf(plugins, side) };
+        // Actions the chat proposed run through this same table on Confirm
+        const routes = { ...own, ...actionRoutes(side, own) };
         const route = routes[body.action];
         if (!route) throw new ApiError('UNKNOWN_ACTION');
         const run = typeof route === 'function' ? route : route.run;
