@@ -29,6 +29,8 @@ export const SECRETS = {
   openai: defineSecret('OPENAI_API_KEY'),
   mailSecret: defineSecret('MAIL_SECRET'),
   smtpPassword: defineSecret('SMTP_PASSWORD'),
+  // The 1% declarations Telegram bot ("unset" until a bot is connected)
+  declarationsBot: defineSecret('DECLARATIONS_BOT_TOKEN'),
 };
 
 // Sites allowed to call the doors
@@ -43,8 +45,15 @@ export function environment(req) {
   return {
     keys: { gemini: SECRETS.gemini.value(), openai: SECRETS.openai.value() },
     secrets: { mailSecret: SECRETS.mailSecret.value(), smtpPassword: SECRETS.smtpPassword.value() },
+    telegramToken: botToken(),
     origin: siteOrigin(req),
   };
+}
+
+// The declarations bot's token, or '' while none is connected
+export function botToken() {
+  const token = String(SECRETS.declarationsBot.value() || '').trim();
+  return token && token !== 'unset' ? token : '';
 }
 
 // side: 'client' | 'lawyer' | 'admin'; modules: the plugin code this door may load.

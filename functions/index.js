@@ -2,7 +2,7 @@
 // AI Law — Firebase Functions
 //
 // The new backend (core + plugins + doors, on Firestore and Storage):
-//   client, lawyer, admin, onOrderPaid, daily — see doors/index.js
+//   client, lawyer, admin, onOrderPaid, daily, declarationsBot — see doors/index.js
 // The functions below (chat, on Google Sheets) keep the current site
 // working until the website switches to the doors; then they go.
 //
@@ -212,4 +212,4 @@ function safeJson(text) {
   }
 }
 
-export { admin, client, daily, lawyer, onOrderPaid } from './doors/index.js';
+export { admin, client, daily, declarationsBot, lawyer, onOrderPaid } from './doors/index.js';

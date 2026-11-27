@@ -8,14 +8,18 @@
 //   onOrderPaid  an order marked paid: receipt + its next steps
 //   daily        retries what failed (folders, agreements, emails) and
 //                moves paid orders on
+//   declarationsBot  the 1% declarations Telegram bot: Telegram sends every
+//                message here (webhook); /setup connects the bot to it
 // Each door lists the plugin code it may load; switching a plugin off or on
 // for a door is done in Firestore (Plugins/{id}: enabled, sides).
 // ==========================================================
 
+import { createHash } from 'node:crypto';
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
+import { onRequest } from 'firebase-functions/v2/https';
 import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { db, log } from '../core/app.js';
-import { SECRETS, door } from '../core/door.js';
+import { SECRETS, botToken, door } from '../core/door.js';
 import { loadPlugins } from '../core/loader.js';
 import { docs } from '../core/records.js';
 import { advance, resumePaid } from '../core/steps.js';
@@ -28,11 +32,13 @@ import lawyerProfile from '../plugins/lawyer-profile/index.js';
 import lawyerVerification from '../plugins/lawyer-verification/index.js';
 import myOrders from '../plugins/my-orders/index.js';
 import ordering, { sendReceipt, setupOrder } from '../plugins/ordering/index.js';
+import declarations, { handleUpdate } from '../plugins/small-business-declarations/index.js';
+import { setWebhook } from '../plugins/small-business-declarations/telegram-api.js';
 import taskDesk from '../plugins/task-desk/index.js';
 
-const CLIENT = [accounts, catalogue, ordering, myOrders, documents, blog];
+const CLIENT = [accounts, catalogue, ordering, myOrders, documents, blog, declarations];
 const LAWYER = [lawyerVerification, assignments, lawyerProfile];
-const ADMIN = [accounts, catalogue, ordering, lawyerVerification, taskDesk, blog];
+const ADMIN = [accounts, catalogue, ordering, lawyerVerification, taskDesk, blog, declarations];
 
 export const client = door('client', CLIENT);
 // Applications carry their documents: up to ~25 MB per request
@@ -44,6 +50,7 @@ function jobEnvironment() {
   return {
     keys: { gemini: SECRETS.gemini.value(), openai: SECRETS.openai.value() },
     secrets: { mailSecret: SECRETS.mailSecret.value(), smtpPassword: SECRETS.smtpPassword.value() },
+    telegramToken: botToken(),
     origin: 'https://www.ailaw.llc',
   };
 }
@@ -108,5 +115,45 @@ export const daily = onSchedule(
       }
     }
     await resumePaid(env);
+  },
+);
+
+// ---------- 1% declarations Telegram bot ----------
+
+const BOT_URL = 'https://europe-west1-website-ai-law.cloudfunctions.net/declarationsBot';
+
+// Telegram signs every call with this (derived from the token, so there is
+// no second secret to keep)
+const webhookSecret = (token) => createHash('sha256').update('ailaw-declarations:' + token).digest('hex').slice(0, 48);
+
+export const declarationsBot = onRequest(
+  { region: 'europe-west1', secrets: Object.values(SECRETS), timeoutSeconds: 60, memory: '512MiB' },
+  async (req, res) => {
+    const token = botToken();
+    if (!token) {
+      res.status(503).send('No bot connected');
+      return;
+    }
+    // GET …/declarationsBot?setup=<secret> points the bot at this function
+    if (req.method === 'GET') {
+      if (req.query.setup !== webhookSecret(token)) {
+        res.status(404).send('');
+        return;
+      }
+      await setWebhook(token, BOT_URL, webhookSecret(token));
+      res.send('Webhook set');
+      return;
+    }
+    if (req.get('X-Telegram-Bot-Api-Secret-Token') !== webhookSecret(token)) {
+      res.status(403).send('');
+      return;
+    }
+    try {
+      await handleUpdate(req.body || {}, jobEnvironment());
+    } catch (err) {
+      await log('declarationsBot', err);
+    }
+    // Always 200, so Telegram doesn't send the same update again
+    res.send('ok');
   },
 );
