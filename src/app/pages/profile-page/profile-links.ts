@@ -16,6 +16,12 @@ export const PROFILE_SECTIONS: ProfileSection[] = [
     text: 'Services you ordered and their progress.',
   },
   {
+    label: '1% Declarations',
+    link: '/profile/declarations',
+    ready: true,
+    text: 'Report your monthly income and get your declarations.',
+  },
+  {
     label: 'Payments',
     link: '/profile/payments',
     ready: false,

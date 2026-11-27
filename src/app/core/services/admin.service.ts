@@ -107,6 +107,12 @@ export class AdminService {
     return this.call('admin:unverifyClient', { clientId });
   }
 
+  // Joins a website login (userId) to an existing client without one; the
+  // record the sign-up made is merged into it
+  linkAccount(clientId: string, userId: string): Promise<Profile> {
+    return this.call('admin:linkAccount', { clientId, userId });
+  }
+
   // ---------- Orders ----------
 
   createOrder(order: AdminNewOrder): Promise<Order> {

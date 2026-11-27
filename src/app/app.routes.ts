@@ -164,6 +164,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'declarations',
+        loadComponent: () =>
+          import('./pages/profile-page/profile-declarations-page/profile-declarations-page').then(
+            (m) => m.ProfileDeclarationsPage,
+          ),
+      },
+      {
         path: 'documents',
         loadComponent: () =>
           import('./pages/profile-page/profile-documents-page/profile-documents-page').then(

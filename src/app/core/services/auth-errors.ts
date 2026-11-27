@@ -33,6 +33,18 @@ const MESSAGES: Record<string, string> = {
   VERIFICATION_REQUIRED:
     'This service is for verified clients only. Contact our lawyer Gocha Okreshidze (https://t.me/ailawllc, info@ailaw.llc) to get verified.',
   FORBIDDEN: 'Only admins can do this.',
+  NOT_A_DECLARATIONS_CLIENT:
+    "Your account isn't linked to the 1% declarations service. Contact our lawyer Gocha Okreshidze (https://t.me/ailawllc, info@ailaw.llc).",
+  VERIFICATION_PENDING: 'Your registration is waiting for verification by AI Law.',
+  NO_INCOME_ENTRIES: 'Add at least one payment, or choose a month without income.',
+  INVALID_DATE: 'Each payment needs a date in the month you are reporting.',
+  INVALID_CURRENCY: 'Choose GEL, USD, EUR or GBP.',
+  INVALID_AMOUNT: 'Enter amounts as numbers, like 1234 or 1234.56.',
+  RATE_UNAVAILABLE: 'The exchange rate for that date is not available. Try again later.',
+  ALREADY_CONFIRMED: 'This report is already saved.',
+  DRAFT_EXPIRED: 'This report was for an earlier month. Report the current month instead.',
+  DRAFT_NOT_FOUND: 'This report could not be found.',
+  ALREADY_LINKED: 'This client already has a website account.',
   CANNOT_CHANGE_OWN_ACCOUNT: "You can't suspend your own account.",
   PRIVILEGED_ACCOUNT: 'Admin and staff accounts are changed directly in Firestore (Clients).',
   INVALID_PROFILE_DATA: 'Some details are too long or contain invalid characters.',

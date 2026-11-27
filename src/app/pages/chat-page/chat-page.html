@@ -175,11 +175,79 @@
                           </span>
                           <span>{{ step.label }}</span>
                           <span class="visually-hidden">
-                            ({{ step.status === 'done' ? 'done' : step.status === 'in_progress' ? 'in progress' : 'waiting' }})
+                            ({{
+                              step.status === 'done'
+                                ? 'done'
+                                : step.status === 'in_progress'
+                                  ? 'in progress'
+                                  : 'waiting'
+                            }})
                           </span>
                         </li>
                       }
                     </ol>
+                  </div>
+                }
+                @if (part.type === 'declaration') {
+                  @let state = cardState()[part.draftId];
+                  <div class="order-card declaration-card">
+                    <span class="service-tag">1% declaration · {{ part.monthName }}</span>
+                    <table class="declaration-table">
+                      <tbody>
+                        @for (e of part.entries; track $index) {
+                          <tr>
+                            <td>{{ e.date }}</td>
+                            <td class="num">{{ e.amount | number: '1.2-2' }} {{ e.currency }}</td>
+                            <td class="num">
+                              {{ e.gel | number: '1.2-2' }} GEL
+                              @if (e.currency !== 'GEL') {
+                                <span class="declaration-rate"
+                                  >at {{ e.rate | number: '1.4-4' }}</span
+                                >
+                              }
+                            </td>
+                          </tr>
+                        } @empty {
+                          <tr>
+                            <td colspan="3">No income this month</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                    <p class="declaration-total">
+                      Total <b>{{ part.income | number: '1.2-2' }} GEL</b> · tax 1%
+                      <b>{{ part.tax | number: '1.2-2' }} GEL</b>
+                    </p>
+                    @if (part.previousIncome !== null) {
+                      <p class="declaration-note">
+                        Replaces the {{ part.previousIncome | number: '1.2-2' }} GEL reported
+                        before.
+                      </p>
+                    }
+                    @if (state === 'saved') {
+                      <p class="declaration-done"><app-icon name="check" /> Saved</p>
+                    } @else {
+                      @if (state && state !== 'saving') {
+                        <p class="declaration-note" role="alert">{{ state }}</p>
+                      }
+                      <div class="declaration-actions">
+                        <button
+                          type="button"
+                          class="declaration-btn declaration-btn--main"
+                          [disabled]="state === 'saving'"
+                          (click)="confirmDeclaration(part)"
+                        >
+                          {{ state === 'saving' ? 'Saving…' : 'Confirm' }}
+                        </button>
+                        <button
+                          type="button"
+                          class="declaration-btn"
+                          (click)="editDeclaration(part)"
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    }
                   </div>
                 }
                 @if (part.type === 'payment') {

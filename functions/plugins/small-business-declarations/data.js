@@ -10,6 +10,8 @@
 //       income, tax, serviceFee, source, entries (one per income received),
 //       reportedAt, declarationFile, deliveredAt, deliveredVia
 //   BotState/{telegram chat id}    where a Telegram conversation is
+//   Drafts/{id}    income the website chat read from a client's message,
+//                  saved only when the client presses Confirm
 // Clients report income through any channel (Telegram, the website chat,
 // later email or WhatsApp); every channel ends up in reportIncome().
 // ==========================================================
@@ -90,7 +92,8 @@ export function requireActive(client) {
 // entries: [{ date: 'yyyy-MM-dd', currency, amount, rate, gel }] (already in GEL),
 // or [] for a zero-income month. The month's total is replaced, as the
 // Telegram bot always did ("Finish" saves the month's total).
-export async function reportIncome(client, { month, entries = [], source, by = '' }) {
+// note: the client's own words, kept with the report (e.g. the chat message)
+export async function reportIncome(client, { month, entries = [], source, by = '', note = '' }) {
   requireActive(client);
   checkMonth(month);
   const { taxRate } = await settings();
@@ -104,6 +107,7 @@ export async function reportIncome(client, { month, entries = [], source, by = '
     entries,
     source,
     reportedBy: by,
+    note: String(note || '').slice(0, 2000),
     reportedAt: now(),
   };
   await ref.set(record, { merge: true });

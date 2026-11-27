@@ -47,3 +47,36 @@ export interface DeliveryResult {
   declarationFile: string;
   deliveredVia: string;
 }
+
+// ---------- The client's side ----------
+
+// One payment received, as the client enters it
+export interface IncomeEntry {
+  date: string; // 2026-10-12
+  currency: string; // GEL, USD, EUR, GBP
+  amount: number;
+}
+
+export interface MyDeclarationMonth {
+  month: string;
+  income: number | null;
+  tax: number | null;
+  reportedAt: string;
+  deliveredAt: string;
+  fileId: string; // inside the client's documents ('' = no file)
+}
+
+export interface MyDeclarations {
+  reportingMonth: string;
+  name: string;
+  registrationId: string;
+  outstandingDebt: number;
+  feePerDeclaration: number;
+  months: MyDeclarationMonth[];
+}
+
+export interface IncomeSaved {
+  month: string;
+  income: number;
+  tax: number;
+}

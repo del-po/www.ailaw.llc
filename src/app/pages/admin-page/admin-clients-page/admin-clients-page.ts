@@ -37,6 +37,15 @@ export class AdminClientsPage {
   protected readonly busyId = signal<string | null>(null);
   // The client whose verification form is open
   protected readonly verifyingId = signal<string | null>(null);
+  // The client (without a login) being joined to a website account
+  protected readonly linkingId = signal<string | null>(null);
+
+  // Website accounts that can be joined to a client: ordinary client logins
+  protected readonly accounts = computed(() =>
+    (this.clients() ?? [])
+      .filter((c) => c.UserID && c.Role === 'client' && c.Type !== 'verified')
+      .sort((a, b) => (a.DisplayName || a.Email).localeCompare(b.DisplayName || b.Email)),
+  );
 
   // Newest first, filtered by type and by name, code, email or phone
   protected readonly list = computed(() => {
@@ -108,6 +117,32 @@ export class AdminClientsPage {
       }),
     );
     if (done) this.verifyingId.set(null);
+  }
+
+  protected async link(client: Profile, select: HTMLSelectElement): Promise<void> {
+    const account = this.accounts().find((a) => a.UserID === select.value);
+    if (!account) {
+      this.error.set('Choose the website account first.');
+      return;
+    }
+    if (
+      !confirm(
+        `Join ${account.DisplayName || account.Email} (${account.ClientID}, ${account.Email}) to ${client.DisplayName} (${client.ClientID})?\n\n` +
+          `${client.ClientID} keeps its code and folder; ${account.ClientID}'s orders and files move to it and ${account.ClientID} is closed.`,
+      )
+    )
+      return;
+    this.busyId.set(client.ClientID);
+    this.error.set(null);
+    try {
+      await this.admin.linkAccount(client.ClientID, account.UserID);
+      this.linkingId.set(null);
+      await this.load();
+    } catch (error) {
+      this.error.set(adminErrorMessage(error));
+    } finally {
+      this.busyId.set(null);
+    }
   }
 
   protected async unverify(client: Profile): Promise<void> {

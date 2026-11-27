@@ -595,6 +595,85 @@
   text-transform: uppercase;
 }
 
+// ---------- 1% declaration card ----------
+
+// The income the chat read, waiting for the client's Confirm
+.declaration-card {
+  gap: 10px;
+}
+
+.declaration-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+
+  td {
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line);
+    vertical-align: top;
+  }
+
+  .num {
+    padding-left: 12px;
+    text-align: right;
+    white-space: nowrap;
+  }
+}
+
+.declaration-rate {
+  display: block;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.declaration-total {
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.declaration-note {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.declaration-done {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.declaration-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.declaration-btn {
+  padding: 8px 16px;
+  border: 1px solid var(--card-border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+
+  &--main {
+    border-color: rgb(var(--yellow));
+    background: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
 // ---------- Order progress card ----------
 
 .order-card {

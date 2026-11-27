@@ -92,6 +92,16 @@
                 Verify
               </button>
             }
+            @if (!client.UserID) {
+              <button
+                type="button"
+                class="action"
+                [disabled]="busyId() === client.ClientID"
+                (click)="linkingId.set(linkingId() === client.ClientID ? null : client.ClientID)"
+              >
+                Link account
+              </button>
+            }
             @if (canSuspend(client)) {
               <button
                 type="button"
@@ -111,6 +121,45 @@
             {{ client.IDNumber ? ' · ID ' + client.IDNumber : '' }}
             {{ client.Address ? ' · ' + client.Address : '' }}
           </p>
+        }
+
+        @if (linkingId() === client.ClientID) {
+          <div class="editor">
+            <h2 class="block-title">Link {{ client.DisplayName }} to a website account</h2>
+            <p class="small">
+              For a client who signed up on the website after we registered them. Their login is
+              joined to
+              {{ client.ClientID }}, which keeps its code, folder and history.
+            </p>
+            <label class="field">
+              <span class="field-label">Website account</span>
+              <app-shape class="field-box" name="field">
+                <select #account>
+                  <option value="">Choose…</option>
+                  @for (a of accounts(); track a.UserID) {
+                    <option [value]="a.UserID">
+                      {{ a.DisplayName || '—' }} · {{ a.Email }} · {{ a.ClientID }}
+                    </option>
+                  }
+                </select>
+              </app-shape>
+            </label>
+            <div class="editor-actions">
+              <button
+                type="button"
+                class="btn"
+                [disabled]="busyId() === client.ClientID"
+                (click)="link(client, account)"
+              >
+                <app-shape name="bar-notch">{{
+                  busyId() === client.ClientID ? 'Linking…' : 'Link'
+                }}</app-shape>
+              </button>
+              <button type="button" class="btn btn--light" (click)="linkingId.set(null)">
+                <app-shape name="bar-notch">Cancel</app-shape>
+              </button>
+            </div>
+          </div>
         }
 
         @if (verifyingId() === client.ClientID) {

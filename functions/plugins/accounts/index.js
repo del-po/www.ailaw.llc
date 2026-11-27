@@ -16,14 +16,17 @@
 //   admin:unverifyClient       back to user (with an account) or guest
 // Folders: clients/users/ID-… - Name or clients/verified/ID-… - Name; the
 // folder moves between the two when the type changes.
-// A guest or verified client who signs up with a confirmed email matching
-// their record becomes a user and keeps their code and folder.
+//   admin:linkAccount          joins a login to an existing client (e.g. a
+//                              verified client who signed up later): the
+//                              existing record keeps its code and folder; the
+//                              record the sign-up made is merged into it
+// Nothing is joined automatically, not even on a matching email.
 // ==========================================================
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import { ApiError, cleanKey, cleanText, db, iso, newCode, now, titleCase } from '../../core/app.js';
 import { makeFolder, moveFolder } from '../../core/files.js';
-import { clientByEmail, clientById, clientByUid, docs } from '../../core/records.js';
+import { clientById, clientByUid, docs } from '../../core/records.js';
 import { getAuth } from 'firebase-admin/auth';
 
 const DELETE_TICKET_MINUTES = 20;
@@ -117,12 +120,9 @@ async function rewriteDoc(ref, swap) {
 
 async function syncProfile(caller, input) {
   const account = await getAuth().getUser(caller.uid);
-  let client = await clientByUid(caller.uid);
-  if (!client && account.emailVerified && account.email) {
-    const known = await clientByEmail(account.email);
-    // A deleted account's record comes back to life on a new sign-up
-    if (known && !known.userId) client = { ...known, status: known.status === 'deleted' ? 'active' : known.status };
-  }
+  // A new login always gets its own record: joining it to an existing
+  // client (same person, other record) is done by AI Law (admin:linkAccount)
+  const client = await clientByUid(caller.uid);
   if (client && client.status && client.status !== 'active') throw new ApiError('ACCOUNT_SUSPENDED');
 
   const name = cleanText(client?.displayName || input.displayName || account.displayName || '', 100, 'INVALID_PROFILE_DATA');
@@ -261,7 +261,7 @@ async function setUserStatus(caller, data) {
 
 async function allClients() {
   return docs(await db.collection('Clients').get())
-    .filter((c) => c.status !== 'deleted' || c.type === 'verified')
+    .filter((c) => c.status !== 'merged' && (c.status !== 'deleted' || c.type === 'verified'))
     .map(toProfile);
 }
 
@@ -299,6 +299,56 @@ async function unverifyClient(caller, data) {
   return toProfile({ ...client, ...changes });
 }
 
+// ---------- Joining a login to an existing client ----------
+
+// target: the existing client (no login yet); the login's own record (made
+// at sign-up) gives up its login, orders and files and is marked merged
+async function linkAccount(data) {
+  const target = await clientById(cleanKey(data.clientId));
+  if (!target) throw new ApiError('CLIENT_NOT_FOUND');
+  if (target.userId) throw new ApiError('ALREADY_LINKED');
+  const source = await clientByUid(cleanKey(data.userId));
+  if (!source) throw new ApiError('PROFILE_NOT_FOUND');
+  if (source.id === target.id) throw new ApiError('INVALID_REQUEST');
+  if (source.role !== 'client') throw new ApiError('PRIVILEGED_ACCOUNT');
+
+  // The target needs a folder to take the source's files
+  let folder = target.folder && !target.folder.startsWith('drive:') ? target.folder : '';
+  if (!folder) folder = await makeFolder(clientFolder(target.id, target.displayName, target.type));
+
+  // Orders and their files move to the target
+  const from = source.folder && !source.folder.startsWith('drive:') ? source.folder : '';
+  if (from) await moveFolder(from, folder);
+  const swap = (value) => (from ? rewritePaths(value, from, folder) : value);
+  const orders = await db.collection('Orders').where('clientId', '==', source.id).get();
+  for (const order of orders.docs) {
+    await rewriteDoc(order.ref, swap);
+    await order.ref.update({ clientId: target.id });
+    for (const sub of ['Items', 'Steps', 'Assignments']) {
+      const inner = await order.ref.collection(sub).get();
+      for (const d of inner.docs) await rewriteDoc(d.ref, swap);
+    }
+  }
+
+  const changes = {
+    userId: source.userId,
+    type: target.type === 'verified' ? 'verified' : 'user',
+    status: 'active',
+    email: target.email || source.email || '',
+    emailVerified: source.emailVerified === true,
+    providers: source.providers || [],
+    photoUrl: source.photoUrl || '',
+    phone: target.phone || source.phone || '',
+    folder,
+    lastLoginAt: source.lastLoginAt || null,
+    updatedAt: now(),
+  };
+  // The login leaves the source first, so it never belongs to two records
+  await db.doc('Clients/' + source.id).update({ userId: '', status: 'merged', mergedInto: target.id, folder: '', updatedAt: now() });
+  await db.doc('Clients/' + target.id).update(changes);
+  return toProfile({ ...target, ...changes });
+}
+
 export default {
   id: 'accounts',
   sides: ['client', 'admin'],
@@ -316,6 +366,7 @@ export default {
       'admin:clients': () => allClients(),
       'admin:verifyClient': (caller, data) => verifyClient(caller, data),
       'admin:unverifyClient': (caller, data) => unverifyClient(caller, data),
+      'admin:linkAccount': (caller, data) => linkAccount(data),
     },
   },
 };

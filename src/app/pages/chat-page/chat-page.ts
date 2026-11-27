@@ -9,12 +9,14 @@ import {
   signal,
   viewChild,
 } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { DecimalPipe, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ChatService } from '../../core/services/chat.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
-import { ChatMessage } from '../../core/models/chat';
+import { ChatMessage, DeclarationPart } from '../../core/models/chat';
+import { DeclarationsService } from '../../core/services/declarations.service';
+import { authErrorMessage } from '../../core/services/auth-errors';
 import { ChatInput, ChatSubmit } from '../../shared/components/chat-input/chat-input';
 import { Icon } from '../../shared/kit/icon/icon';
 import { Header } from '../../shared/components/header/header';
@@ -26,7 +28,7 @@ const STICK_DISTANCE = 80;
 
 @Component({
   selector: 'app-chat-page',
-  imports: [RouterLink, ChatInput, Icon, Header, BankTransfer],
+  imports: [RouterLink, DecimalPipe, ChatInput, Icon, Header, BankTransfer],
   templateUrl: './chat-page.html',
   styleUrl: './chat-page.scss',
   host: {
@@ -66,6 +68,34 @@ export class ChatPage {
   protected readonly copiedId = signal<string | null>(null);
 
   protected readonly format = formatMessage;
+
+  // ---------- 1% declarations cards ----------
+
+  private readonly declarations = inject(DeclarationsService);
+  // Per draft: 'saving', 'saved' or an error message
+  protected readonly cardState = signal<Record<string, string>>({});
+
+  protected async confirmDeclaration(part: DeclarationPart): Promise<void> {
+    this.cardState.update((s) => ({ ...s, [part.draftId]: 'saving' }));
+    try {
+      await this.declarations.confirm(part.draftId);
+      this.cardState.update((s) => ({ ...s, [part.draftId]: 'saved' }));
+    } catch (error) {
+      const code = (error as Error)?.message;
+      this.cardState.update((s) => ({
+        ...s,
+        [part.draftId]:
+          code === 'ALREADY_CONFIRMED'
+            ? 'saved'
+            : (authErrorMessage(error) ?? 'Something went wrong.'),
+      }));
+    }
+  }
+
+  // Opens the profile form with the card's entries, to correct them
+  protected editDeclaration(part: DeclarationPart): void {
+    this.router.navigate(['/profile/declarations'], { queryParams: { draft: part.draftId } });
+  }
 
   protected submit({ text, files }: ChatSubmit): void {
     const editing = this.editingId();

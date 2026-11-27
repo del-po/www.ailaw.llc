@@ -1,0 +1,160 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Profile</span></div>
+  <h1 class="title">1% Declarations</h1>
+  @if (data(); as d) {
+    <p class="lead">
+      Report your income for {{ monthName(d.reportingMonth) }}: the previous month is the only one
+      you can report. We file the declaration and send it to you.
+    </p>
+  }
+</section>
+
+@if (blocked()) {
+  <p class="message" role="alert">{{ blocked() }}</p>
+} @else {
+  @if (error()) {
+    <p class="message" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="message message--ok" role="status">{{ notice() }}</p>
+  }
+
+  @if (data(); as d) {
+    <!-- ---------- Report ---------- -->
+    <form class="report" (submit)="submit($event)">
+      <h2 class="block-title">Income for {{ monthName(d.reportingMonth) }}</h2>
+      @if (reported(); as r) {
+        @if (r.income !== null) {
+          <p class="small">
+            Already reported: {{ r.income | number: '1.2-2' }} GEL ({{
+              r.reportedAt | date: 'MMM d'
+            }}). Reporting again replaces it.
+          </p>
+        }
+      }
+
+      <label class="check">
+        <input
+          type="checkbox"
+          [checked]="zero()"
+          (change)="zero.set($any($event.target).checked)"
+        />
+        I had no income this month
+      </label>
+
+      @if (!zero()) {
+        <div class="payments">
+          <div class="payment payment--head" aria-hidden="true">
+            <span>Date received</span><span>Currency</span><span>Amount</span><span></span>
+          </div>
+          @for (row of rows(); track $index; let i = $index) {
+            <div class="payment">
+              <app-shape class="field-box" name="field">
+                <input
+                  type="date"
+                  [min]="firstDay()"
+                  [max]="lastDay()"
+                  [value]="row.date"
+                  aria-label="Date received"
+                  (change)="setRow(i, 'date', $any($event.target).value)"
+                />
+              </app-shape>
+              <app-shape class="field-box" name="field">
+                <select
+                  aria-label="Currency"
+                  (change)="setRow(i, 'currency', $any($event.target).value)"
+                >
+                  @for (c of currencies; track c) {
+                    <option [value]="c" [selected]="row.currency === c">{{ c }}</option>
+                  }
+                </select>
+              </app-shape>
+              <app-shape class="field-box" name="field">
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  placeholder="1234.56"
+                  aria-label="Amount"
+                  [value]="row.amount"
+                  (input)="setRow(i, 'amount', $any($event.target).value)"
+                />
+              </app-shape>
+              <button
+                type="button"
+                class="action"
+                [disabled]="rows().length < 2"
+                (click)="removeRow(i)"
+              >
+                Remove
+              </button>
+            </div>
+          }
+          <button type="button" class="action add" (click)="addRow()">+ Add a payment</button>
+          <p class="small">
+            Payments in USD, EUR or GBP count in GEL at the National Bank rate of the day received.
+          </p>
+        </div>
+      }
+
+      <button type="submit" class="btn" [disabled]="busy()">
+        <app-shape name="bar-notch">{{ busy() ? 'Saving…' : 'Report income' }}</app-shape>
+      </button>
+    </form>
+
+    <!-- ---------- Debt ---------- -->
+    @if (d.outstandingDebt > 0) {
+      <p class="message" role="status">
+        Outstanding debt on rs.ge: <b>{{ d.outstandingDebt | number: '1.2-2' }} GEL</b>. Estimated
+        penalty {{ penalty() | number: '1.2-2' }} GEL per day (0.05% of the debt per overdue day).
+      </p>
+    }
+
+    <!-- ---------- Months ---------- -->
+    <section class="months">
+      <div class="months-head">
+        <h2 class="block-title">Your months</h2>
+        <nav class="years" aria-label="Year">
+          @for (y of years(); track y) {
+            <button
+              type="button"
+              class="year"
+              [class.is-active]="year() === y"
+              (click)="pickYear(y)"
+            >
+              {{ y }}
+            </button>
+          }
+        </nav>
+      </div>
+      <div class="rows">
+        @for (m of table(); track m.month) {
+          <div class="row month">
+            <span class="cell-title">{{ monthName(m.month) }}</span>
+            <span class="cell-mono">{{
+              m.income !== null ? (m.income | number: '1.2-2') + ' GEL' : 'Not reported'
+            }}</span>
+            <span class="cell-mono">{{
+              m.tax !== null ? 'Tax ' + (m.tax | number: '1.2-2') + ' GEL' : ''
+            }}</span>
+            <span class="cell-mono">
+              @if (m.fileId) {
+                <button
+                  type="button"
+                  class="action"
+                  [disabled]="downloading() === m.month"
+                  (click)="download(m)"
+                >
+                  {{ downloading() === m.month ? 'Opening…' : 'Declaration (PDF)' }}
+                </button>
+              } @else if (m.income !== null) {
+                Being filed
+              }
+            </span>
+          </div>
+        }
+      </div>
+    </section>
+  } @else if (!error()) {
+    <div class="skeleton" aria-busy="true"></div>
+  }
+}

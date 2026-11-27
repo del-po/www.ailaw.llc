@@ -45,7 +45,21 @@ export interface PaymentPart {
   reference: string;
 }
 
-export type MessagePart = TextPart | FilePart | ServicePart | OrderPart | PaymentPart;
+// Income the chat read from a 1% declarations client's message: saved only
+// when the client presses Confirm
+export interface DeclarationPart {
+  type: 'declaration';
+  draftId: string;
+  month: string;
+  monthName: string;
+  entries: { date: string; currency: string; amount: number; rate: number; gel: number }[];
+  income: number;
+  tax: number;
+  previousIncome: number | null;
+}
+
+export type MessagePart =
+  TextPart | FilePart | ServicePart | OrderPart | PaymentPart | DeclarationPart;
 
 export interface ChatMessage {
   id: string;

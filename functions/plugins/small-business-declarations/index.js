@@ -7,9 +7,13 @@
 //   3. AI Law files the declaration on rs.ge, uploads the PDF and it is
 //      delivered: saved in the client's folder and sent (delivery.js)
 // Data: data.js. Contract signing is not here: it belongs to checkout.
-// Client:
-//   declarations:my       the signed-in client's months and debt
-//   declarations:report   report last month's income from the website
+// Client (signed in, and linked to a declarations client):
+//   declarations:my        the client's months, debt and declaration files
+//   declarations:report    report last month's income (the profile form)
+//   declarations:draft     a chat draft, to fill the form ("Edit")
+//   declarations:confirm   the client presses Confirm on a chat draft
+// The chat never saves income itself: it drafts, shows a card with every
+// entry, the total and the tax, and only the client's Confirm saves it.
 // Admin:
 //   declarations:list           every client with one year's months
 //   declarations:setIncome      type in a month's income by hand
@@ -20,14 +24,17 @@
 //   declarations:settings       sending test/live, fee, bank account …
 // ==========================================================
 
-import { ApiError, cleanText, now, validEmail } from '../../core/app.js';
+import { ApiError, cleanKey, cleanText, now, validEmail } from '../../core/app.js';
+import { addPart } from '../../core/chat.js';
 import { clientByUid } from '../../core/records.js';
 import {
+  FOLDER,
   TOOL,
   allClients,
   checkMonth,
   clientRef,
   findClient,
+  monthRef,
   months,
   reportIncome,
   reportingMonth,
@@ -99,13 +106,108 @@ async function ownClient(caller) {
   return requireActive(record?.clientId ? await findClient({ clientId: record.clientId }) : null);
 }
 
-async function reportFromSite(caller, data, source) {
-  const client = await ownClient(caller);
+// The previous month's entries from the website, checked and in GEL
+async function websiteEntries(data) {
   const month = reportingMonth();
   const entries = data.zero ? [] : await toGel(Array.isArray(data.entries) ? data.entries.slice(0, 50) : [], month);
   if (!data.zero && !entries.length) throw new ApiError('NO_INCOME_ENTRIES');
-  const saved = await reportIncome(client, { month, entries, source, by: caller.uid });
+  return { month, entries };
+}
+
+async function reportFromSite(caller, data) {
+  const client = await ownClient(caller);
+  const { month, entries } = await websiteEntries(data);
+  const note = cleanText(data.note ?? '', 2000);
+  const saved = await reportIncome(client, { month, entries, source: 'website', by: caller.uid, note });
   return { month, income: saved.income, tax: saved.tax, previousIncome: saved.previousIncome };
+}
+
+// ---------- Chat drafts ----------
+
+const drafts = () => TOOL.collection('Drafts');
+
+async function ownDraft(caller, draftId) {
+  const snap = await drafts().doc(cleanKey(draftId)).get();
+  const draft = snap.data();
+  if (!draft || draft.uid !== caller.uid) throw new ApiError('DRAFT_NOT_FOUND');
+  return { ref: snap.ref, ...draft };
+}
+
+// The card the chat shows: every entry, the total, the tax, Confirm / Edit
+async function makeDraft(ctx, args) {
+  const client = await ownClient(ctx.caller);
+  const { month, entries } = await websiteEntries(args || {});
+  const { taxRate } = await settings();
+  const income = round2(entries.reduce((s, e) => s + e.gel, 0));
+  const previous = (await monthRef(client.registrationId, month).get()).data()?.income ?? null;
+  const draft = {
+    uid: ctx.caller.uid,
+    registrationId: client.registrationId,
+    month,
+    entries,
+    income,
+    tax: round2(income * taxRate),
+    previousIncome: previous,
+    note: String(ctx.question || '').slice(0, 2000),
+    conversationId: ctx.conversationId || '',
+    status: 'draft',
+    createdAt: now(),
+  };
+  const ref = drafts().doc();
+  await ref.set(draft);
+  addPart(ctx, {
+    type: 'declaration',
+    draftId: ref.id,
+    month,
+    monthName: monthName(month),
+    entries: entries.map(({ date, currency, amount, rate, gel }) => ({ date, currency, amount, rate, gel })),
+    income: draft.income,
+    tax: draft.tax,
+    previousIncome: previous,
+  });
+  return draft;
+}
+
+async function confirmDraft(caller, data) {
+  const draft = await ownDraft(caller, data.draftId);
+  if (draft.status !== 'draft') throw new ApiError('ALREADY_CONFIRMED');
+  // A draft from last month's chat can't be saved into the wrong month
+  if (draft.month !== reportingMonth()) throw new ApiError('DRAFT_EXPIRED');
+  const client = await ownClient(caller);
+  if (client.registrationId !== draft.registrationId) throw new ApiError('DRAFT_NOT_FOUND');
+  const saved = await reportIncome(client, {
+    month: draft.month,
+    entries: draft.entries,
+    source: 'chat',
+    by: caller.uid,
+    note: draft.note,
+  });
+  await draft.ref.update({ status: 'confirmed', confirmedAt: now() });
+  return { month: saved.month, income: saved.income, tax: saved.tax };
+}
+
+// What the profile page shows; the declaration files are given as paths
+// inside the client's own folder, the way the Documents page opens them
+async function myDeclarations(caller, data) {
+  const client = await ownClient(caller);
+  const year = /^\d{4}$/.test(String(data.year || '')) ? String(data.year) : undefined;
+  const c = toClient(client, await months(client.registrationId, year));
+  const cfg = await settings();
+  return {
+    reportingMonth: reportingMonth(),
+    name: c.name,
+    registrationId: c.registrationId,
+    outstandingDebt: c.outstandingDebt,
+    feePerDeclaration: cfg.feePerDeclaration,
+    months: c.months.map((m) => ({
+      month: m.month,
+      income: m.income,
+      tax: m.tax,
+      reportedAt: m.reportedAt,
+      deliveredAt: m.deliveredAt,
+      fileId: m.declarationFile ? `${FOLDER}/${m.declarationFile.split('/').pop()}` : '',
+    })),
+  };
 }
 
 // ---------- Admin ----------
@@ -193,12 +295,13 @@ export default {
   sides: ['client', 'admin'],
   actions: {
     client: {
-      'declarations:my': async (caller, data) => {
-        const client = await ownClient(caller);
-        const year = /^\d{4}$/.test(String(data.year || '')) ? String(data.year) : undefined;
-        return { reportingMonth: reportingMonth(), ...toClient(client, await months(client.registrationId, year)) };
+      'declarations:my': (caller, data) => myDeclarations(caller, data),
+      'declarations:report': (caller, data) => reportFromSite(caller, data),
+      'declarations:draft': async (caller, data) => {
+        const d = await ownDraft(caller, data.draftId);
+        return { month: d.month, status: d.status, entries: d.entries.map(({ date, currency, amount }) => ({ date, currency, amount })) };
       },
-      'declarations:report': (caller, data) => reportFromSite(caller, data, 'website'),
+      'declarations:confirm': (caller, data) => confirmDraft(caller, data),
     },
     admin: {
       'declarations:list': (caller, data) => list(data),
@@ -212,14 +315,16 @@ export default {
     },
   },
   tools: {
-    report_declaration_income: {
+    draft_declaration_income: {
       sides: ['client'],
       description:
-        "Records a 1% small-business declaration client's income for the previous month (the only month " +
-        'they can report). Confirm the entries with the client first. Each entry is one payment received: ' +
-        'date (yyyy-MM-dd, within that month), currency (GEL, USD, EUR or GBP) and amount; foreign currency ' +
-        'is converted at the National Bank rate of that day. zero=true for a month without income. ' +
-        "The month's total is replaced by what is sent.",
+        "Prepares a 1% small-business declaration client's income for the previous month (the only month " +
+        'they can report) from what they wrote. Each entry is one payment received: date (yyyy-MM-dd, within ' +
+        'that month), currency (GEL, USD, EUR or GBP) and amount exactly as the client gave it; foreign currency ' +
+        'is converted at the National Bank rate of that day. zero=true for a month without income. Ask first ' +
+        'when a date, currency or amount is unclear; never guess. This does NOT save anything: it shows the ' +
+        'client a card with the entries, total and tax, and only their Confirm button saves it. Tell them to ' +
+        'check the card and press Confirm (or Edit to correct it); never say the income is saved.',
       parameters: {
         type: 'object',
         properties: {
@@ -237,8 +342,8 @@ export default {
       run: async (ctx, args) => {
         if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
         try {
-          const r = await reportFromSite(ctx.caller, args || {}, 'chat');
-          return { ...r, monthName: monthName(r.month) };
+          const d = await makeDraft(ctx, args);
+          return { shownToClient: true, month: monthName(d.month), totalGel: d.income, tax: d.tax, saved: false };
         } catch (err) {
           if (err instanceof ApiError) return { error: err.code };
           throw err;

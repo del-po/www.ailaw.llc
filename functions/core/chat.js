@@ -159,6 +159,8 @@ export async function answer(caller, side, data, emit, env, plugins, scope = nul
     caller,
     side,
     conversationId: conversation.id,
+    // The person's own words, for tools that keep them with what they save
+    question,
     parts: [],
     settings,
     env,
