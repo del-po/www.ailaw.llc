@@ -17,6 +17,10 @@ interface Confirmation {
   total: number;
   currency: string;
   paid: boolean;
+  // Ongoing service: nothing to pay now, the fee per unit later
+  ongoing: boolean;
+  rate: number | null;
+  unitLabel: string;
 }
 
 // Opened after placing an order (?order=…). Shows the order number and, while
@@ -47,6 +51,9 @@ export class PaymentSuccessPage {
         total: placed.total,
         currency: placed.currency,
         paid: placed.paymentStatus === 'paid',
+        ongoing: placed.billing === 'ongoing',
+        rate: placed.rate,
+        unitLabel: placed.unitLabel,
       });
     }
 
@@ -72,6 +79,9 @@ export class PaymentSuccessPage {
         total: order.total,
         currency: order.currency,
         paid: order.paymentStatus === 'paid',
+        ongoing: order.billing === 'ongoing',
+        rate: order.rate ?? null,
+        unitLabel: order.unitLabel ?? '',
       });
     } catch (error) {
       this.error.set(authErrorMessage(error));

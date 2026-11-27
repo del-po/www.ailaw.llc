@@ -1,6 +1,7 @@
 import { Service, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
+import { CheckoutRules } from '../models/checkout-fields';
 import { LegalService, ServiceCategory } from '../models/legal-service';
 import { DOORS, DoorResult } from './doors';
 
@@ -18,6 +19,9 @@ interface ApiService {
   FinalPrice: number;
   OnSale: boolean;
   DiscountEnd: string;
+  Billing?: 'once' | 'ongoing';
+  UnitLabel?: string;
+  CheckoutFields?: CheckoutRules;
 }
 
 interface ApiCategory {
@@ -67,6 +71,9 @@ function toLegalService(s: ApiService): LegalService {
     finalPrice: s.FinalPrice,
     onSale: s.OnSale,
     discountEnd: s.DiscountEnd,
+    billing: s.Billing === 'ongoing' ? 'ongoing' : 'once',
+    unitLabel: s.UnitLabel ?? '',
+    checkoutFields: s.CheckoutFields ?? {},
   };
 }
 

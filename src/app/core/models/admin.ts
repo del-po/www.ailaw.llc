@@ -1,3 +1,5 @@
+import { CheckoutRules } from './checkout-fields';
+
 // Rows as the admin sees them: every status, raw prices and discount dates
 
 export type ServiceStatus = 'Active' | 'Draft' | 'Inactive';
@@ -16,6 +18,11 @@ export interface AdminServiceRow {
   DiscountedPrice: number | '';
   DiscountStart: string; // yyyy-mm-dd or ''
   DiscountEnd: string;
+  // once: paid when ordered; ongoing: fee per UnitLabel until cancelled
+  Billing: 'once' | 'ongoing';
+  UnitLabel: string;
+  // What checkout asks for when this service is in the cart
+  CheckoutFields: CheckoutRules;
 }
 
 // What the editor sends; the backend fills in the ID and checks everything

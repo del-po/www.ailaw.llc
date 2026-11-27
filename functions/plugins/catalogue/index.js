@@ -13,10 +13,24 @@
 import { ApiError, COMPANY, db, formatDate, now, slugify, toDate } from '../../core/app.js';
 import { addPart, openService } from '../../core/chat.js';
 import { publicUrl, savePicture } from '../../core/files.js';
+import { CHECKOUT_FIELDS, FIELD_RULES } from '../../core/orders.js';
 import { pluginRecords } from '../../core/loader.js';
 import { clientByUid, forget, priceOf, serviceBySlug, services, setting } from '../../core/records.js';
 
 const STATUSES = { active: 'Active', inactive: 'Inactive', draft: 'Draft' };
+
+// "50 GEL", or "50 GEL per declaration" for an ongoing service
+const priceText = (s, amount) =>
+  `${amount} ${s.currency || 'GEL'}` + (s.billing === 'ongoing' ? ' ' + (s.unitLabel || 'per service') : '');
+
+// Only known fields with a known rule
+function cleanFields(value) {
+  const out = {};
+  for (const [field, rule] of Object.entries(value && typeof value === 'object' ? value : {})) {
+    if (CHECKOUT_FIELDS[field] && FIELD_RULES.includes(rule)) out[field] = rule;
+  }
+  return out;
+}
 const fromLabel = (label) => String(label || '').toLowerCase();
 const dateText = (value) => (toDate(value) ? formatDate(value) : '');
 
@@ -55,6 +69,9 @@ async function toPublic(s) {
     FinalPrice: finalPrice,
     OnSale: onSale,
     DiscountEnd: onSale ? dateText(s.discountEnd) : '',
+    Billing: s.billing === 'ongoing' ? 'ongoing' : 'once',
+    UnitLabel: s.billing === 'ongoing' ? s.unitLabel || 'per service' : '',
+    CheckoutFields: cleanFields(s.checkoutFields),
   };
 }
 
@@ -84,6 +101,9 @@ function toAdmin(s) {
     DiscountedPrice: s.discountedPrice ? Number(s.discountedPrice) : '',
     DiscountStart: dateText(s.discountStart),
     DiscountEnd: dateText(s.discountEnd),
+    Billing: s.billing === 'ongoing' ? 'ongoing' : 'once',
+    UnitLabel: s.unitLabel || '',
+    CheckoutFields: cleanFields(s.checkoutFields),
   };
 }
 
@@ -100,6 +120,9 @@ const EDITABLE = {
   DiscountStart: 'discountStart',
   DiscountEnd: 'discountEnd',
   Currency: 'currency',
+  Billing: 'billing',
+  UnitLabel: 'unitLabel',
+  CheckoutFields: 'checkoutFields',
 };
 
 async function allServices() {
@@ -122,6 +145,10 @@ async function checkService(input, base, list) {
   s.category = String(s.category ?? '').trim();
   s.currency = String(s.currency || 'GEL').toUpperCase();
   s.status = fromLabel(s.status) || 'draft';
+  s.billing = s.billing === 'ongoing' ? 'ongoing' : 'once';
+  s.unitLabel = String(s.unitLabel ?? '').trim().slice(0, 40);
+  s.checkoutFields = cleanFields(s.checkoutFields);
+  if (s.billing === 'ongoing' && !s.unitLabel) throw new ApiError('An ongoing service needs a unit, e.g. "per declaration".');
 
   if (!s.name) throw new ApiError('Name is required.');
   if (!Number.isFinite(s.price) || s.price < 0) throw new ApiError('Invalid price.');
@@ -255,7 +282,7 @@ async function servicesPrompt(ctx) {
     const { finalPrice } = priceOf(s);
     const line = plugins[s.plugin]?.menu || s.chatSummary || s.shortDescription;
     return (
-      `- ${s.serviceId}: ${s.name}, ${finalPrice} ${s.currency}` +
+      `- ${s.serviceId}: ${s.name}, ${priceText(s, finalPrice)}` +
       (s.requires === 'verified' ? ' (verified clients only)' : '') +
       ` — ${line}` +
       (s.whenToOffer ? ` Offer when: ${s.whenToOffer}` : '')
@@ -298,7 +325,9 @@ async function openDetails(slug, plugins) {
     .map((i) => `${i.title}: ${i.text}`)
     .join('\n');
   return [
-    `${s.name} (id ${s.serviceId}), ${finalPrice} ${s.currency}` + (s.requires === 'verified' ? ', verified clients only' : ''),
+    `${s.name} (id ${s.serviceId}), ${priceText(s, finalPrice)}` +
+      (s.billing === 'ongoing' ? ' (ongoing: nothing due when ordering, runs until cancelled)' : '') +
+      (s.requires === 'verified' ? ', verified clients only' : ''),
     s.description || s.chatSummary || s.shortDescription,
     fields ? 'Details needed to order:\n' + fields : 'No details needed to order.',
     knowHow ? 'Know-how:\n' + knowHow : '',
@@ -317,7 +346,7 @@ async function showCard(ctx, slug) {
     id: s.serviceId,
     title: s.name,
     summary: s.chatSummary || s.shortDescription,
-    price: `${finalPrice} ${s.currency}`,
+    price: priceText(s, finalPrice),
     link: s.link || `/services/${s.serviceId}`,
   });
 }

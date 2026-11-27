@@ -38,7 +38,8 @@ function caption(client, month, tax, cfg, html) {
     `${b(`Hello, ${client.name.split(' ')[0]}!`)}`,
     '',
     `Here is your tax declaration for ${b(monthName(month))}.`,
-    `The tax amount is: ${b(tax.toFixed(2) + ' GEL')}.`,
+    // The tax AI Law typed in from rs.ge; left out until it is there
+    ...(typeof tax === 'number' ? [`The tax amount is: ${b(round2(tax).toFixed(2) + ' GEL')}.`] : []),
     `Outstanding Debt: ${b(debt.toFixed(2) + ' GEL')}`,
     '',
   ];
@@ -71,7 +72,7 @@ function caption(client, month, tax, cfg, html) {
 
 // To the client (or, while testing, to AI Law). Returns how it went out.
 async function send(client, month, file, cfg, env) {
-  const tax = round2((await monthRef(client.registrationId, month).get()).data()?.tax);
+  const tax = (await monthRef(client.id, month).get()).data()?.tax;
   const testing = cfg.sending !== 'live';
   const telegramId = testing ? cfg.testTelegramId : client.telegramId;
   const email = testing ? cfg.testEmail : client.email;
@@ -98,9 +99,10 @@ async function send(client, month, file, cfg, env) {
 
 // upload: { name, type, data (base64) } from the admin page; without it, the
 // month's file already in the folder is sent again
-export async function deliver(registrationId, month, upload, env) {
+// key: the client's key in the list (registration ID or ID-… code)
+export async function deliver(key, month, upload, env) {
   checkMonth(month);
-  const client = requireActive(await findClient({ registrationId }));
+  const client = requireActive(await findClient({ key }));
   const folder = await clientFolder(client);
   if (!folder) throw new ApiError('NO_CLIENT_FOLDER');
   const cfg = await settings();
@@ -120,7 +122,7 @@ export async function deliver(registrationId, month, upload, env) {
     file = { name: fileName(month), content: stored.content };
   }
 
-  const ref = monthRef(client.registrationId, month);
+  const ref = monthRef(client.id, month);
   await ref.set({ month, declarationFile: path, serviceFee: cfg.feePerDeclaration, filedAt: now() }, { merge: true });
   const via = await send(client, month, file, cfg, env);
   await ref.update({ deliveredAt: now(), deliveredVia: via });

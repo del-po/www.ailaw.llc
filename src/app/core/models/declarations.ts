@@ -4,7 +4,7 @@
 export interface DeclarationMonth {
   month: string; // 2026-10
   income: number | null;
-  tax: number | null;
+  tax: number | null; // typed in from rs.ge when filing
   serviceFee: number | null;
   source: string; // telegram, chat, website, manual, sheet-import
   reportedAt: string;
@@ -14,14 +14,18 @@ export interface DeclarationMonth {
 }
 
 export interface DeclarationClient {
+  key: string; // the registration ID, or the ID-… code when there is none
   registrationId: string;
   name: string;
   clientId: string;
-  status: 'active' | 'pending';
+  status: 'active' | 'pending' | 'ended';
   telegramId: string;
   telegramUsername: string;
   email: string;
   serviceStart: string;
+  endedAt: string;
+  // Another record has the same registration ID: to sort out by hand
+  duplicateOf: string;
   outstandingDebt: number;
   months: DeclarationMonth[];
 }
@@ -78,5 +82,4 @@ export interface MyDeclarations {
 export interface IncomeSaved {
   month: string;
   income: number;
-  tax: number;
 }

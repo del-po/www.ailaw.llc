@@ -186,7 +186,7 @@ export class ProfileDeclarationsPage {
     try {
       const saved = await this.declarations.report(this.zero() ? { zero: true } : { entries });
       this.notice.set(
-        `Saved: ${month}, ${saved.income.toFixed(2)} GEL, tax ${saved.tax.toFixed(2)} GEL.`,
+        `Saved: ${month}, ${saved.income.toFixed(2)} GEL. We file it and send you the declaration.`,
       );
       await this.load();
     } catch (error) {

@@ -17,6 +17,19 @@ type Filter = 'all' | 'missing' | 'waiting' | 'delivered' | 'pending';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const FIRST_YEAR = 2022;
 
+// The year's figures for one client, laid out like the old sheet
+interface SheetRow {
+  client: DeclarationClient;
+  income: (number | null)[];
+  tax: (number | null)[];
+  // per month: 'delivered' (declaration in the folder), 'reported', ''
+  state: string[];
+  incomeTotal: number;
+  taxTotal: number;
+}
+
+const sum = (list: (number | null)[]) => list.reduce<number>((t, v) => t + (v ?? 0), 0);
+
 @Component({
   selector: 'app-admin-declarations-page',
   imports: [DatePipe, DecimalPipe, Shape],
@@ -43,7 +56,7 @@ export class AdminDeclarationsPage {
   protected readonly notice = signal<string | null>(null);
   protected readonly busy = signal(false);
   // The client whose panel is open, and the month being worked on there
-  protected readonly openId = signal<string | null>(null);
+  protected readonly openKey = signal<string | null>(null);
   protected readonly month = signal('');
   protected readonly settings = signal<DeclarationSettings | null>(null);
   protected readonly settingsOpen = signal(false);
@@ -61,17 +74,40 @@ export class AdminDeclarationsPage {
   // to be the one clients report in
   protected readonly showsReporting = computed(() => this.reportingMonth().startsWith(this.year()));
 
-  protected readonly list = computed(() => {
+  protected readonly rows = computed<SheetRow[]>(() => {
     const filter = this.filter();
     const words = this.search().toLowerCase().split(/\s+/).filter(Boolean);
     return (this.data()?.clients ?? [])
       .filter((c) => filter === 'all' || !this.showsReporting() || this.stage(c) === filter)
       .filter((c) => {
-        const text = [c.name, c.registrationId, c.clientId, c.telegramUsername, c.email]
+        const text = [c.name, c.key, c.registrationId, c.clientId, c.telegramUsername, c.email]
           .join(' ')
           .toLowerCase();
         return words.every((w) => text.includes(w));
+      })
+      .map((client) => {
+        const months = MONTHS.map((_, i) => this.monthOf(client, this.monthKey(i)));
+        const income = months.map((m) => m?.income ?? null);
+        const tax = months.map((m) => m?.tax ?? null);
+        const state = months.map((m) =>
+          m?.deliveredAt || m?.declarationFile ? 'delivered' : m?.income != null ? 'reported' : '',
+        );
+        return { client, income, tax, state, incomeTotal: sum(income), taxTotal: sum(tax) };
       });
+  });
+
+  // The bottom lines: every client on screen added up
+  protected readonly totals = computed(() => {
+    const rows = this.rows();
+    const column = (pick: (r: SheetRow) => (number | null)[], i: number) =>
+      rows.reduce((t, r) => t + (pick(r)[i] ?? 0), 0);
+    return {
+      income: MONTHS.map((_, i) => column((r) => r.income, i)),
+      tax: MONTHS.map((_, i) => column((r) => r.tax, i)),
+      incomeTotal: rows.reduce((t, r) => t + r.incomeTotal, 0),
+      taxTotal: rows.reduce((t, r) => t + r.taxTotal, 0),
+      debt: rows.reduce((t, r) => t + r.client.outstandingDebt, 0),
+    };
   });
 
   // Counts for the reporting month, shown in the heading
@@ -87,7 +123,7 @@ export class AdminDeclarationsPage {
   });
 
   protected readonly openClient = computed(
-    () => this.data()?.clients.find((c) => c.registrationId === this.openId()) ?? null,
+    () => this.data()?.clients.find((c) => c.key === this.openKey()) ?? null,
   );
 
   protected readonly openMonth = computed(() => {
@@ -122,18 +158,19 @@ export class AdminDeclarationsPage {
   protected pickYear(year: string): void {
     this.year.set(year);
     this.filter.set('all');
+    this.openKey.set(null);
     this.data.set(null);
     this.load();
   }
 
   // ---------- Reading a client ----------
 
-  protected monthOf(client: DeclarationClient, month: string): DeclarationMonth | null {
-    return client.months.find((m) => m.month === month) ?? null;
+  protected monthKey(index: number): string {
+    return `${this.year()}-${String(index + 1).padStart(2, '0')}`;
   }
 
-  protected cell(client: DeclarationClient, index: number): DeclarationMonth | null {
-    return this.monthOf(client, `${this.year()}-${String(index + 1).padStart(2, '0')}`);
+  protected monthOf(client: DeclarationClient, month: string): DeclarationMonth | null {
+    return client.months.find((m) => m.month === month) ?? null;
   }
 
   // Where a client stands for the reporting month
@@ -145,11 +182,20 @@ export class AdminDeclarationsPage {
     return m.deliveredAt || m.declarationFile ? 'delivered' : 'waiting';
   }
 
-  protected toggle(client: DeclarationClient): void {
-    const open = this.openId() === client.registrationId;
-    this.openId.set(open ? null : client.registrationId);
+  // Opens a client's panel, on a month (a cell) or on the reporting month
+  protected open(client: DeclarationClient, index?: number): void {
+    const same = this.openKey() === client.key;
+    if (index === undefined && same) {
+      this.openKey.set(null);
+      return;
+    }
+    this.openKey.set(client.key);
     this.month.set(
-      this.reportingMonth().startsWith(this.year()) ? this.reportingMonth() : `${this.year()}-12`,
+      index !== undefined
+        ? this.monthKey(index)
+        : this.showsReporting()
+          ? this.reportingMonth()
+          : `${this.year()}-12`,
     );
     this.notice.set(null);
   }
@@ -160,14 +206,35 @@ export class AdminDeclarationsPage {
 
   // ---------- Changes ----------
 
-  protected async saveIncome(client: DeclarationClient, value: string): Promise<void> {
-    const income = Number(value);
-    if (value.trim() === '' || !(income >= 0)) {
-      this.error.set('Enter the income in GEL (0 for a month without income).');
+  // Empty = clear the figure; otherwise a number of GEL
+  private figure(value: string, label: string): number | null | undefined {
+    if (value.trim() === '') return null;
+    const n = Number(value);
+    if (!(n >= 0)) {
+      this.error.set(`Enter the ${label} in GEL, or leave it empty.`);
+      return undefined;
+    }
+    return n;
+  }
+
+  protected async saveMonth(
+    client: DeclarationClient,
+    incomeText: string,
+    taxText: string,
+  ): Promise<void> {
+    const income = this.figure(incomeText, 'income');
+    const tax = this.figure(taxText, 'tax');
+    if (income === undefined || tax === undefined) return;
+    const old = this.openMonth();
+    const figures: { income?: number | null; tax?: number | null } = {};
+    if (income !== (old?.income ?? null)) figures.income = income;
+    if (tax !== (old?.tax ?? null)) figures.tax = tax;
+    if (!Object.keys(figures).length) {
+      this.notice.set('Nothing changed.');
       return;
     }
-    await this.run(`Income for ${this.monthName(this.month())} saved.`, () =>
-      this.admin.setDeclarationIncome(client.registrationId, this.month(), income),
+    await this.run(`${this.monthName(this.month())} saved.`, () =>
+      this.admin.setDeclarationMonth(client.key, this.month(), figures),
     );
   }
 
@@ -182,15 +249,19 @@ export class AdminDeclarationsPage {
       return;
     }
     const testing = this.data()?.sending !== 'live';
+    const noTax =
+      this.openMonth()?.tax == null
+        ? '\nThe tax for this month is empty: the message will leave it out.'
+        : '';
     if (
       !confirm(
-        `Deliver ${this.monthName(this.month())} to ${client.name}?${testing ? '\n(Test mode: it comes to you.)' : ''}`,
+        `Deliver ${this.monthName(this.month())} to ${client.name}?${noTax}${testing ? '\n(Test mode: it comes to you.)' : ''}`,
       )
     )
       return;
     const done = await this.run('', async () => {
       const result = await this.admin.deliverDeclaration(
-        client.registrationId,
+        client.key,
         this.month(),
         await readUpload(file),
       );
@@ -202,7 +273,7 @@ export class AdminDeclarationsPage {
   protected async resend(client: DeclarationClient): Promise<void> {
     if (!confirm(`Send ${this.monthName(this.month())} to ${client.name} again?`)) return;
     await this.run('', async () => {
-      const result = await this.admin.deliverDeclaration(client.registrationId, this.month());
+      const result = await this.admin.deliverDeclaration(client.key, this.month());
       this.notice.set(`Sent again by ${result.deliveredVia}.`);
     });
   }
@@ -214,7 +285,7 @@ export class AdminDeclarationsPage {
       return;
     }
     await this.run('Outstanding debt saved.', () =>
-      this.admin.setDeclarationDebt(client.registrationId, amount),
+      this.admin.setDeclarationDebt(client.key, amount),
     );
   }
 
@@ -226,11 +297,23 @@ export class AdminDeclarationsPage {
     event.preventDefault();
     const field = (name: string) =>
       (form.elements.namedItem(name) as HTMLInputElement).value.trim();
-    await this.run('Contacts saved.', () =>
-      this.admin.setDeclarationContacts(client.registrationId, {
+    await this.run('Details saved.', () =>
+      this.admin.setDeclarationContacts(client.key, {
+        registrationId: field('registrationId'),
         telegramId: field('telegramId'),
         email: field('email'),
       }),
+    );
+  }
+
+  protected async setStatus(client: DeclarationClient, status: 'active' | 'ended'): Promise<void> {
+    const question =
+      status === 'ended'
+        ? `End the service for ${client.name}? They can't report any more, and from next year they leave the list.`
+        : `Start the service again for ${client.name}?`;
+    if (!confirm(question)) return;
+    await this.run(status === 'ended' ? 'Service ended.' : 'Service active again.', () =>
+      this.admin.setDeclarationStatus(client.key, status),
     );
   }
 
@@ -238,7 +321,7 @@ export class AdminDeclarationsPage {
     if (!confirm(`Verify ${client.name} (${client.registrationId})? Check their identity first.`))
       return;
     await this.run(`${client.name} is verified and has a client folder.`, () =>
-      this.admin.verifyDeclarationClient(client.registrationId),
+      this.admin.verifyDeclarationClient(client.key),
     );
   }
 

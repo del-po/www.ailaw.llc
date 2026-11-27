@@ -88,7 +88,12 @@
                       }
                       <span class="price-now">
                         {{ service.finalPrice | number: '1.0-2'
-                        }}<small class="currency">{{ service.currency }}</small>
+                        }}<small class="currency"
+                          >{{ service.currency
+                          }}{{
+                            service.billing === 'ongoing' ? ' ' + service.unitLabel : ''
+                          }}</small
+                        >
                       </span>
                     </p>
 

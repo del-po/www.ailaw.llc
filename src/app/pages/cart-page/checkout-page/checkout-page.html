@@ -53,19 +53,27 @@
             </app-shape>
           </label>
 
-          <label class="field">
-            <span class="field-label">Phone</span>
-            <app-shape class="field-box" name="field">
-              <input
-                name="phone"
-                type="tel"
-                autocomplete="tel"
-                maxlength="30"
-                required
-                [value]="auth.profile()?.Phone ?? ''"
-              />
-            </app-shape>
-          </label>
+          <!-- What the services in the cart ask for -->
+          @for (f of fields(); track f.key) {
+            <label class="field">
+              <span class="field-label"
+                >{{ f.label }}{{ rules()[f.key] === 'optional' ? ' · optional' : '' }}</span
+              >
+              <app-shape class="field-box" name="field">
+                <input
+                  [name]="f.key"
+                  [type]="f.type"
+                  [attr.autocomplete]="f.autocomplete"
+                  [maxLength]="f.max"
+                  [required]="rules()[f.key] === 'required'"
+                  [value]="known(f)"
+                />
+              </app-shape>
+              @if (f.hint) {
+                <span class="small">{{ f.hint }}</span>
+              }
+            </label>
+          }
 
           <label class="field">
             <span class="field-label">Notes for the lawyer · optional</span>
@@ -77,6 +85,30 @@
               placeholder="Anything we should know before we start"
             ></textarea>
           </label>
+
+          <!-- ---------- Payment ---------- -->
+          <fieldset class="pay">
+            <legend class="block-title">Payment</legend>
+            @for (m of paymentMethods; track m.value) {
+              <label class="pay-option" [class.is-off]="!m.ready">
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  [value]="m.value"
+                  [checked]="m.value === 'invoice'"
+                  [disabled]="!m.ready"
+                />
+                <span>{{ m.label }}</span>
+                @if (!m.ready) {
+                  <span class="pay-soon">Soon</span>
+                }
+              </label>
+            }
+            <p class="small">
+              For now we only accept invoice payments: the invoice comes with your agreement by
+              email, and AI Law confirms your payment by hand.
+            </p>
+          </fieldset>
 
           <label class="agree">
             <input type="checkbox" name="agree" required />
@@ -101,7 +133,11 @@
                   }
                 </span>
                 <span class="order-price">
-                  {{ line.service!.finalPrice * line.quantity | number: '1.0-2' }}
+                  @if (line.service!.billing === 'ongoing') {
+                    {{ priceLabel(line.service!) }}
+                  } @else {
+                    {{ line.service!.finalPrice * line.quantity | number: '1.0-2' }}
+                  }
                 </span>
               </li>
             }
@@ -115,7 +151,7 @@
               </div>
             }
             <div class="sum sum--total">
-              <dt>Total</dt>
+              <dt>{{ ongoing() ? 'Due now' : 'Total' }}</dt>
               <dd>
                 {{ totals().total | number: '1.0-2'
                 }}<small class="currency">{{ totals().currency }}</small>
@@ -131,7 +167,14 @@
             <app-shape name="field">{{ busy() ? 'Placing order…' : 'Place order' }}</app-shape>
           </button>
 
-          <p class="small">You'll pay by bank transfer. The details are on the next page.</p>
+          @if (ongoing()) {
+            <p class="small">
+              Nothing is due now. This is an ongoing service: each one is invoiced when we provide
+              it, until you cancel.
+            </p>
+          } @else {
+            <p class="small">You'll pay by bank transfer. The details are on the next page.</p>
+          }
           <a class="small link" routerLink="/cart">Back to cart</a>
         </aside>
       </form>

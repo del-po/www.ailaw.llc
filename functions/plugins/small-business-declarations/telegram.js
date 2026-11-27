@@ -96,7 +96,7 @@ export async function handleUpdate(update, env) {
     env,
     cfg,
     // While testing, the test chat acts as the test client
-    client: () => (testing ? findClient({ registrationId: cfg.testRegistrationId }) : findClient({ telegramId: chatId })),
+    client: () => (testing ? findClient({ key: cfg.testRegistrationId }) : findClient({ telegramId: chatId })),
   };
 
   try {
@@ -186,6 +186,10 @@ async function activeClient(ctx) {
     await ctx.say('⏳ Your registration is waiting for verification by AI Law. We will let you know once it is done.', MAIN);
     return null;
   }
+  if (client.status === 'ended') {
+    await ctx.say(`Your 1% declarations service with AI Law has ended. ${CONTACT}`, MAIN);
+    return null;
+  }
   return client;
 }
 
@@ -249,7 +253,7 @@ async function receiveType(ctx, type) {
     if (!list.length) return ctx.say('I couldn\'t find any declaration PDFs in your folder.', RECEIVE);
     return ctx.say('Select the year for your declarations:', years(list, 'py'));
   }
-  const list = [...new Set((await months(client.registrationId)).map((m) => m.month.slice(0, 4)))].sort().reverse();
+  const list = [...new Set((await months(client.id)).map((m) => m.month.slice(0, 4)))].sort().reverse();
   if (!list.length) return ctx.say('I couldn\'t find any figures for your account yet.', RECEIVE);
   await saveState(ctx.chatId, { flow: 'receive', type });
   return ctx.say('Select the year:', years(list, 'yr'));
@@ -284,7 +288,7 @@ async function yearFigures(ctx, state, year) {
   if (!client) return;
   const label = state.type === 'tax' ? 'Tax' : 'Income';
   const field = state.type === 'tax' ? 'tax' : 'income';
-  const byMonth = Object.fromEntries((await months(client.registrationId, year)).map((m) => [m.month.slice(5), m[field]]));
+  const byMonth = Object.fromEntries((await months(client.id, year)).map((m) => [m.month.slice(5), m[field]]));
   let total = 0;
   const lines = [`📘 ${label} information for ${year}`];
   MONTHS.forEach((name, i) => {

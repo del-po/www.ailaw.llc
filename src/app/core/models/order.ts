@@ -8,8 +8,10 @@ export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
 export interface OrderRequest {
   items: { slug: string; quantity: number }[];
   customerName: string;
-  customerPhone: string;
+  // What the services in the cart ask for (phone, address, registrationId…)
+  fields: Record<string, string>;
   customerNotes: string;
+  paymentMethod: 'invoice';
 }
 
 export interface BankTransfer {
@@ -27,6 +29,10 @@ export interface OrderPlaced {
   currency: string;
   orderStatus: OrderStatus;
   paymentStatus: PaymentStatus;
+  // ongoing: nothing due now; rate per unitLabel until cancelled
+  billing: 'once' | 'ongoing';
+  rate: number | null;
+  unitLabel: string;
   payment: BankTransfer;
 }
 
@@ -52,6 +58,9 @@ export interface Order {
   discountTotal: number;
   taxTotal: number;
   total: number;
+  billing?: 'once' | 'ongoing';
+  rate?: number | null;
+  unitLabel?: string;
   orderStatus: OrderStatus;
   paymentStatus: PaymentStatus;
   paymentProvider: string;

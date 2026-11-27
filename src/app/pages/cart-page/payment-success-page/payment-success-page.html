@@ -9,7 +9,11 @@
       @if (order(); as item) {
         <p class="lead">
           Your order is placed.
-          @if (item.paid) {
+          @if (item.ongoing) {
+            Nothing is due now: each service is invoiced at {{ item.rate | number: '1.0-2' }}
+            {{ item.currency }} {{ item.unitLabel }} when we provide it. Your agreement is in your
+            email.
+          } @else if (item.paid) {
             It's paid, and a lawyer will contact you shortly.
           } @else {
             To start, transfer {{ item.total | number: '1.2-2' }} {{ item.currency }} using the
@@ -27,7 +31,7 @@
     </section>
 
     @if (order(); as item) {
-      @if (!item.paid) {
+      @if (!item.paid && !item.ongoing) {
         <app-bank-transfer
           class="transfer"
           [amount]="item.total"

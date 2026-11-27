@@ -54,7 +54,6 @@ export interface DeclarationPart {
   monthName: string;
   entries: { date: string; currency: string; amount: number; rate: number; gel: number }[];
   income: number;
-  tax: number;
   previousIncome: number | null;
 }
 

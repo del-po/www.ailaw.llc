@@ -154,43 +154,46 @@ export class AdminService {
   }
 
   // ---------- 1% declarations ----------
+  // A client is named by key: their registration ID, or ID-… code
 
   listDeclarations(year: string): Promise<DeclarationsList> {
     return this.call('declarations:list', { year });
   }
 
-  setDeclarationIncome(
-    registrationId: string,
+  // income and/or tax for one month; null clears a figure
+  setDeclarationMonth(
+    key: string,
     month: string,
-    income: number,
+    figures: { income?: number | null; tax?: number | null },
   ): Promise<DeclarationMonth> {
-    return this.call('declarations:setIncome', { registrationId, month, income });
+    return this.call('declarations:setMonth', { key, month, ...figures });
   }
 
-  setDeclarationDebt(registrationId: string, amount: number): Promise<unknown> {
-    return this.call('declarations:setDebt', { registrationId, amount });
+  setDeclarationDebt(key: string, amount: number): Promise<unknown> {
+    return this.call('declarations:setDebt', { key, amount });
   }
 
   setDeclarationContacts(
-    registrationId: string,
-    contacts: { telegramId: string; email: string },
+    key: string,
+    contacts: { registrationId: string; telegramId: string; email: string },
   ): Promise<DeclarationClient> {
-    return this.call('declarations:setContacts', { registrationId, ...contacts });
+    return this.call('declarations:setContacts', { key, ...contacts });
+  }
+
+  // ended: the client cancelled the service
+  setDeclarationStatus(key: string, status: 'active' | 'ended'): Promise<DeclarationClient> {
+    return this.call('declarations:setStatus', { key, status });
   }
 
   // A self-registered (pending) client gets a client record and folder
-  verifyDeclarationClient(registrationId: string): Promise<DeclarationClient> {
-    return this.call('declarations:verify', { registrationId });
+  verifyDeclarationClient(key: string): Promise<DeclarationClient> {
+    return this.call('declarations:verify', { key });
   }
 
   // With a file: saved in the client's folder, then sent. Without: the
   // month's file already there is sent again
-  deliverDeclaration(
-    registrationId: string,
-    month: string,
-    file?: Upload,
-  ): Promise<DeliveryResult> {
-    return this.call('declarations:deliver', { registrationId, month, file: file ?? null });
+  deliverDeclaration(key: string, month: string, file?: Upload): Promise<DeliveryResult> {
+    return this.call('declarations:deliver', { key, month, file: file ?? null });
   }
 
   // Called with nothing, it only reads the settings

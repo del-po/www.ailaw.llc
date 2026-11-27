@@ -24,10 +24,18 @@ export function joinLines(items: CartItem[], services: LegalService[]): CartLine
   }));
 }
 
-// Unavailable lines are left out. All services share one currency today,
-// so the first line's is used.
+// "50 GEL" or, for an ongoing service, "50 GEL per declaration"
+export function priceLabel(service: LegalService, amount = service.finalPrice): string {
+  const value = Number.isInteger(amount) ? String(amount) : amount.toFixed(2);
+  return (
+    `${value} ${service.currency}` + (service.billing === 'ongoing' ? ' ' + service.unitLabel : '')
+  );
+}
+
+// Unavailable lines are left out; ongoing services cost nothing now. All
+// services share one currency today, so the first line's is used.
 export function cartTotals(lines: CartLine[]): CartTotals {
-  const available = lines.filter((line) => line.service);
+  const available = lines.filter((line) => line.service && line.service.billing !== 'ongoing');
   const sum = (price: (s: LegalService) => number) =>
     available.reduce((total, line) => total + price(line.service!) * line.quantity, 0);
 
@@ -35,10 +43,10 @@ export function cartTotals(lines: CartLine[]): CartTotals {
   const total = sum((s) => s.finalPrice);
 
   return {
-    count: available.reduce((n, line) => n + line.quantity, 0),
+    count: lines.filter((line) => line.service).reduce((n, line) => n + line.quantity, 0),
     subtotal,
     total,
     savings: subtotal - total,
-    currency: available[0]?.service?.currency ?? 'GEL',
+    currency: lines.find((line) => line.service)?.service?.currency ?? 'GEL',
   };
 }

@@ -10,6 +10,7 @@ import {
 import { Shape } from '../../../shared/kit/shapes/shape';
 import { readUpload } from '../../../core/services/read-upload';
 import { adminErrorMessage } from '../admin-links';
+import { CHECKOUT_FIELDS, CheckoutRules, FieldRule } from '../../../core/models/checkout-fields';
 
 const EMPTY: AdminServiceInput = {
   Slug: '',
@@ -24,6 +25,9 @@ const EMPTY: AdminServiceInput = {
   DiscountedPrice: '',
   DiscountStart: '',
   DiscountEnd: '',
+  Billing: 'once',
+  UnitLabel: '',
+  CheckoutFields: {},
 };
 
 @Component({
@@ -36,6 +40,7 @@ export class AdminServicesPage {
   private readonly admin = inject(AdminService);
 
   protected readonly statuses: ServiceStatus[] = ['Active', 'Draft', 'Inactive'];
+  protected readonly checkoutFields = CHECKOUT_FIELDS;
 
   protected readonly services = signal<AdminServiceRow[] | null>(null);
   protected readonly categories = signal<AdminCategory[]>([]);
@@ -69,6 +74,16 @@ export class AdminServicesPage {
   }
 
   // ---------- Service editor ----------
+
+  // One select per field: '' (not asked), optional or required
+  private rulesFrom(value: (name: string) => string): CheckoutRules {
+    const rules: CheckoutRules = {};
+    for (const f of CHECKOUT_FIELDS) {
+      const rule = value('field-' + f.key);
+      if (rule === 'required' || rule === 'optional') rules[f.key] = rule as FieldRule;
+    }
+    return rules;
+  }
 
   protected newService(): void {
     this.notice.set(null);
@@ -104,6 +119,9 @@ export class AdminServicesPage {
       DiscountedPrice: discounted === '' ? '' : Number(discounted),
       DiscountStart: value('DiscountStart'),
       DiscountEnd: value('DiscountEnd'),
+      Billing: value('Billing') === 'ongoing' ? 'ongoing' : 'once',
+      UnitLabel: value('UnitLabel'),
+      CheckoutFields: this.rulesFrom(value),
     };
 
     // A picture chosen in the form is uploaded after the service is saved

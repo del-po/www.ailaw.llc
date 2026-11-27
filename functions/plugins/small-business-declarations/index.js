@@ -13,19 +13,24 @@
 //   declarations:draft     a chat draft, to fill the form ("Edit")
 //   declarations:confirm   the client presses Confirm on a chat draft
 // The chat never saves income itself: it drafts, shows a card with every
-// entry, the total and the tax, and only the client's Confirm saves it.
-// Admin:
-//   declarations:list           every client with one year's months
-//   declarations:setIncome      type in a month's income by hand
+// entry and the total, and only the client's Confirm saves it.
+// Admin (a client is named by key: registration ID, or ID-… code):
+//   declarations:list           the year's clients with their months
+//   declarations:setMonth       a month's income and/or tax, by hand (the
+//                               tax is always typed in from rs.ge)
 //   declarations:setDebt        outstanding debt, as shown on rs.ge
-//   declarations:setContacts    Telegram chat id / email for a client
+//   declarations:setContacts    registration ID, Telegram chat id, email
+//   declarations:setStatus      active / ended (the client cancelled)
 //   declarations:verify         a pending (self-registered) client → active
 //   declarations:deliver        upload a declaration → folder → client
 //   declarations:settings       sending test/live, fee, bank account …
+// Ordering the service on the website puts the client on the list at once
+// (onOrderPlaced below): no verification, no wait for payment.
 // ==========================================================
 
 import { ApiError, cleanKey, cleanText, now, validEmail } from '../../core/app.js';
 import { addPart } from '../../core/chat.js';
+import { onOrderPlaced } from '../../core/orders.js';
 import { clientByUid } from '../../core/records.js';
 import {
   FOLDER,
@@ -33,6 +38,7 @@ import {
   allClients,
   checkMonth,
   clientRef,
+  enrol,
   findClient,
   monthRef,
   months,
@@ -69,7 +75,8 @@ function toMonth(m) {
 
 function toClient(c, list = []) {
   return {
-    registrationId: c.registrationId,
+    key: c.id,
+    registrationId: c.registrationId || '',
     name: c.name,
     clientId: c.clientId || '',
     status: c.status || 'active',
@@ -77,6 +84,8 @@ function toClient(c, list = []) {
     telegramUsername: c.telegramUsername || '',
     email: c.email || '',
     serviceStart: c.serviceStart || '',
+    endedAt: iso(c.endedAt),
+    duplicateOf: c.duplicateOf || '',
     outstandingDebt: round2(c.outstandingDebt),
     months: list.map(toMonth).sort((a, b) => a.month.localeCompare(b.month)),
   };
@@ -119,7 +128,7 @@ async function reportFromSite(caller, data) {
   const { month, entries } = await websiteEntries(data);
   const note = cleanText(data.note ?? '', 2000);
   const saved = await reportIncome(client, { month, entries, source: 'website', by: caller.uid, note });
-  return { month, income: saved.income, tax: saved.tax, previousIncome: saved.previousIncome };
+  return { month, income: saved.income, previousIncome: saved.previousIncome };
 }
 
 // ---------- Chat drafts ----------
@@ -133,20 +142,18 @@ async function ownDraft(caller, draftId) {
   return { ref: snap.ref, ...draft };
 }
 
-// The card the chat shows: every entry, the total, the tax, Confirm / Edit
+// The card the chat shows: every entry, the total, Confirm / Edit
 async function makeDraft(ctx, args) {
   const client = await ownClient(ctx.caller);
   const { month, entries } = await websiteEntries(args || {});
-  const { taxRate } = await settings();
   const income = round2(entries.reduce((s, e) => s + e.gel, 0));
-  const previous = (await monthRef(client.registrationId, month).get()).data()?.income ?? null;
+  const previous = (await monthRef(client.id, month).get()).data()?.income ?? null;
   const draft = {
     uid: ctx.caller.uid,
-    registrationId: client.registrationId,
+    key: client.id,
     month,
     entries,
     income,
-    tax: round2(income * taxRate),
     previousIncome: previous,
     note: String(ctx.question || '').slice(0, 2000),
     conversationId: ctx.conversationId || '',
@@ -162,7 +169,6 @@ async function makeDraft(ctx, args) {
     monthName: monthName(month),
     entries: entries.map(({ date, currency, amount, rate, gel }) => ({ date, currency, amount, rate, gel })),
     income: draft.income,
-    tax: draft.tax,
     previousIncome: previous,
   });
   return draft;
@@ -174,7 +180,7 @@ async function confirmDraft(caller, data) {
   // A draft from last month's chat can't be saved into the wrong month
   if (draft.month !== reportingMonth()) throw new ApiError('DRAFT_EXPIRED');
   const client = await ownClient(caller);
-  if (client.registrationId !== draft.registrationId) throw new ApiError('DRAFT_NOT_FOUND');
+  if (client.id !== draft.key) throw new ApiError('DRAFT_NOT_FOUND');
   const saved = await reportIncome(client, {
     month: draft.month,
     entries: draft.entries,
@@ -183,7 +189,7 @@ async function confirmDraft(caller, data) {
     note: draft.note,
   });
   await draft.ref.update({ status: 'confirmed', confirmedAt: now() });
-  return { month: saved.month, income: saved.income, tax: saved.tax };
+  return { month: saved.month, income: saved.income };
 }
 
 // What the profile page shows; the declaration files are given as paths
@@ -191,7 +197,7 @@ async function confirmDraft(caller, data) {
 async function myDeclarations(caller, data) {
   const client = await ownClient(caller);
   const year = /^\d{4}$/.test(String(data.year || '')) ? String(data.year) : undefined;
-  const c = toClient(client, await months(client.registrationId, year));
+  const c = toClient(client, await months(client.id, year));
   const cfg = await settings();
   return {
     reportingMonth: reportingMonth(),
@@ -212,15 +218,22 @@ async function myDeclarations(caller, data) {
 
 // ---------- Admin ----------
 
+// The year's clients: everyone with figures in that year, plus, for the
+// current year, every active client (a new one has no figures yet). An ended
+// client drops off from the year after.
 async function list(data) {
   const year = /^\d{4}$/.test(String(data.year || '')) ? String(data.year) : reportingMonth().slice(0, 4);
-  const clients = await allClients();
+  const current = reportingMonth().slice(0, 4);
   const cfg = await settings();
   const rows = [];
-  for (const c of clients) {
+  for (const c of await allClients()) {
     // The test client only shows while testing
-    if (c.registrationId === cfg.testRegistrationId && cfg.sending === 'live') continue;
-    rows.push(toClient(c, await months(c.registrationId, year)));
+    if (c.id === cfg.testRegistrationId && cfg.sending === 'live') continue;
+    const list = await months(c.id, year);
+    const started = !c.serviceStart || c.serviceStart.slice(0, 4) <= year;
+    const ended = c.status === 'ended' && iso(c.endedAt).slice(0, 4) < year;
+    const listed = list.length || (year >= current && started && !ended && c.status !== 'ended');
+    if (listed) rows.push(toClient(c, list));
   }
   return {
     year,
@@ -230,27 +243,45 @@ async function list(data) {
   };
 }
 
-async function setIncome(caller, data) {
-  const client = await findClient({ registrationId: String(data.registrationId || '') });
+async function byKey(data) {
+  const client = await findClient({ key: String(data.key || '') });
+  if (!client) throw new ApiError('CLIENT_NOT_FOUND');
+  return client;
+}
+
+const amountOf = (value) => {
+  if (value === '' || value === null) return null;
+  const n = Number(value);
+  if (!(n >= 0)) throw new ApiError('INVALID_AMOUNT');
+  return round2(n);
+};
+
+// income and/or tax for one month; '' or null clears a figure
+async function setMonth(caller, data) {
+  const client = await byKey(data);
   const month = checkMonth(data.month);
-  const income = Number(data.income);
-  if (!(income >= 0)) throw new ApiError('INVALID_AMOUNT');
-  const entries = [{ date: `${month}-01`, currency: 'GEL', amount: income, rate: 1, gel: round2(income), manual: true }];
-  return toMonth(await reportIncome(client, { month, entries, source: 'manual', by: caller.email || caller.uid }));
+  const ref = monthRef(client.id, month);
+  if (data.income !== undefined) {
+    const income = amountOf(data.income);
+    if (income === null) await ref.set({ month, income: null }, { merge: true });
+    else {
+      const entries = [{ date: `${month}-01`, currency: 'GEL', amount: income, rate: 1, gel: income, manual: true }];
+      await ref.set({ month, income, entries, source: 'manual', reportedBy: caller.email || caller.uid, reportedAt: now() }, { merge: true });
+    }
+  }
+  if (data.tax !== undefined) await ref.set({ month, tax: amountOf(data.tax), taxUpdatedAt: now() }, { merge: true });
+  return toMonth({ month, ...(await ref.get()).data() });
 }
 
 async function setDebt(data) {
-  const client = await findClient({ registrationId: String(data.registrationId || '') });
-  if (!client) throw new ApiError('CLIENT_NOT_FOUND');
-  const amount = Number(data.amount);
-  if (!(amount >= 0)) throw new ApiError('INVALID_AMOUNT');
-  await clientRef(client.registrationId).update({ outstandingDebt: round2(amount), debtUpdatedAt: now() });
-  return { registrationId: client.registrationId, outstandingDebt: round2(amount) };
+  const client = await byKey(data);
+  const amount = amountOf(data.amount ?? 0) ?? 0;
+  await clientRef(client.id).update({ outstandingDebt: amount, debtUpdatedAt: now() });
+  return { key: client.id, outstandingDebt: amount };
 }
 
 async function setContacts(data) {
-  const client = await findClient({ registrationId: String(data.registrationId || '') });
-  if (!client) throw new ApiError('CLIENT_NOT_FOUND');
+  const client = await byKey(data);
   const changes = { updatedAt: now() };
   if (data.email !== undefined) {
     const email = cleanText(data.email, 200).toLowerCase();
@@ -262,12 +293,26 @@ async function setContacts(data) {
     if (id && !/^-?\d+$/.test(id)) throw new ApiError('INVALID_TELEGRAM_ID');
     changes.telegramId = id;
   }
-  await clientRef(client.registrationId).update(changes);
+  if (data.registrationId !== undefined) {
+    const rid = cleanText(data.registrationId, 20).replace(/\s+/g, '');
+    if (rid && !/^\d{9,11}$/.test(rid)) throw new ApiError('INVALID_REGISTRATION_ID');
+    changes.registrationId = rid;
+  }
+  await clientRef(client.id).update(changes);
+  return toClient({ ...client, ...changes });
+}
+
+// ended: the client cancelled; they stay in the years they have figures for
+async function setStatus(data) {
+  const client = await byKey(data);
+  if (!['active', 'ended'].includes(data.status)) throw new ApiError('INVALID_REQUEST');
+  const changes = { status: data.status, endedAt: data.status === 'ended' ? now() : null, updatedAt: now() };
+  await clientRef(client.id).update(changes);
   return toClient({ ...client, ...changes });
 }
 
 async function verifyPending(data, env) {
-  const client = await verify(String(data.registrationId || ''));
+  const client = await verify(String(data.key || ''));
   const cfg = await settings();
   const chat = cfg.sending === 'live' ? client.telegramId : cfg.testTelegramId;
   if (chat && env.telegramToken) {
@@ -288,6 +333,11 @@ async function updateSettings(data) {
   return Object.fromEntries(EDITABLE.map((k) => [k, cfg[k]]));
 }
 
+// ---------- Ordering the service ----------
+
+// A signed-in client's order puts them on the list (see enrol)
+onOrderPlaced('small-business-declarations', (order, client) => enrol(order, client, order.details || {}));
+
 // ---------- The plugin ----------
 
 export default {
@@ -305,12 +355,13 @@ export default {
     },
     admin: {
       'declarations:list': (caller, data) => list(data),
-      'declarations:setIncome': (caller, data) => setIncome(caller, data),
+      'declarations:setMonth': (caller, data) => setMonth(caller, data),
       'declarations:setDebt': (caller, data) => setDebt(data),
       'declarations:setContacts': (caller, data) => setContacts(data),
+      'declarations:setStatus': (caller, data) => setStatus(data),
       'declarations:verify': (caller, data, env) => verifyPending(data, env),
       'declarations:deliver': (caller, data, env) =>
-        deliver(String(data.registrationId || ''), String(data.month || ''), data.file || null, env),
+        deliver(String(data.key || ''), String(data.month || ''), data.file || null, env),
       'declarations:settings': (caller, data) => updateSettings(data),
     },
   },
@@ -323,7 +374,7 @@ export default {
         'that month), currency (GEL, USD, EUR or GBP) and amount exactly as the client gave it; foreign currency ' +
         'is converted at the National Bank rate of that day. zero=true for a month without income. Ask first ' +
         'when a date, currency or amount is unclear; never guess. This does NOT save anything: it shows the ' +
-        'client a card with the entries, total and tax, and only their Confirm button saves it. Tell them to ' +
+        'client a card with the entries and the total, and only their Confirm button saves it. Tell them to ' +
         'check the card and press Confirm (or Edit to correct it); never say the income is saved.',
       parameters: {
         type: 'object',
@@ -343,7 +394,7 @@ export default {
         if (!ctx.caller.signedIn) return { error: 'SIGN_IN_REQUIRED' };
         try {
           const d = await makeDraft(ctx, args);
-          return { shownToClient: true, month: monthName(d.month), totalGel: d.income, tax: d.tax, saved: false };
+          return { shownToClient: true, month: monthName(d.month), totalGel: d.income, saved: false };
         } catch (err) {
           if (err instanceof ApiError) return { error: err.code };
           throw err;
@@ -353,7 +404,7 @@ export default {
     get_declaration_info: {
       sides: ['client'],
       description:
-        "A 1% small-business declaration client's own figures: income and tax per month for a year, " +
+        "A 1% small-business declaration client's own figures: income and tax (as filed) per month for a year, " +
         'whether each declaration was delivered, outstanding debt on rs.ge, and which month they can report now.',
       parameters: { type: 'object', properties: { year: { type: 'string' } } },
       run: async (ctx, args) => {
@@ -361,7 +412,7 @@ export default {
         try {
           const client = await ownClient(ctx.caller);
           const year = /^\d{4}$/.test(String(args?.year || '')) ? String(args.year) : reportingMonth().slice(0, 4);
-          const c = toClient(client, await months(client.registrationId, year));
+          const c = toClient(client, await months(client.id, year));
           return {
             reportingMonth: reportingMonth(),
             outstandingDebt: c.outstandingDebt,

@@ -1,3 +1,5 @@
+import { CheckoutRules } from './checkout-fields';
+
 // A legal service as the website uses it (mapped from the Services API)
 
 export interface LegalService {
@@ -13,6 +15,11 @@ export interface LegalService {
   finalPrice: number; // what the customer pays today
   onSale: boolean;
   discountEnd: string; // yyyy-mm-dd, only while on sale
+  // once: paid when ordered; ongoing: nothing due when ordering, then the
+  // price per unit (e.g. "per declaration") until the client cancels
+  billing: 'once' | 'ongoing';
+  unitLabel: string;
+  checkoutFields: CheckoutRules;
 }
 
 export interface ServiceCategory {

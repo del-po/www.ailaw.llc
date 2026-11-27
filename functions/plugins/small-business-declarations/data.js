@@ -2,13 +2,16 @@
 // Small business declarations: the data
 // Everything lives in ServiceTools/SmallBusinessDeclarations:
 //   (the document itself)   settings: tax rate, fee, bank account, sending
-//   Clients/{registration ID}
-//       name, registrationId, clientId (ID-… of the client record),
-//       telegramId, telegramUsername, email, status (active | pending),
-//       serviceStart, outstandingDebt
+//   Clients/{key}   the key is the registration ID, or the client's ID-…
+//                   code when they enrolled on the website without one
+//       name, registrationId (may be filled in later), clientId (ID-… of
+//       the client record), telegramId, telegramUsername, email,
+//       status (active | pending | ended), serviceStart, endedAt,
+//       outstandingDebt, orderNumber (the enrolment order, if any)
 //   Clients/{…}/Months/{yyyy-MM}
-//       income, tax, serviceFee, source, entries (one per income received),
-//       reportedAt, declarationFile, deliveredAt, deliveredVia
+//       income, entries (one per income received), source, note,
+//       reportedAt; tax (typed in by AI Law from rs.ge when filing),
+//       serviceFee, declarationFile, deliveredAt, deliveredVia
 //   BotState/{telegram chat id}    where a Telegram conversation is
 //   Drafts/{id}    income the website chat read from a client's message,
 //                  saved only when the client presses Confirm
@@ -24,7 +27,6 @@ export const FOLDER = 'SmallBusinessDeclarations';
 
 // What the settings fall back to when the tool document leaves them out
 const DEFAULTS = {
-  taxRate: 0.01,
   feePerDeclaration: 50,
   bankAccount: 'GE33BG0000000538123818',
   // test: every message goes to testTelegramId / testEmail; live: to clients
@@ -44,8 +46,8 @@ export async function settings() {
 // ---------- Small helpers ----------
 
 export const round2 = (n) => Math.round(Number(n || 0) * 100) / 100;
-export const clientRef = (registrationId) => TOOL.collection('Clients').doc(String(registrationId));
-export const monthRef = (registrationId, month) => clientRef(registrationId).collection('Months').doc(month);
+export const clientRef = (key) => TOOL.collection('Clients').doc(String(key));
+export const monthRef = (key, month) => clientRef(key).collection('Months').doc(month);
 
 const one = (snap) => (snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() });
 
@@ -67,12 +69,16 @@ export const lastDay = (month) => {
 
 // ---------- Finding a client ----------
 
-// By whatever the channel knows about the sender
-export async function findClient({ registrationId, telegramId, clientId, email }) {
+// By whatever the channel knows about the sender; client.id is the key
+export async function findClient({ key, registrationId, telegramId, clientId, email }) {
   const clients = TOOL.collection('Clients');
-  if (registrationId) {
-    const snap = await clientRef(registrationId).get();
+  if (key) {
+    const snap = await clientRef(key).get();
     return snap.exists ? { id: snap.id, ...snap.data() } : null;
+  }
+  if (registrationId) {
+    const found = one(await clients.where('registrationId', '==', String(registrationId)).limit(1).get());
+    return found || findClient({ key: registrationId });
   }
   if (telegramId) return one(await clients.where('telegramId', '==', String(telegramId)).limit(1).get());
   if (clientId) return one(await clients.where('clientId', '==', String(clientId)).limit(1).get());
@@ -80,10 +86,11 @@ export async function findClient({ registrationId, telegramId, clientId, email }
   return null;
 }
 
-// Only verified (active) clients may report or receive
+// Only active clients may report or receive (not pending, not ended)
 export function requireActive(client) {
   if (!client) throw new ApiError('NOT_A_DECLARATIONS_CLIENT');
   if (client.status === 'pending') throw new ApiError('VERIFICATION_PENDING');
+  if (client.status === 'ended') throw new ApiError('SERVICE_ENDED');
   return client;
 }
 
@@ -91,19 +98,18 @@ export function requireActive(client) {
 
 // entries: [{ date: 'yyyy-MM-dd', currency, amount, rate, gel }] (already in GEL),
 // or [] for a zero-income month. The month's total is replaced, as the
-// Telegram bot always did ("Finish" saves the month's total).
+// Telegram bot always did ("Finish" saves the month's total). The tax is
+// not touched: AI Law types it in from rs.ge when filing.
 // note: the client's own words, kept with the report (e.g. the chat message)
 export async function reportIncome(client, { month, entries = [], source, by = '', note = '' }) {
   requireActive(client);
   checkMonth(month);
-  const { taxRate } = await settings();
   const income = round2(entries.reduce((sum, e) => sum + Number(e.gel || 0), 0));
-  const ref = monthRef(client.registrationId, month);
+  const ref = monthRef(client.id, month);
   const before = (await ref.get()).data() || {};
   const record = {
     month,
     income,
-    tax: round2(income * taxRate),
     entries,
     source,
     reportedBy: by,
@@ -116,8 +122,8 @@ export async function reportIncome(client, { month, entries = [], source, by = '
 
 // ---------- Reading ----------
 
-export async function months(registrationId, year) {
-  let query = clientRef(registrationId).collection('Months');
+export async function months(key, year) {
+  let query = clientRef(key).collection('Months');
   if (year) query = query.where('month', '>=', `${year}-01`).where('month', '<=', `${year}-12`);
   return (await query.get()).docs.map((d) => ({ id: d.id, ...d.data() }));
 }
@@ -136,7 +142,7 @@ export async function register({ registrationId, name, telegramId, telegramUsern
   const existing = await findClient({ registrationId: rid });
   const link = { telegramId: String(telegramId || ''), telegramUsername: telegramUsername || '', updatedAt: now() };
   if (existing) {
-    await clientRef(rid).update(link);
+    await clientRef(existing.id).update(link);
     return { ...existing, ...link, isNew: false };
   }
   const fullName = cleanText(name, 100, 'INVALID_NAME').replace(/\s+/g, ' ');
@@ -158,8 +164,8 @@ export async function register({ registrationId, name, telegramId, telegramUsern
 }
 
 // After the identity check: a client record (verified) and a folder
-export async function verify(registrationId) {
-  const client = await findClient({ registrationId });
+export async function verify(key) {
+  const client = await findClient({ key });
   if (!client) throw new ApiError('CLIENT_NOT_FOUND');
   let clientId = client.clientId;
   if (!clientId) {
@@ -178,7 +184,7 @@ export async function verify(registrationId) {
       emailVerified: false,
       phone: '',
       passport: '',
-      idNumber: client.registrationId,
+      idNumber: client.registrationId || '',
       address: '',
       notes: 'Registered through the 1% declarations Telegram bot',
       userId: '',
@@ -192,6 +198,47 @@ export async function verify(registrationId) {
     await makeFolder(`${folder}/${FOLDER}`);
   }
   const changes = { clientId, status: 'active', serviceStart: client.serviceStart || formatDate(now(), 'yyyy-MM'), updatedAt: now() };
-  await clientRef(registrationId).update(changes);
+  await clientRef(client.id).update(changes);
   return { ...client, ...changes };
+}
+
+// ---------- Enrolling from an order ----------
+
+// A signed-in client ordered the service: they go on the list at once,
+// active, with no verification and no wait for payment. Ordering again
+// after ending the service starts it again on the same record.
+export async function enrol(order, client, details = {}) {
+  const month = formatDate(now(), 'yyyy-MM');
+  const registrationId = String(details.registrationId || '').replace(/\s+/g, '');
+  const existing = await findClient({ clientId: client.id });
+  // The same registration ID on another client's record is never joined
+  // automatically: the new record is flagged for AI Law to sort out
+  const other = registrationId && !existing ? await findClient({ registrationId }) : null;
+  const duplicateOf = other && other.clientId !== client.id ? other.id : '';
+  if (existing) {
+    const changes = { status: 'active', endedAt: null, orderNumber: order.orderNumber, clientId: client.id, updatedAt: now() };
+    if (registrationId && !existing.registrationId) changes.registrationId = registrationId;
+    await clientRef(existing.id).update(changes);
+    return { ...existing, ...changes };
+  }
+  const key = registrationId && !other && !(await clientRef(registrationId).get()).exists ? registrationId : client.id;
+  const record = {
+    name: order.customerName || client.displayName || '',
+    registrationId,
+    clientId: client.id,
+    email: order.customerEmail || client.email || '',
+    telegramId: '',
+    telegramUsername: '',
+    status: 'active',
+    active: true,
+    serviceStart: month,
+    endedAt: null,
+    outstandingDebt: 0,
+    orderNumber: order.orderNumber,
+    duplicateOf,
+    createdAt: now(),
+  };
+  await clientRef(key).set(record);
+  if (client.folder) await makeFolder(`${client.folder}/${FOLDER}`);
+  return { id: key, ...record };
 }

@@ -58,3 +58,32 @@
     }
   }
 }
+
+// ---------- What checkout asks for ----------
+
+.asks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.asks-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 20px;
+}
+
+.ask {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+@include below(tablet) {
+  .asks-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

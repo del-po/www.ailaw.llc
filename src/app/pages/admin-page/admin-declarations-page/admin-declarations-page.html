@@ -66,86 +66,100 @@
 </div>
 
 @if (data()) {
-  <div class="table" role="table" [attr.aria-label]="'Income by month, ' + year()">
+  <!-- One block per client: an Income line and a Tax line, like the old sheet -->
+  <div class="sheet" role="table" [attr.aria-label]="'Income and tax by month, ' + year()">
     <div class="line line--head" role="row">
       <span class="name" role="columnheader">Client</span>
+      <span class="kind" role="columnheader"></span>
       @for (label of monthLabels; track label) {
-        <span class="month" role="columnheader">{{ label }}</span>
+        <span class="num" role="columnheader">{{ label }}</span>
       }
+      <span class="num" role="columnheader">Total</span>
+      <span class="num" role="columnheader">Debt</span>
     </div>
 
-    @for (client of list(); track client.registrationId) {
-      <div class="client-block">
-        <button
-          type="button"
-          class="line"
-          role="row"
-          [class.is-open]="openId() === client.registrationId"
-          [attr.aria-expanded]="openId() === client.registrationId"
-          (click)="toggle(client)"
-        >
-          <span class="name" role="cell">
-            <span class="cell-title">{{ client.name }}</span>
-            <span class="cell-sub"
-              >{{ client.registrationId
-              }}{{
-                client.outstandingDebt > 0
-                  ? ' · debt ' + (client.outstandingDebt | number: '1.2-2')
-                  : ''
-              }}</span
-            >
-            @if (client.status === 'pending') {
+    @for (row of rows(); track row.client.key) {
+      @let c = row.client;
+      <div
+        class="client-block"
+        [class.is-open]="openKey() === c.key"
+        [class.is-ended]="c.status === 'ended'"
+      >
+        <div class="line" role="row">
+          <button
+            type="button"
+            class="name"
+            role="rowheader"
+            [attr.aria-expanded]="openKey() === c.key"
+            (click)="open(c)"
+          >
+            <span class="cell-title">{{ c.name }}</span>
+            <span class="cell-sub">{{ c.registrationId || 'no registration ID' }}</span>
+            @if (c.status === 'pending') {
               <span class="status status--draft">To verify</span>
+            } @else if (c.status === 'ended') {
+              <span class="status">Ended</span>
             }
-          </span>
-          @for (label of monthLabels; track label; let i = $index) {
-            @let m = cell(client, i);
-            <span
-              class="month"
+            @if (c.duplicateOf) {
+              <span class="status status--draft">Same reg. ID as {{ c.duplicateOf }}</span>
+            }
+          </button>
+          <span class="kind" role="cell">Income</span>
+          @for (v of row.income; track $index; let i = $index) {
+            <button
+              type="button"
+              class="num cell"
               role="cell"
-              [class.is-delivered]="!!m?.deliveredAt || !!m?.declarationFile"
-              [class.is-reported]="
-                m?.income !== null &&
-                m?.income !== undefined &&
-                !m?.deliveredAt &&
-                !m?.declarationFile
-              "
-              [attr.title]="
-                m
-                  ? 'Tax ' +
-                    (m.tax | number: '1.2-2') +
-                    (m.deliveredVia ? ' · ' + m.deliveredVia : '')
-                  : null
-              "
+              [class.is-delivered]="row.state[i] === 'delivered'"
+              [class.is-reported]="row.state[i] === 'reported'"
+              [class.is-picked]="openKey() === c.key && month() === monthKey(i)"
+              (click)="open(c, i)"
             >
-              {{ m && m.income !== null ? (m.income | number: '1.0-0') : '—' }}
-            </span>
+              {{ v !== null ? (v | number: '1.2-2') : '—' }}
+            </button>
           }
-        </button>
+          <span class="num total" role="cell">{{ row.incomeTotal | number: '1.2-2' }}</span>
+          <span class="num" role="cell" [class.is-debt]="c.outstandingDebt > 0">{{
+            c.outstandingDebt | number: '1.2-2'
+          }}</span>
+        </div>
+        <div class="line line--tax" role="row">
+          <span class="name" role="rowheader"></span>
+          <span class="kind" role="cell">Tax</span>
+          @for (v of row.tax; track $index; let i = $index) {
+            <button type="button" class="num cell" role="cell" (click)="open(c, i)">
+              {{ v !== null ? (v | number: '1.2-2') : '—' }}
+            </button>
+          }
+          <span class="num total" role="cell">{{ row.taxTotal | number: '1.2-2' }}</span>
+          <span class="num" role="cell"></span>
+        </div>
 
-        @if (openId() === client.registrationId && openClient(); as c) {
+        @if (openKey() === c.key && openClient(); as oc) {
           <div class="panel">
             <p class="cell-sub">
-              {{ c.clientId || 'No client record yet' }} · Telegram
-              {{ c.telegramUsername ? '@' + c.telegramUsername : '' }} {{ c.telegramId || '—' }} ·
-              {{ c.email || 'no email' }}{{ c.serviceStart ? ' · since ' + c.serviceStart : '' }}
+              {{ oc.clientId || 'No client record yet' }} · Telegram
+              {{ oc.telegramUsername ? '@' + oc.telegramUsername : '' }}
+              {{ oc.telegramId || '—' }} · {{ oc.email || 'no email'
+              }}{{ oc.serviceStart ? ' · since ' + oc.serviceStart : ''
+              }}{{ oc.endedAt ? ' · ended ' + (oc.endedAt | date: 'MMM d, y') : '' }}
             </p>
 
-            @if (c.status === 'pending') {
+            @if (oc.status === 'pending') {
               <div class="editor">
                 <h2 class="block-title">Registered through Telegram</h2>
                 <p class="small">
-                  Check {{ c.name }}'s identity, then verify: they get a client record and folder
+                  Check {{ oc.name }}'s identity, then verify: they get a client record and folder
                   and can report income.
                 </p>
                 <div class="editor-actions">
-                  <button type="button" class="btn" [disabled]="busy()" (click)="verify(c)">
+                  <button type="button" class="btn" [disabled]="busy()" (click)="verify(oc)">
                     <app-shape name="bar-notch">Verify</app-shape>
                   </button>
                 </div>
               </div>
             } @else {
-              <!-- One month: income, then the filed declaration -->
+              <!-- One month: income, tax from rs.ge, then the filed declaration -->
               <div class="editor">
                 <div class="month-head">
                   <h2 class="block-title">Month</h2>
@@ -162,8 +176,7 @@
                 @let om = openMonth();
                 <p class="cell-sub">
                   @if (om && om.income !== null) {
-                    Income {{ om.income | number: '1.2-2' }} GEL · tax
-                    {{ om.tax | number: '1.2-2' }} GEL · from {{ om.source
+                    Reported {{ om.income | number: '1.2-2' }} GEL from {{ om.source
                     }}{{ om.reportedAt ? ', ' + (om.reportedAt | date: 'MMM d, HH:mm') : '' }}
                   } @else {
                     No income reported for {{ monthName(month()) }}.
@@ -179,34 +192,47 @@
 
                 <div class="grid">
                   <label class="field">
-                    <span class="field-label">Income, GEL (by hand)</span>
+                    <span class="field-label">Income, GEL</span>
                     <app-shape class="field-box" name="field">
                       <input #income type="number" min="0" step="0.01" [value]="om?.income ?? ''" />
                     </app-shape>
                   </label>
-                  <div class="field field--action">
-                    <button
-                      type="button"
-                      class="btn btn--light"
-                      [disabled]="busy()"
-                      (click)="saveIncome(c, income.value)"
-                    >
-                      <app-shape name="bar-notch">Save income</app-shape>
-                    </button>
-                  </div>
+                  <label class="field">
+                    <span class="field-label">Tax, GEL · from rs.ge when filing</span>
+                    <app-shape class="field-box" name="field">
+                      <input #tax type="number" min="0" step="0.01" [value]="om?.tax ?? ''" />
+                    </app-shape>
+                  </label>
+                </div>
+                <div class="editor-actions">
+                  <button
+                    type="button"
+                    class="btn btn--light"
+                    [disabled]="busy()"
+                    (click)="saveMonth(oc, income.value, tax.value)"
+                  >
+                    <app-shape name="bar-notch">Save month</app-shape>
+                  </button>
+                </div>
 
+                <div class="grid">
                   <label class="field">
                     <span class="field-label">Filed declaration (PDF)</span>
                     <input #pdf class="file" type="file" accept="application/pdf" />
                   </label>
                   <div class="field field--action">
-                    <button type="button" class="btn" [disabled]="busy()" (click)="deliver(c, pdf)">
+                    <button
+                      type="button"
+                      class="btn"
+                      [disabled]="busy()"
+                      (click)="deliver(oc, pdf)"
+                    >
                       <app-shape name="bar-notch">{{
                         busy() ? 'Working…' : 'Upload & deliver'
                       }}</app-shape>
                     </button>
                     @if (om?.declarationFile) {
-                      <button type="button" class="action" [disabled]="busy()" (click)="resend(c)">
+                      <button type="button" class="action" [disabled]="busy()" (click)="resend(oc)">
                         Send again
                       </button>
                     }
@@ -214,14 +240,40 @@
                 </div>
               </div>
 
-              <!-- The client: debt from rs.ge and how to reach them -->
-              <form #contacts class="editor" (submit)="saveContacts(c, contacts, $event)">
+              <!-- The client: registration ID, contacts, debt from rs.ge, status -->
+              <form #contacts class="editor" (submit)="saveContacts(oc, contacts, $event)">
                 <h2 class="block-title">Client</h2>
+                <div class="grid">
+                  <label class="field">
+                    <span class="field-label">Registration ID (rs.ge tax ID)</span>
+                    <app-shape class="field-box" name="field">
+                      <input name="registrationId" maxlength="11" [value]="oc.registrationId" />
+                    </app-shape>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Telegram chat id</span>
+                    <app-shape class="field-box" name="field">
+                      <input name="telegramId" maxlength="20" [value]="oc.telegramId" />
+                    </app-shape>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Email</span>
+                    <app-shape class="field-box" name="field">
+                      <input name="email" type="email" maxlength="200" [value]="oc.email" />
+                    </app-shape>
+                  </label>
+                </div>
+                <div class="editor-actions">
+                  <button type="submit" class="btn btn--light" [disabled]="busy()">
+                    <app-shape name="bar-notch">Save details</app-shape>
+                  </button>
+                </div>
+
                 <div class="grid">
                   <label class="field">
                     <span class="field-label">Outstanding debt on rs.ge, GEL</span>
                     <app-shape class="field-box" name="field">
-                      <input #debt type="number" min="0" step="0.01" [value]="c.outstandingDebt" />
+                      <input #debt type="number" min="0" step="0.01" [value]="oc.outstandingDebt" />
                     </app-shape>
                   </label>
                   <div class="field field--action">
@@ -229,28 +281,33 @@
                       type="button"
                       class="btn btn--light"
                       [disabled]="busy()"
-                      (click)="saveDebt(c, debt.value)"
+                      (click)="saveDebt(oc, debt.value)"
                     >
                       <app-shape name="bar-notch">Save debt</app-shape>
                     </button>
                   </div>
-                  <label class="field">
-                    <span class="field-label">Telegram chat id</span>
-                    <app-shape class="field-box" name="field">
-                      <input name="telegramId" maxlength="20" [value]="c.telegramId" />
-                    </app-shape>
-                  </label>
-                  <label class="field">
-                    <span class="field-label">Email</span>
-                    <app-shape class="field-box" name="field">
-                      <input name="email" type="email" maxlength="200" [value]="c.email" />
-                    </app-shape>
-                  </label>
                 </div>
+
                 <div class="editor-actions">
-                  <button type="submit" class="btn btn--light" [disabled]="busy()">
-                    <app-shape name="bar-notch">Save contacts</app-shape>
-                  </button>
+                  @if (oc.status === 'ended') {
+                    <button
+                      type="button"
+                      class="action"
+                      [disabled]="busy()"
+                      (click)="setStatus(oc, 'active')"
+                    >
+                      Start the service again
+                    </button>
+                  } @else {
+                    <button
+                      type="button"
+                      class="action"
+                      [disabled]="busy()"
+                      (click)="setStatus(oc, 'ended')"
+                    >
+                      End the service (client cancelled)
+                    </button>
+                  }
                 </div>
               </form>
             }
@@ -259,6 +316,30 @@
       </div>
     } @empty {
       <p class="small">No clients match.</p>
+    }
+
+    @if (rows().length) {
+      <!-- Everyone on screen added up -->
+      <div class="sum-block">
+        <div class="line line--sum" role="row">
+          <span class="name" role="rowheader"><span class="cell-title">All clients</span></span>
+          <span class="kind" role="cell">Income</span>
+          @for (v of totals().income; track $index) {
+            <span class="num" role="cell">{{ v | number: '1.2-2' }}</span>
+          }
+          <span class="num total" role="cell">{{ totals().incomeTotal | number: '1.2-2' }}</span>
+          <span class="num" role="cell">{{ totals().debt | number: '1.2-2' }}</span>
+        </div>
+        <div class="line line--sum line--tax" role="row">
+          <span class="name" role="rowheader"></span>
+          <span class="kind" role="cell">Tax</span>
+          @for (v of totals().tax; track $index) {
+            <span class="num" role="cell">{{ v | number: '1.2-2' }}</span>
+          }
+          <span class="num total" role="cell">{{ totals().taxTotal | number: '1.2-2' }}</span>
+          <span class="num" role="cell"></span>
+        </div>
+      </div>
     }
   </div>
 

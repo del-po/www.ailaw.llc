@@ -1,7 +1,9 @@
 // ==========================================================
 // Plugin: ordering (client + admin)
 // Client:
-//   placeOrder   checkout from the cart the browser keeps: { items: [{ slug, quantity }] }
+//   placeOrder   checkout from the cart the browser keeps: { items: [{ slug, quantity }],
+//                customerName, fields (what the services ask for), paymentMethod }
+//                Only "invoice" is accepted for now: AI Law confirms payments by hand
 //   start_order  the chat's tool: one service, with the details the client
 //                confirmed; the order then runs its plugin's steps
 // Admin:
@@ -11,7 +13,8 @@
 //   admin:resendEmail      the confirmation email again
 // After every order (setupOrder, retried by the daily job when it fails):
 //   1. its Storage folder: the client's folder/2026/…, or clients/guests/2026/…
-//   2. the Legal Services Agreement PDF (+ invoice page when paying by invoice)
+//   2. the Legal Services Agreement PDF (+ invoice page when paying by invoice
+//      and something is due); ongoing services get the Ongoing agreement
 //   3. the confirmation email with the PDF attached
 // sendReceipt is used by the on-paid job.
 // ==========================================================
@@ -76,8 +79,9 @@ export async function setupOrder(orderNumber, env) {
   // 2. Agreement
   if (!order.agreement || order.agreement.startsWith('drive:')) {
     const d = await documentData(order);
-    const withInvoice = d.paymentMethod === 'invoice';
-    const title = (withInvoice ? 'Legal Services Agreement and Invoice - ' : 'Legal Services Agreement - ') + d.number;
+    const withInvoice = d.paymentMethod === 'invoice' && !d.ongoing && Number(d.total) > 0;
+    const kind = d.ongoing ? 'Ongoing Legal Services Agreement' : 'Legal Services Agreement';
+    const title = kind + (withInvoice ? ' and Invoice - ' : ' - ') + d.number;
     const pdf = await buildPdf([...agreementBlocks(d), ...(withInvoice ? invoiceBlocks(d) : [])]);
     order.agreement = await saveFile(join(order.folder, title + '.pdf'), pdf, 'application/pdf');
     await ref.update({ agreement: order.agreement, updatedAt: now() });
@@ -100,13 +104,18 @@ async function documentData(order) {
 
 async function sendConfirmation(order, env) {
   const d = await documentData(order);
-  const invoice = d.paymentMethod === 'invoice';
-  const services = d.lines.map((l) => `• ${l.name}${l.quantity > 1 ? ' × ' + l.quantity : ''} — ${l.total} ${d.currency}`).join('\n');
-  const payment = invoice
-    ? `Payment: please transfer ${d.total} ${d.currency} to\n${d.bank.recipient}, IBAN ${d.bank.iban}\n` +
-      `with the reference ${d.number}. The invoice is on the second page of the attached PDF.\n` +
-      'We start as soon as the payment arrives.'
-    : 'Payment: received at checkout. We are starting on your order.';
+  const invoice = d.paymentMethod === 'invoice' && !d.ongoing && Number(d.total) > 0;
+  const services = d.lines
+    .map((l) => `• ${l.name}${l.quantity > 1 ? ' × ' + l.quantity : ''} — ` + (d.ongoing ? `${d.rate} ${d.currency} ${d.unitLabel}` : `${l.total} ${d.currency}`))
+    .join('\n');
+  const payment = d.ongoing
+    ? `Nothing is due now. Each service is invoiced at ${d.rate} ${d.currency} ${d.unitLabel} when we provide it.\n` +
+      'The agreement runs until you cancel it.'
+    : invoice
+      ? `Payment: please transfer ${d.total} ${d.currency} to\n${d.bank.recipient}, IBAN ${d.bank.iban}\n` +
+        `with the reference ${d.number}. The invoice is on the second page of the attached PDF.\n` +
+        'We start as soon as the payment arrives.'
+      : 'Payment: received at checkout. We are starting on your order.';
   const file = order.agreement.startsWith('drive:') ? null : await readFile(order.agreement);
 
   return mail(env, {
@@ -118,11 +127,11 @@ async function sendConfirmation(order, env) {
       `Thank you for your order ${d.number}.`,
       '',
       services,
-      `Total: ${d.total} ${d.currency}`,
+      d.ongoing ? '' : `Total: ${d.total} ${d.currency}`,
       '',
       payment,
       '',
-      `Attached is your Legal Services Agreement${invoice ? ' with the invoice' : ''}.`,
+      `Attached is your ${d.ongoing ? 'Ongoing ' : ''}Legal Services Agreement${invoice ? ' with the invoice' : ''}.`,
       d.client.code ? `Your client code: ${d.client.code}.` : '',
       '',
       'Questions? Just reply to this email.',
@@ -173,13 +182,19 @@ async function setupSafely(orderNumber, env) {
 
 // ---------- Client ----------
 
+const PAYMENT_METHODS = ['invoice'];
+
 async function placeOrder(caller, data, env) {
   const items = Array.isArray(data.items) ? data.items : [];
+  const paymentMethod = data.paymentMethod || 'invoice';
+  if (!PAYMENT_METHODS.includes(paymentMethod)) throw new ApiError('PAYMENT_METHOD_UNAVAILABLE');
+  const fields = data.fields && typeof data.fields === 'object' ? data.fields : {};
   const { order } = await createOrder(caller, items, {
     customerName: data.customerName,
-    customerPhone: data.customerPhone,
+    fields,
     billingAddress: data.billingAddress,
     customerNotes: data.customerNotes,
+    paymentMethod,
   });
   await setupSafely(order.orderNumber, env);
   return paymentInfo(order);

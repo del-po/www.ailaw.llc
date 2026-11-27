@@ -42,7 +42,8 @@
                   @if (line.service!.onSale) {
                     <s>{{ line.service!.price | number: '1.0-2' }}</s>
                   }
-                  {{ line.service!.finalPrice | number: '1.0-2' }} {{ line.service!.currency }} each
+                  {{ line.service!.finalPrice | number: '1.0-2' }} {{ line.service!.currency }}
+                  {{ line.service!.billing === 'ongoing' ? line.service!.unitLabel : 'each' }}
                 </p>
               </div>
 
@@ -69,8 +70,12 @@
               </div>
 
               <p class="line-total">
-                {{ line.service!.finalPrice * line.quantity | number: '1.0-2'
-                }}<small class="currency">{{ line.service!.currency }}</small>
+                @if (line.service!.billing === 'ongoing') {
+                  0<small class="currency">{{ line.service!.currency }} now</small>
+                } @else {
+                  {{ line.service!.finalPrice * line.quantity | number: '1.0-2'
+                  }}<small class="currency">{{ line.service!.currency }}</small>
+                }
               </p>
 
               <button

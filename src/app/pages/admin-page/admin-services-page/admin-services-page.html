@@ -133,6 +133,50 @@
           <input name="DiscountEnd" type="date" [value]="item.DiscountEnd" />
         </app-shape>
       </label>
+
+      <!-- ---------- Billing ---------- -->
+      <label class="field">
+        <span class="field-label">Billing</span>
+        <app-shape class="field-box" name="field">
+          <select name="Billing">
+            <option value="once" [selected]="item.Billing !== 'ongoing'">
+              Once: paid when ordered
+            </option>
+            <option value="ongoing" [selected]="item.Billing === 'ongoing'">
+              Ongoing: price per unit, until cancelled
+            </option>
+          </select>
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Unit · ongoing only, e.g. "per declaration"</span>
+        <app-shape class="field-box" name="field">
+          <input name="UnitLabel" maxlength="40" [value]="item.UnitLabel" />
+        </app-shape>
+      </label>
+
+      <!-- ---------- What checkout asks for ---------- -->
+      <div class="wide asks">
+        <span class="field-label">Checkout asks for · name and email always</span>
+        <div class="asks-grid">
+          @for (f of checkoutFields; track f.key) {
+            <label class="ask">
+              <span>{{ f.label }}</span>
+              <app-shape class="field-box" name="field">
+                <select [name]="'field-' + f.key">
+                  <option value="" [selected]="!item.CheckoutFields[f.key]">Not asked</option>
+                  <option value="optional" [selected]="item.CheckoutFields[f.key] === 'optional'">
+                    Optional
+                  </option>
+                  <option value="required" [selected]="item.CheckoutFields[f.key] === 'required'">
+                    Required
+                  </option>
+                </select>
+              </app-shape>
+            </label>
+          }
+        </div>
+      </div>
     </div>
 
     <div class="editor-actions">

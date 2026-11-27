@@ -47,8 +47,14 @@
             }
             <span class="price-now">
               {{ item.finalPrice | number: '1.0-2'
-              }}<small class="currency">{{ item.currency }}</small>
+              }}<small class="currency"
+                >{{ item.currency
+                }}{{ item.billing === 'ongoing' ? ' ' + item.unitLabel : '' }}</small
+              >
             </span>
+            @if (item.billing === 'ongoing') {
+              <span class="sale">Ongoing · nothing due when ordering · cancel any time</span>
+            }
             @if (item.onSale && item.discountEnd) {
               <span class="sale">Offer ends {{ item.discountEnd | date: 'MMM d' }}</span>
             }
