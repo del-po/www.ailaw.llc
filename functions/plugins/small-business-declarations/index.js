@@ -620,6 +620,39 @@ const adminTools = {
         });
       }),
   },
+  declarations_settings: {
+    sides: ['admin'],
+    description:
+      '1% declarations settings: sending test/live, fee per declaration, bank account in the delivery message, ' +
+      'test Telegram chat and email, where new registrations are emailed. Give fields to propose a change ' +
+      '(shows a Confirm card); give none to just read them.',
+    parameters: {
+      type: 'object',
+      properties: {
+        sending: { type: 'string', enum: ['test', 'live'] },
+        feePerDeclaration: { type: 'number' },
+        bankAccount: { type: 'string' },
+        testTelegramId: { type: 'string' },
+        testEmail: { type: 'string' },
+        notifyEmail: { type: 'string' },
+      },
+    },
+    run: (ctx, args) =>
+      adminTool(async () => {
+        const now = await updateSettings({});
+        const changes = Object.fromEntries(Object.entries(args || {}).filter(([k, v]) => v !== undefined && EDITABLE.includes(k)));
+        if (!Object.keys(changes).length) return now;
+        return proposeAction(ctx, {
+          action: 'declarations:settings',
+          data: changes,
+          title: '1% declarations settings',
+          lines: Object.entries(changes).map(([k, v]) => `${k}: ${now[k]} → ${v}`).concat(
+            changes.sending === 'live' ? ['Live: declarations and bot messages reach real clients.'] : [],
+          ),
+          danger: changes.sending === 'live',
+        });
+      }),
+  },
   declarations_verify: {
     sides: ['admin'],
     description: 'Proposes verifying a client who registered through the Telegram bot (status pending). Shows a Confirm card.',

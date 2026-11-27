@@ -50,7 +50,7 @@ function toProfile(c) {
     Notes: c.notes || '',
     UserID: c.userId || '',
     Role: c.role || 'client',
-    Providers: (c.providers || []).join(','),
+    Providers: (Array.isArray(c.providers) ? c.providers : []).join(','),
     EmailVerified: c.emailVerified === true,
     PhotoURL: c.photoUrl || '',
     CreatedAt: iso(c.createdAt),
