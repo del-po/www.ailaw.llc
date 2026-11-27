@@ -2,7 +2,7 @@
 // Core: files
 //   - Storage folders: a folder is a path prefix; an empty ".keep" file
 //     makes it exist before anything is put in it
-//   - save, list, read
+//   - save, list, read; pictures uploaded from admin pages
 //   - PDF: turns simple blocks (title, heading, paragraph, table, page break)
 //     into a PDF, with DejaVu Sans so Georgian and symbols like № print
 // ==========================================================
@@ -10,7 +10,7 @@
 import PDFDocument from 'pdfkit';
 import { randomUUID } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { bucket } from './app.js';
+import { ApiError, bucket } from './app.js';
 
 const FONT = fileURLToPath(new URL('../assets/DejaVuSans.ttf', import.meta.url));
 const FONT_BOLD = fileURLToPath(new URL('../assets/DejaVuSans-Bold.ttf', import.meta.url));
@@ -76,6 +76,22 @@ export async function folderTime(path) {
   } catch {
     return '';
   }
+}
+
+// A picture sent from an admin page as { type, data (base64) }, saved as
+// base + its extension; anything else than a JPEG, PNG or WebP under 5 MB is refused
+const PICTURES = { 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp' };
+
+export async function savePicture(base, upload) {
+  const type = String(upload?.type || '').toLowerCase();
+  if (!PICTURES[type]) throw new ApiError('INVALID_FILE_TYPE');
+  const content = Buffer.from(String(upload.data || ''), 'base64');
+  if (!content.length) throw new ApiError('INVALID_FILE');
+  if (content.length > 5 * 1024 * 1024) throw new ApiError('FILE_TOO_LARGE');
+  // A new name each time, so browsers don't keep showing the old picture
+  const path = `${base}-${Date.now().toString(36)}${PICTURES[type]}`;
+  await saveFile(path, content, type);
+  return path;
 }
 
 // A link anyone can open (for public pictures such as blog covers): a

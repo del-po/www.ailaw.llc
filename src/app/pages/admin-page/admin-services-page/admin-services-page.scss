@@ -6,6 +6,7 @@
 // ==========================================================
 
 @include admin-page;
+@include admin-editor;
 
 .block {
   display: flex;
@@ -20,48 +21,10 @@
   gap: 16px;
 }
 
-// ---------- Editor ----------
-
-.editor {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  padding: 24px;
-  background: var(--card-bg);
-  border-top: 4px solid rgb(var(--yellow));
-}
-
-// Two columns of fields; long ones span both
-.grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px 20px;
-}
-
-.wide {
-  grid-column: 1 / -1;
-}
-
-// Selects and dates sit in the same field shape as text inputs
-.field-box select {
-  width: 100%;
-  height: 100%;
-  padding: 0 12px;
-  border: none;
-  background: none;
+.file {
+  margin-top: 8px;
   font-family: var(--font-mono);
-  font-size: 14px;
-}
-
-.editor-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-
-  .btn {
-    width: 180px;
-  }
+  font-size: 12px;
 }
 
 // ---------- Lists ----------
@@ -86,10 +49,6 @@
 // ==========================================================
 
 @include below(tablet) {
-  .grid {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .service {
     grid-template-columns: minmax(0, 1fr) auto auto;
 

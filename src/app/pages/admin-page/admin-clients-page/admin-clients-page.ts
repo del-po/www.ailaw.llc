@@ -2,7 +2,7 @@ import { Component, afterNextRender, computed, inject, signal } from '@angular/c
 import { DatePipe } from '@angular/common';
 import { AdminService } from '../../../core/services/admin.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Profile } from '../../../core/models/profile';
+import { ClientType, Profile } from '../../../core/models/profile';
 import { Shape } from '../../../shared/kit/shapes/shape';
 import { adminErrorMessage } from '../admin-links';
 
@@ -10,6 +10,8 @@ const PROVIDER_NAMES: Record<string, string> = {
   password: 'Email',
   'google.com': 'Google',
 };
+
+type Filter = 'all' | ClientType;
 
 @Component({
   selector: 'app-admin-clients-page',
@@ -21,17 +23,29 @@ export class AdminClientsPage {
   private readonly admin = inject(AdminService);
   private readonly auth = inject(AuthService);
 
+  protected readonly filters: { value: Filter; label: string }[] = [
+    { value: 'all', label: 'All' },
+    { value: 'user', label: 'Accounts' },
+    { value: 'verified', label: 'Verified' },
+    { value: 'guest', label: 'Guests' },
+  ];
+
   protected readonly clients = signal<Profile[] | null>(null);
+  protected readonly filter = signal<Filter>('all');
   protected readonly search = signal('');
   protected readonly error = signal<string | null>(null);
   protected readonly busyId = signal<string | null>(null);
+  // The client whose verification form is open
+  protected readonly verifyingId = signal<string | null>(null);
 
-  // Newest first, filtered by name, email or phone
+  // Newest first, filtered by type and by name, code, email or phone
   protected readonly list = computed(() => {
+    const filter = this.filter();
     const words = this.search().toLowerCase().split(/\s+/).filter(Boolean);
     return (this.clients() ?? [])
+      .filter((c) => filter === 'all' || c.Type === filter)
       .filter((c) => {
-        const text = [c.DisplayName, c.FirstName, c.LastName, c.Email, c.Phone]
+        const text = [c.ClientID, c.DisplayName, c.Email, c.Phone, c.Passport, c.IDNumber]
           .join(' ')
           .toLowerCase();
         return words.every((w) => text.includes(w));
@@ -40,8 +54,8 @@ export class AdminClientsPage {
   });
 
   protected readonly total = computed(() => this.clients()?.length ?? 0);
-  protected readonly suspended = computed(
-    () => this.clients()?.filter((c) => c.Status === 'suspended').length ?? 0,
+  protected readonly verified = computed(
+    () => this.clients()?.filter((c) => c.Type === 'verified').length ?? 0,
   );
 
   constructor() {
@@ -51,7 +65,7 @@ export class AdminClientsPage {
   protected async load(): Promise<void> {
     this.error.set(null);
     try {
-      this.clients.set(await this.admin.listClients());
+      this.clients.set(await this.admin.allClients());
     } catch (error) {
       this.error.set(adminErrorMessage(error));
     }
@@ -64,9 +78,9 @@ export class AdminClientsPage {
       .join(', ');
   }
 
-  // Only clients can be suspended here, and never your own account
-  protected canChange(client: Profile): boolean {
-    return client.Role === 'client' && client.UserID !== this.auth.user()?.uid;
+  // Only clients with an account can be suspended, and never your own account
+  protected canSuspend(client: Profile): boolean {
+    return !!client.UserID && client.Role === 'client' && client.UserID !== this.auth.user()?.uid;
   }
 
   protected async toggle(client: Profile): Promise<void> {
@@ -78,15 +92,41 @@ export class AdminClientsPage {
     )
       return;
 
-    this.busyId.set(client.UserID);
+    await this.run(client, () => this.admin.setClientStatus(client.UserID, status));
+  }
+
+  protected async verify(client: Profile, form: HTMLFormElement, event: Event): Promise<void> {
+    event.preventDefault();
+    const field = (name: string) => (form.elements.namedItem(name) as HTMLInputElement).value.trim();
+    const done = await this.run(client, () =>
+      this.admin.verifyClient(client.ClientID, {
+        passport: field('passport'),
+        idNumber: field('idNumber'),
+        address: field('address'),
+        phone: field('phone'),
+      }),
+    );
+    if (done) this.verifyingId.set(null);
+  }
+
+  protected async unverify(client: Profile): Promise<void> {
+    if (!confirm(`Remove ${client.DisplayName || client.Email}'s verification?`)) return;
+    await this.run(client, () => this.admin.unverifyClient(client.ClientID));
+  }
+
+  // Runs one change and puts the updated client in the list
+  private async run(client: Profile, change: () => Promise<Profile>): Promise<boolean> {
+    this.busyId.set(client.ClientID);
     this.error.set(null);
     try {
-      const updated = await this.admin.setClientStatus(client.UserID, status);
+      const updated = await change();
       this.clients.update(
-        (list) => list?.map((c) => (c.UserID === updated.UserID ? updated : c)) ?? null,
+        (list) => list?.map((c) => (c.ClientID === updated.ClientID ? updated : c)) ?? null,
       );
+      return true;
     } catch (error) {
       this.error.set(adminErrorMessage(error));
+      return false;
     } finally {
       this.busyId.set(null);
     }

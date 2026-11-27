@@ -30,10 +30,14 @@ async function listOrders() {
   return docs(snap).map((o) => toOrder(o));
 }
 
+// One order with its items and the lawyers on it
 async function getOrder(orderId) {
   const order = await orderById(cleanKey(orderId));
   if (!order) throw new ApiError('ORDER_NOT_FOUND');
-  return toOrder(order, await orderItems(order.orderNumber));
+  const assignments = docs(await db.collection(`Orders/${order.orderNumber}/Assignments`).get())
+    .filter((a) => a.status !== 'cancelled')
+    .map((a) => ({ lawyerId: a.lawyerId, lawyerName: a.lawyerName, role: a.role, status: a.status }));
+  return { ...toOrder(order, await orderItems(order.orderNumber)), assignments };
 }
 
 async function updateOrder(data) {

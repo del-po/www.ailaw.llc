@@ -3,14 +3,15 @@
 // Client (public):  services, service, categories — the services pages
 // Client (chat):    the services list in the AI's instructions, and the
 //                   offer_service tool, which shows a service card
-// Admin:            services and categories: list, create, update, archive
+// Admin:            services and categories: list, create, update, archive;
+//                   services:image uploads a service's picture
 // Services/{slug} is the catalogue record; the work behind a service lives
 // in its plugin (service.plugin → Plugins/{id}).
 // ==========================================================
 
 import { ApiError, COMPANY, db, formatDate, now, slugify, toDate } from '../../core/app.js';
 import { addPart } from '../../core/chat.js';
-import { publicUrl } from '../../core/files.js';
+import { publicUrl, savePicture } from '../../core/files.js';
 import { pluginRecords } from '../../core/loader.js';
 import { clientByUid, forget, priceOf, serviceBySlug, services, setting } from '../../core/records.js';
 
@@ -172,6 +173,15 @@ async function archiveService(id) {
   return { ID: Number(id), Status: 'Inactive' };
 }
 
+async function uploadImage(id, file) {
+  const old = (await allServices()).find((s) => Number(s.number) === Number(id));
+  if (!old) throw new ApiError('Service not found.');
+  const image = await savePicture('services/' + old.serviceId, file);
+  await db.doc('Services/' + old.id).update({ image, updatedAt: now() });
+  forget('services');
+  return toAdmin({ ...old, image });
+}
+
 // ---------- Admin: categories ----------
 
 async function categoryList() {
@@ -285,6 +295,7 @@ export default {
       'services:create': (caller, data) => createService(data.data || data),
       'services:update': (caller, data) => updateService(data.id, data.data || {}),
       'services:delete': (caller, data) => archiveService(data.id),
+      'services:image': (caller, data) => uploadImage(data.id, data.file),
       'categories:list': async () => (await categoryList()).map(toAdminCategory),
       'categories:create': (caller, data) => createCategory(data.data || data),
       'categories:update': (caller, data) => updateCategory(data.id, data.data || {}),

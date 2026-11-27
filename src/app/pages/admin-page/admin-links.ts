@@ -1,3 +1,4 @@
+import { Upload } from '../../core/models/admin';
 import { authErrorMessage } from '../../core/services/auth-errors';
 
 // Sections of the admin area, in menu order. `ready` is false until the
@@ -17,7 +18,12 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     ready: true,
     text: 'Services, prices, discounts and categories.',
   },
-  { label: 'Clients', link: '/admin/clients', ready: true, text: 'Everyone with an account.' },
+  {
+    label: 'Clients',
+    link: '/admin/clients',
+    ready: true,
+    text: 'Every client: accounts, verified clients and guests.',
+  },
   {
     label: 'Lawyers',
     link: '/admin/lawyers',
@@ -25,7 +31,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
     text: 'Lawyer applications: approve or decline.',
   },
   { label: 'Orders', link: '/admin/orders', ready: true, text: 'Orders and their progress.' },
-  { label: 'Blog', link: '/admin/blog', ready: true, text: 'Published articles.' },
+  { label: 'Blog', link: '/admin/blog', ready: true, text: 'Write and publish articles.' },
   {
     label: 'Review',
     link: '/admin/review',
@@ -42,4 +48,15 @@ export function adminErrorMessage(error: unknown): string {
   return friendly && !friendly.startsWith('Something went wrong')
     ? friendly
     : message || 'Something went wrong.';
+}
+
+// A chosen file → { name, type, data (base64) }, ready to send
+export function readUpload(file: File): Promise<Upload> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      resolve({ name: file.name, type: file.type, data: String(reader.result).split(',')[1] ?? '' });
+    reader.onerror = () => reject(new Error('The file could not be read.'));
+    reader.readAsDataURL(file);
+  });
 }

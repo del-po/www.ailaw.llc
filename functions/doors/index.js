@@ -30,7 +30,7 @@ import taskDesk from '../plugins/task-desk/index.js';
 
 const CLIENT = [accounts, catalogue, ordering, myOrders, documents, blog];
 const LAWYER = [lawyerVerification, assignments];
-const ADMIN = [accounts, catalogue, lawyerVerification, taskDesk, blog];
+const ADMIN = [accounts, catalogue, ordering, lawyerVerification, taskDesk, blog];
 
 export const client = door('client', CLIENT);
 // Applications carry their documents: up to ~25 MB per request

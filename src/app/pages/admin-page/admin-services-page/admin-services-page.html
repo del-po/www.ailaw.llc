@@ -2,7 +2,7 @@
   <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
   <h1 class="title">Services</h1>
   <p class="lead">
-    Services, prices, discounts and categories. Archived services stay in the sheet for past orders.
+    Services, prices, discounts and categories. Archived services stay on file for past orders.
   </p>
 </section>
 
@@ -100,10 +100,16 @@
       </label>
 
       <label class="field">
-        <span class="field-label">Image · Drive link, Drive file ID or image URL</span>
+        <span class="field-label">Image · Storage path or image URL; or upload one below</span>
         <app-shape class="field-box" name="field">
           <input name="Image" [value]="item.Image" />
         </app-shape>
+        <input
+          class="file"
+          name="Picture"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+        />
       </label>
 
       <label class="field">

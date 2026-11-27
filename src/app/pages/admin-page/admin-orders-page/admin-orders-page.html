@@ -3,15 +3,110 @@
   <h1 class="title">Orders</h1>
   <p class="lead">
     Every order, newest first. Mark an order paid when its transfer arrives, using the order number
-    in the transfer's purpose.
+    in the transfer's purpose. Orders taken by phone or Telegram are added with "New order".
   </p>
 </section>
 
 @if (error()) {
   <p class="message" role="alert">{{ error() }}</p>
 }
+@if (notice()) {
+  <p class="message message--ok" role="status">{{ notice() }}</p>
+}
+
+<!-- ---------- New order ---------- -->
+@if (creating()) {
+  <form #newOrder class="editor" (submit)="createOrder(newOrder, $event)">
+    <h2 class="block-title">New order</h2>
+    <div class="grid">
+      <label class="field wide">
+        <span class="field-label">Client</span>
+        <app-shape class="field-box" name="field">
+          <select #client name="client" (change)="clientId.set(client.value)">
+            <option value="">New guest (type the details below)</option>
+            @for (c of clients(); track c.ClientID) {
+              <option [value]="c.ClientID">
+                {{ c.DisplayName || c.Email }} · {{ c.ClientID }} · {{ c.Type }}
+              </option>
+            }
+          </select>
+        </app-shape>
+      </label>
+
+      @if (!clientId()) {
+        <label class="field">
+          <span class="field-label">First name</span>
+          <app-shape class="field-box" name="field">
+            <input name="firstName" maxlength="80" required />
+          </app-shape>
+        </label>
+        <label class="field">
+          <span class="field-label">Last name</span>
+          <app-shape class="field-box" name="field">
+            <input name="lastName" maxlength="80" />
+          </app-shape>
+        </label>
+        <label class="field">
+          <span class="field-label">Email · the agreement goes here</span>
+          <app-shape class="field-box" name="field">
+            <input name="email" type="email" required />
+          </app-shape>
+        </label>
+        <label class="field">
+          <span class="field-label">Phone</span>
+          <app-shape class="field-box" name="field">
+            <input name="phone" type="tel" maxlength="30" />
+          </app-shape>
+        </label>
+      }
+
+      <label class="field">
+        <span class="field-label">Service</span>
+        <app-shape class="field-box" name="field">
+          <select name="service" required>
+            @for (service of services(); track service.ID) {
+              <option [value]="service.Slug">
+                {{ service.Name }} · {{ service.Price }} {{ service.Currency }}
+              </option>
+            }
+          </select>
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Quantity</span>
+        <app-shape class="field-box" name="field">
+          <input name="quantity" type="number" min="1" max="20" value="1" />
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Payment</span>
+        <app-shape class="field-box" name="field">
+          <select name="payment">
+            <option value="invoice">Invoice · the client pays by transfer</option>
+            <option value="paid">Already paid · receipt is sent</option>
+          </select>
+        </app-shape>
+      </label>
+      <label class="field wide">
+        <span class="field-label">Note · optional</span>
+        <textarea class="area" name="notes" rows="2" maxlength="1000"></textarea>
+      </label>
+    </div>
+    <div class="editor-actions">
+      <button type="submit" class="btn" [disabled]="busy()">
+        <app-shape name="bar-notch">{{ busy() ? 'Placing…' : 'Place order' }}</app-shape>
+      </button>
+      <button type="button" class="btn btn--light" [disabled]="busy()" (click)="creating.set(false)">
+        <app-shape name="bar-notch">Cancel</app-shape>
+      </button>
+    </div>
+  </form>
+}
 
 <div class="toolbar">
+  @if (!creating()) {
+    <button type="button" class="action" (click)="startOrder()">+ New order</button>
+  }
   <nav class="filters" aria-label="Filter orders">
     @for (item of filters; track item.value) {
       <button
@@ -178,6 +273,61 @@
                   (click)="save(full, orderStatus.value, paymentStatus.value)"
                 >
                   <app-shape name="bar-notch">{{ busy() ? 'Saving…' : 'Save' }}</app-shape>
+                </button>
+              </div>
+
+              <!-- Lawyers on this order -->
+              <div class="lawyers">
+                <span class="field-label">Lawyers</span>
+                @for (a of full.assignments ?? []; track a.lawyerId) {
+                  <span class="cell-mono"
+                    >{{ a.lawyerName }} · {{ a.lawyerId }} · {{ a.role }} · {{ a.status }}</span
+                  >
+                } @empty {
+                  <span class="cell-mono">No lawyer yet.</span>
+                }
+              </div>
+              @if (full.orderStatus === 'placed' || full.orderStatus === 'in_progress') {
+                <div class="controls">
+                  <label class="field">
+                    <span class="field-label">Assign a lawyer</span>
+                    <app-shape class="field-box" name="field">
+                      <select #lawyer>
+                        <option value="">Choose…</option>
+                        @for (l of available(); track l.lawyerId) {
+                          <option [value]="l.lawyerId">
+                            {{ l.firstName }} {{ l.lastName }} · {{ l.lawyerId }}
+                          </option>
+                        }
+                      </select>
+                    </app-shape>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Role</span>
+                    <app-shape class="field-box" name="field">
+                      <select #role>
+                        <option value="lead">Lead · does the work</option>
+                        <option value="reviewer">Reviewer · checks it</option>
+                      </select>
+                    </app-shape>
+                  </label>
+                  <button
+                    type="button"
+                    class="btn save"
+                    [disabled]="busy() || !lawyer.value"
+                    (click)="assign(full, lawyer.value, role.value)"
+                  >
+                    <app-shape name="bar-notch">Assign</app-shape>
+                  </button>
+                </div>
+              }
+
+              <div class="paperwork">
+                <button type="button" class="action" [disabled]="busy()" (click)="remake(full)">
+                  Remake agreement
+                </button>
+                <button type="button" class="action" [disabled]="busy()" (click)="resend(full)">
+                  Resend email
                 </button>
               </div>
             } @else {

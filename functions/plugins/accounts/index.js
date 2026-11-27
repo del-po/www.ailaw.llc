@@ -8,15 +8,20 @@
 //   finalizeAccountDeletion   removes the client's account link; orders and
 //                             documents stay, as legal records
 // Admin:
-//   listUsers, setUserStatus
+//   listUsers, setUserStatus   accounts (clients who signed up)
+//   admin:clients              every client: users, verified and guests
+//   admin:verifyClient         after the passport check: type → verified, with
+//                              passport / ID number / address; a client
+//                              without an account gets a permanent folder
+//   admin:unverifyClient       back to user (with an account) or guest
 // A guest or verified client who signs up with a confirmed email matching
 // their record becomes a user and keeps their code and folder.
 // ==========================================================
 
 import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
-import { ApiError, cleanText, db, iso, newCode, now, titleCase } from '../../core/app.js';
+import { ApiError, cleanKey, cleanText, db, iso, newCode, now, titleCase } from '../../core/app.js';
 import { makeFolder } from '../../core/files.js';
-import { clientByEmail, clientByUid } from '../../core/records.js';
+import { clientByEmail, clientById, clientByUid, docs } from '../../core/records.js';
 import { getAuth } from 'firebase-admin/auth';
 
 const DELETE_TICKET_MINUTES = 20;
@@ -198,6 +203,41 @@ async function setUserStatus(caller, data) {
   return toProfile({ ...client, status: data.status });
 }
 
+async function allClients() {
+  return docs(await db.collection('Clients').get())
+    .filter((c) => c.status !== 'deleted' || c.type === 'verified')
+    .map(toProfile);
+}
+
+async function verifyClient(caller, data) {
+  const client = await clientById(cleanKey(data.clientId));
+  if (!client) throw new ApiError('CLIENT_NOT_FOUND');
+  const changes = {
+    type: 'verified',
+    status: 'active',
+    passport: cleanText(data.passport ?? client.passport, 40, 'INVALID_PROFILE_DATA'),
+    idNumber: cleanText(data.idNumber ?? client.idNumber, 20, 'INVALID_PROFILE_DATA'),
+    address: cleanText(data.address ?? client.address, 300, 'INVALID_PROFILE_DATA'),
+    phone: cleanText(data.phone ?? client.phone, 30, 'INVALID_PROFILE_DATA'),
+    updatedAt: now(),
+  };
+  if (!changes.passport && !changes.idNumber) throw new ApiError('PASSPORT_OR_ID_REQUIRED');
+  // A verified client keeps one folder for all their orders
+  if (!client.folder || client.folder.startsWith('drive:')) {
+    changes.folder = await makeFolder(clientFolder(client.id, client.displayName));
+  }
+  await db.doc('Clients/' + client.id).update(changes);
+  return toProfile({ ...client, ...changes });
+}
+
+async function unverifyClient(caller, data) {
+  const client = await clientById(cleanKey(data.clientId));
+  if (!client) throw new ApiError('CLIENT_NOT_FOUND');
+  const changes = { type: client.userId ? 'user' : 'guest', updatedAt: now() };
+  await db.doc('Clients/' + client.id).update(changes);
+  return toProfile({ ...client, ...changes });
+}
+
 export default {
   id: 'accounts',
   sides: ['client', 'admin'],
@@ -212,6 +252,9 @@ export default {
     admin: {
       listUsers: () => listUsers(),
       setUserStatus: (caller, data) => setUserStatus(caller, data),
+      'admin:clients': () => allClients(),
+      'admin:verifyClient': (caller, data) => verifyClient(caller, data),
+      'admin:unverifyClient': (caller, data) => unverifyClient(caller, data),
     },
   },
 };

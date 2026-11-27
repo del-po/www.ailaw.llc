@@ -8,7 +8,7 @@ import {
   ServiceStatus,
 } from '../../../core/models/admin';
 import { Shape } from '../../../shared/kit/shapes/shape';
-import { adminErrorMessage } from '../admin-links';
+import { adminErrorMessage, readUpload } from '../admin-links';
 
 const EMPTY: AdminServiceInput = {
   Slug: '',
@@ -105,12 +105,14 @@ export class AdminServicesPage {
       DiscountEnd: value('DiscountEnd'),
     };
 
+    // A picture chosen in the form is uploaded after the service is saved
+    const picture = (form.elements.namedItem('Picture') as HTMLInputElement).files?.[0];
+
     await this.run(async () => {
-      if (current.ID) {
-        await this.admin.updateService(current.ID, data);
-      } else {
-        await this.admin.createService(data);
-      }
+      const saved = current.ID
+        ? await this.admin.updateService(current.ID, data)
+        : await this.admin.createService(data);
+      if (picture) await this.admin.uploadServiceImage(saved.ID, await readUpload(picture));
       this.editing.set(null);
       this.notice.set(
         `“${data.Name}” is saved. The public site shows changes within a few minutes.`,

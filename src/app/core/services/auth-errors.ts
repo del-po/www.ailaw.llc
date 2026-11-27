@@ -34,11 +34,26 @@ const MESSAGES: Record<string, string> = {
     'This service is for verified clients only. Contact our lawyer Gocha Okreshidze (https://t.me/ailawllc, info@ailaw.llc) to get verified.',
   FORBIDDEN: 'Only admins can do this.',
   CANNOT_CHANGE_OWN_ACCOUNT: "You can't suspend your own account.",
-  PRIVILEGED_ACCOUNT: 'Admin and staff accounts are changed directly in the Users sheet.',
+  PRIVILEGED_ACCOUNT: 'Admin and staff accounts are changed directly in Firestore (Clients).',
   INVALID_PROFILE_DATA: 'Some details are too long or contain invalid characters.',
   RECENT_LOGIN_REQUIRED: 'For your security, confirm your login again and retry.',
   PRIVILEGED_ACCOUNT_DELETE_REQUIRES_REVIEW:
     'Staff and admin accounts can only be deleted by the AI Law team.',
+  CLIENT_NOT_FOUND: 'This client could not be found.',
+  CLIENT_HAS_NO_EMAIL: 'This client has no email address, which every order needs.',
+  PASSPORT_OR_ID_REQUIRED: 'Enter the passport number or the ID number.',
+  INVALID_EMAIL: 'Enter a valid email address.',
+  MISSING_NAME: 'Enter the client’s first name.',
+  ORDER_CLOSED: 'This order is completed or cancelled.',
+  ORDER_HAS_NO_FOLDER: 'This order has no folder yet. Remake its agreement first.',
+  LAWYER_NOT_AVAILABLE: 'This lawyer isn’t approved or active.',
+  ALREADY_ASSIGNED: 'This lawyer is already on this order.',
+  AGREEMENT_FAILED: 'The agreement could not be made. Try again.',
+  EMAIL_FAILED: 'The email could not be sent. Try again later.',
+  INVALID_FILE_TYPE: 'Use a JPEG, PNG or WebP picture.',
+  FILE_TOO_LARGE: 'The picture is larger than 5 MB.',
+  SAVE_THE_POST_FIRST: 'Save the post once before adding a cover.',
+  INVALID_SLUG: 'Give the post a title.',
 };
 
 // Closing the Google window is the person's choice, not an error

@@ -63,6 +63,15 @@ export interface Order {
   paidAt: string;
   completedAt: string;
   items?: OrderItem[]; // only when a single order is opened
+  assignments?: OrderAssignment[]; // only when the admin opens an order
+}
+
+// A lawyer working on an order
+export interface OrderAssignment {
+  lawyerId: string;
+  lawyerName: string;
+  role: 'lead' | 'reviewer';
+  status: string;
 }
 
 export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {

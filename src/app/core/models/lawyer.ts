@@ -15,7 +15,7 @@ export interface AdminLawyer {
   specializations: string;
   languages: string;
   bio: string;
-  folderUrl: string; // their documents in Drive
+  folderUrl: string; // their documents (Firebase console → Storage)
   appliedAt: string; // ISO date
   verifiedAt: string;
   hasLogin: boolean;

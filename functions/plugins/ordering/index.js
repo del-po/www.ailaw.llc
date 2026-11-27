@@ -1,8 +1,14 @@
 // ==========================================================
-// Plugin: ordering (client)
+// Plugin: ordering (client + admin)
+// Client:
 //   placeOrder   checkout from the cart the browser keeps: { items: [{ slug, quantity }] }
 //   start_order  the chat's tool: one service, with the details the client
 //                confirmed; the order then runs its plugin's steps
+// Admin:
+//   admin:createOrder      an order taken by phone or Telegram, for an
+//                          existing client or a new guest
+//   admin:remakeAgreement  a fresh PDF from the order as it is now
+//   admin:resendEmail      the confirmation email again
 // After every order (setupOrder, retried by the daily job when it fails):
 //   1. its Storage folder: the client's folder/2026/…, or guests/2026/…
 //   2. the Legal Services Agreement PDF (+ invoice page when paying by invoice)
@@ -10,12 +16,34 @@
 // sendReceipt is used by the on-paid job.
 // ==========================================================
 
-import { ApiError, COMPANY, cleanName, db, formatDate, log, now, parseJson, validEmail } from '../../core/app.js';
+import {
+  ApiError,
+  COMPANY,
+  cleanKey,
+  cleanName,
+  cleanText,
+  db,
+  formatDate,
+  log,
+  newCode,
+  now,
+  parseJson,
+  titleCase,
+  validEmail,
+} from '../../core/app.js';
 import { addPart } from '../../core/chat.js';
 import { buildPdf, join, makeFolder, readFile, saveFile } from '../../core/files.js';
 import { pluginRecords } from '../../core/loader.js';
-import { createOrder, orderCard, paymentInfo } from '../../core/orders.js';
-import { chatSettings, clientById, orderByNumber, orderItems, serviceBySlug } from '../../core/records.js';
+import { createOrder, orderCard, paymentInfo, toOrder } from '../../core/orders.js';
+import {
+  chatSettings,
+  clientByEmail,
+  clientById,
+  orderById,
+  orderByNumber,
+  orderItems,
+  serviceBySlug,
+} from '../../core/records.js';
 import { mail, startSteps } from '../../core/steps.js';
 import { agreementBlocks, agreementData, invoiceBlocks } from './agreement.js';
 
@@ -31,8 +59,8 @@ export async function setupOrder(orderNumber, env) {
     return;
   }
 
-  // 1. Folder
-  if (!order.folder) {
+  // 1. Folder (orders copied from Drive get a new one in Storage)
+  if (!order.folder || order.folder.startsWith('drive:')) {
     const client = await clientById(order.clientId);
     const year = formatDate(order.createdAt, 'yyyy');
     const stamp = formatDate(order.createdAt, 'yyyy-MM-dd_HH-mm-ss');
@@ -46,7 +74,7 @@ export async function setupOrder(orderNumber, env) {
   }
 
   // 2. Agreement
-  if (!order.agreement) {
+  if (!order.agreement || order.agreement.startsWith('drive:')) {
     const d = await documentData(order);
     const withInvoice = d.paymentMethod === 'invoice';
     const title = (withInvoice ? 'Legal Services Agreement and Invoice - ' : 'Legal Services Agreement - ') + d.number;
@@ -233,12 +261,105 @@ const startOrder = {
   },
 };
 
+// ---------- Admin ----------
+
+// The client an admin order is for: an existing one by code, or a new guest
+// (a guest with that email already on file is reused)
+async function orderClient(data) {
+  if (data.clientId) {
+    const client = await clientById(cleanKey(data.clientId));
+    if (!client) throw new ApiError('CLIENT_NOT_FOUND');
+    return client;
+  }
+  const guest = data.guest || {};
+  const email = String(guest.email || '').trim().toLowerCase();
+  if (!validEmail(email)) throw new ApiError('INVALID_EMAIL');
+  const known = await clientByEmail(email);
+  if (known) return known;
+
+  const firstName = titleCase(cleanText(guest.firstName, 80));
+  const lastName = titleCase(cleanText(guest.lastName, 80));
+  if (!firstName) throw new ApiError('MISSING_NAME');
+  const clientId = await newCode('ID', 'Clients');
+  const record = {
+    clientId,
+    type: 'guest',
+    status: 'active',
+    firstName,
+    lastName,
+    displayName: [firstName, lastName].filter(Boolean).join(' '),
+    email,
+    phone: cleanText(guest.phone, 30),
+    passport: '',
+    idNumber: '',
+    address: '',
+    notes: '',
+    userId: '',
+    role: 'client',
+    providers: [],
+    emailVerified: false,
+    photoUrl: '',
+    folder: '',
+    createdAt: now(),
+    updatedAt: now(),
+    lastLoginAt: null,
+  };
+  await db.doc('Clients/' + clientId).set(record);
+  return { id: clientId, ...record };
+}
+
+async function adminCreateOrder(caller, data, env) {
+  const client = await orderClient(data);
+  if (!validEmail(client.email)) throw new ApiError('CLIENT_HAS_NO_EMAIL');
+  const paid = data.payment === 'paid';
+  const { order } = await createOrder(caller, Array.isArray(data.items) ? data.items : [], {
+    client,
+    source: 'manual',
+    customerNotes: data.customerNotes,
+    paymentMethod: paid ? 'checkout' : 'invoice',
+  });
+  await setupSafely(order.orderNumber, env);
+  // Already paid: the on-paid job sends the receipt and starts the work
+  if (paid) await db.doc('Orders/' + order.orderNumber).update({ paymentStatus: 'paid', updatedAt: now() });
+  return toOrder(await orderByNumber(order.orderNumber), await orderItems(order.orderNumber));
+}
+
+async function adminOrder(data) {
+  const order = await orderById(cleanKey(data.orderId));
+  if (!order) throw new ApiError('ORDER_NOT_FOUND');
+  return order;
+}
+
+// The agreement is made again from the order's current details (same file name)
+async function remakeAgreement(caller, data, env) {
+  const order = await adminOrder(data);
+  await db.doc('Orders/' + order.orderNumber).update({ agreement: '', updatedAt: now() });
+  await setupOrder(order.orderNumber, env);
+  const fresh = await orderByNumber(order.orderNumber);
+  if (!fresh.agreement) throw new ApiError('AGREEMENT_FAILED');
+  return toOrder(fresh, await orderItems(order.orderNumber));
+}
+
+async function resendEmail(caller, data, env) {
+  const order = await adminOrder(data);
+  await db.doc('Orders/' + order.orderNumber).update({ emailedAt: null, updatedAt: now() });
+  await setupOrder(order.orderNumber, env);
+  const fresh = await orderByNumber(order.orderNumber);
+  if (!fresh.emailedAt) throw new ApiError('EMAIL_FAILED');
+  return toOrder(fresh, await orderItems(order.orderNumber));
+}
+
 export default {
   id: 'ordering',
-  sides: ['client'],
+  sides: ['client', 'admin'],
   actions: {
     client: {
       placeOrder: (caller, data, env) => placeOrder(caller, data, env),
+    },
+    admin: {
+      'admin:createOrder': (caller, data, env) => adminCreateOrder(caller, data, env),
+      'admin:remakeAgreement': (caller, data, env) => remakeAgreement(caller, data, env),
+      'admin:resendEmail': (caller, data, env) => resendEmail(caller, data, env),
     },
   },
   tools: { start_order: startOrder },

@@ -1,12 +1,20 @@
-// A row of the Users sheet, as the Profiles API returns it
+// A client record (Firestore → Clients), as the backend returns it
+
+export type ClientType = 'user' | 'verified' | 'guest';
 
 export interface Profile {
-  UserID: string;
+  ClientID: string; // ID-XXXXXX
+  Type: ClientType;
+  UserID: string; // '' for guests and verified clients without an account
   FirstName: string;
   LastName: string;
   DisplayName: string;
   Email: string;
   Phone: string;
+  Passport: string;
+  IDNumber: string;
+  Address: string;
+  Notes: string;
   Role: 'client' | 'staff' | 'admin';
   Status: 'active' | 'suspended' | 'deleted';
   Providers: string; // comma-separated, e.g. "password,google.com"

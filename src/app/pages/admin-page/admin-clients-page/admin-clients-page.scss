@@ -6,18 +6,41 @@
 // ==========================================================
 
 @include admin-page;
+@include admin-editor;
+@include admin-filters;
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
 
 .search {
-  display: block;
-  max-width: 420px;
+  width: 340px;
 
   input {
     font-size: 13px;
   }
 }
 
+.client-block {
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid var(--line);
+
+  .row {
+    border-bottom: none;
+  }
+
+  .editor {
+    margin-bottom: 16px;
+  }
+}
+
 .client {
-  grid-template-columns: minmax(0, 1fr) 180px 150px 90px;
+  grid-template-columns: minmax(0, 1fr) 170px 170px 140px;
 
   &.is-suspended .cell-title {
     color: var(--text-muted);
@@ -25,10 +48,15 @@
   }
 }
 
-.labels {
+.identity {
+  margin: -6px 0 12px;
+}
+
+.labels,
+.actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 6px 12px;
 }
 
 // ==========================================================
@@ -36,11 +64,16 @@
 // ==========================================================
 
 @include below(tablet) {
+  .search {
+    width: 100%;
+  }
+
   .client {
     grid-template-columns: minmax(0, 1fr) auto;
     row-gap: 8px;
 
-    .cell-mono {
+    .cell-mono,
+    .actions {
       grid-column: 1 / -1;
     }
   }

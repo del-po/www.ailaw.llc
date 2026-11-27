@@ -2,8 +2,8 @@
   <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
   <h1 class="title">Clients</h1>
   <p class="lead">
-    {{ total() }} accounts{{ suspended() ? ', ' + suspended() + ' suspended' : '' }}. A suspended
-    client is signed out at their next login and can't use their account.
+    {{ total() }} clients, {{ verified() }} verified. Verify a client after checking their passport:
+    they can then order every service. A suspended client can't use their account.
   </p>
 </section>
 
@@ -11,51 +11,146 @@
   <p class="message" role="alert">{{ error() }}</p>
 }
 
-<label class="search">
-  <span class="visually-hidden">Search clients</span>
-  <app-shape class="field-box" name="field">
-    <input
-      #box
-      type="search"
-      placeholder="Search by name, email or phone…"
-      (input)="search.set(box.value)"
-    />
-  </app-shape>
-</label>
+<div class="toolbar">
+  <nav class="filters" aria-label="Filter clients">
+    @for (item of filters; track item.value) {
+      <button
+        type="button"
+        class="filter"
+        [class.is-active]="filter() === item.value"
+        [attr.aria-pressed]="filter() === item.value"
+        (click)="filter.set(item.value)"
+      >
+        {{ item.label }}
+      </button>
+    }
+  </nav>
+
+  <label class="search">
+    <span class="visually-hidden">Search clients</span>
+    <app-shape class="field-box" name="field">
+      <input
+        #box
+        type="search"
+        placeholder="Name, code, email, phone, passport…"
+        (input)="search.set(box.value)"
+      />
+    </app-shape>
+  </label>
+</div>
 
 @if (clients()) {
   <div class="rows">
-    @for (client of list(); track client.UserID) {
-      <div class="row client" [class.is-suspended]="client.Status === 'suspended'">
-        <span class="cell-main">
-          <span class="cell-title">{{ client.DisplayName || '—' }}</span>
-          <span class="cell-sub"
-            >{{ client.Email }}{{ client.Phone ? ' · ' + client.Phone : '' }}</span
-          >
-        </span>
-        <span class="cell-mono">
-          {{ providers(client) }}{{ client.EmailVerified ? '' : ' · unverified' }} <br />Since
-          {{ client.CreatedAt | date: 'MMM d, y' }}
-        </span>
-        <span class="labels">
-          @if (client.Role !== 'client') {
-            <span class="status status--draft">{{ client.Role }}</span>
-          }
-          <span class="status" [class.status--active]="client.Status === 'active'">{{
-            client.Status
-          }}</span>
-        </span>
-        @if (canChange(client)) {
-          <button
-            type="button"
-            class="action"
-            [disabled]="busyId() === client.UserID"
-            (click)="toggle(client)"
-          >
-            {{ client.Status === 'active' ? 'Suspend' : 'Reactivate' }}
-          </button>
-        } @else {
-          <span></span>
+    @for (client of list(); track client.ClientID) {
+      <div class="client-block">
+        <div class="row client" [class.is-suspended]="client.Status === 'suspended'">
+          <span class="cell-main">
+            <span class="cell-title">{{ client.DisplayName || '—' }}</span>
+            <span class="cell-sub"
+              >{{ client.ClientID }} · {{ client.Email || 'no email'
+              }}{{ client.Phone ? ' · ' + client.Phone : '' }}</span
+            >
+          </span>
+          <span class="cell-mono">
+            @if (client.UserID) {
+              {{ providers(client) }}{{ client.EmailVerified ? '' : ' · unconfirmed' }}
+            } @else {
+              No account
+            }
+            <br />Since {{ client.CreatedAt | date: 'MMM d, y' }}
+          </span>
+          <span class="labels">
+            @if (client.Role !== 'client') {
+              <span class="status status--draft">{{ client.Role }}</span>
+            }
+            <span class="status" [class.status--active]="client.Type === 'verified'">{{
+              client.Type
+            }}</span>
+            @if (client.Status !== 'active') {
+              <span class="status">{{ client.Status }}</span>
+            }
+          </span>
+          <span class="actions">
+            @if (client.Type === 'verified') {
+              <button
+                type="button"
+                class="action"
+                [disabled]="busyId() === client.ClientID"
+                (click)="unverify(client)"
+              >
+                Unverify
+              </button>
+            } @else {
+              <button
+                type="button"
+                class="action"
+                [disabled]="busyId() === client.ClientID"
+                (click)="verifyingId.set(verifyingId() === client.ClientID ? null : client.ClientID)"
+              >
+                Verify
+              </button>
+            }
+            @if (canSuspend(client)) {
+              <button
+                type="button"
+                class="action"
+                [disabled]="busyId() === client.ClientID"
+                (click)="toggle(client)"
+              >
+                {{ client.Status === 'active' ? 'Suspend' : 'Reactivate' }}
+              </button>
+            }
+          </span>
+        </div>
+
+        @if (client.Type === 'verified' && (client.Passport || client.IDNumber || client.Address)) {
+          <p class="cell-sub identity">
+            {{ client.Passport ? 'Passport ' + client.Passport : '' }}
+            {{ client.IDNumber ? ' · ID ' + client.IDNumber : '' }}
+            {{ client.Address ? ' · ' + client.Address : '' }}
+          </p>
+        }
+
+        @if (verifyingId() === client.ClientID) {
+          <form #form class="editor" (submit)="verify(client, form, $event)">
+            <h2 class="block-title">Verify {{ client.DisplayName || client.Email }}</h2>
+            <div class="grid">
+              <label class="field">
+                <span class="field-label">Passport number</span>
+                <app-shape class="field-box" name="field">
+                  <input name="passport" maxlength="40" [value]="client.Passport" />
+                </app-shape>
+              </label>
+              <label class="field">
+                <span class="field-label">ID number · personal number</span>
+                <app-shape class="field-box" name="field">
+                  <input name="idNumber" maxlength="20" [value]="client.IDNumber" />
+                </app-shape>
+              </label>
+              <label class="field">
+                <span class="field-label">Address</span>
+                <app-shape class="field-box" name="field">
+                  <input name="address" maxlength="300" [value]="client.Address" />
+                </app-shape>
+              </label>
+              <label class="field">
+                <span class="field-label">Phone</span>
+                <app-shape class="field-box" name="field">
+                  <input name="phone" type="tel" maxlength="30" [value]="client.Phone" />
+                </app-shape>
+              </label>
+            </div>
+            <div class="editor-actions">
+              <button type="submit" class="btn" [disabled]="busyId() === client.ClientID">
+                <app-shape name="bar-notch">{{
+                  busyId() === client.ClientID ? 'Saving…' : 'Verify'
+                }}</app-shape>
+              </button>
+              <button type="button" class="btn btn--light" (click)="verifyingId.set(null)">
+                <app-shape name="bar-notch">Cancel</app-shape>
+              </button>
+            </div>
+          </form>
         }
       </div>
     } @empty {

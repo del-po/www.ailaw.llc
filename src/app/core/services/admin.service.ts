@@ -1,6 +1,15 @@
 import { Service, inject } from '@angular/core';
-import { AdminCategory, AdminServiceInput, AdminServiceRow } from '../models/admin';
+import {
+  AdminCategory,
+  AdminNewOrder,
+  AdminPost,
+  AdminPostRow,
+  AdminServiceInput,
+  AdminServiceRow,
+  Upload,
+} from '../models/admin';
 import { AdminLawyer } from '../models/lawyer';
+import { Order } from '../models/order';
 import { Profile } from '../models/profile';
 import { AuthService } from './auth.service';
 import { DOORS, DoorResult } from './doors';
@@ -26,6 +35,10 @@ export class AdminService {
   // Sets the status to Inactive; the row stays for past orders
   archiveService(id: number): Promise<unknown> {
     return this.call('services:delete', { id });
+  }
+
+  uploadServiceImage(id: number, file: Upload): Promise<AdminServiceRow> {
+    return this.call('services:image', { id, file });
   }
 
   // ---------- Categories ----------
@@ -68,6 +81,63 @@ export class AdminService {
 
   rejectLawyer(lawyerId: string): Promise<AdminLawyer[]> {
     return this.call('admin:rejectLawyer', { lawyerId });
+  }
+
+  // ---------- All clients (users, verified, guests) ----------
+
+  allClients(): Promise<Profile[]> {
+    return this.call('admin:clients');
+  }
+
+  verifyClient(
+    clientId: string,
+    details: { passport: string; idNumber: string; address: string; phone: string },
+  ): Promise<Profile> {
+    return this.call('admin:verifyClient', { clientId, ...details });
+  }
+
+  unverifyClient(clientId: string): Promise<Profile> {
+    return this.call('admin:unverifyClient', { clientId });
+  }
+
+  // ---------- Orders ----------
+
+  createOrder(order: AdminNewOrder): Promise<Order> {
+    return this.call('admin:createOrder', order);
+  }
+
+  remakeAgreement(orderId: string): Promise<Order> {
+    return this.call('admin:remakeAgreement', { orderId });
+  }
+
+  resendEmail(orderId: string): Promise<Order> {
+    return this.call('admin:resendEmail', { orderId });
+  }
+
+  assignLawyer(orderNumber: string, lawyerId: string, role: 'lead' | 'reviewer'): Promise<unknown> {
+    return this.call('admin:assign', { orderNumber, lawyerId, role });
+  }
+
+  // ---------- Blog ----------
+
+  listPosts(): Promise<AdminPostRow[]> {
+    return this.call('blog:list');
+  }
+
+  getPost(slug: string): Promise<AdminPost> {
+    return this.call('blog:get', { slug });
+  }
+
+  savePost(post: Partial<AdminPost> & { tags: string }): Promise<{ slug: string }> {
+    return this.call('blog:save', post);
+  }
+
+  uploadCover(slug: string, file: Upload): Promise<AdminPost> {
+    return this.call('blog:cover', { slug, file });
+  }
+
+  deletePost(slug: string): Promise<unknown> {
+    return this.call('blog:delete', { slug });
   }
 
   // ---------- Helpers ----------

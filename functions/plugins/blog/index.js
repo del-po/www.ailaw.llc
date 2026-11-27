@@ -1,15 +1,15 @@
 // ==========================================================
 // Plugin: blog (client + admin)
 // Client (public):  getPosts, getPost — published posts only
-// Admin:            blog:list, blog:save, blog:delete — for the admin blog
-//                   editor (posts are written in Markdown)
+// Admin:            blog:list, blog:get, blog:save, blog:cover, blog:delete —
+//                   the admin blog editor (posts are written in Markdown)
 // Blog/{slug}: title, deck, body (Markdown), author, category, tags,
 // featured, cover (a Storage path), status draft/published, publishedAt.
 // ==========================================================
 
 import { Marked } from 'marked';
 import { ApiError, cleanText, db, formatDate, iso, now, slugify } from '../../core/app.js';
-import { publicUrl } from '../../core/files.js';
+import { publicUrl, savePicture } from '../../core/files.js';
 import { docs } from '../../core/records.js';
 
 const escapeHtml = (text) =>
@@ -75,13 +75,17 @@ async function post(slug) {
 // ---------- Admin ----------
 
 async function adminList() {
-  return docs(await db.collection('Blog').get()).map((p) => ({
-    slug: p.id,
-    title: p.title,
-    status: p.status,
-    publishedAt: iso(p.publishedAt),
-    updatedAt: iso(p.updatedAt),
-  }));
+  return docs(await db.collection('Blog').get())
+    .map((p) => ({
+      slug: p.id,
+      title: p.title,
+      category: p.category || '',
+      featured: p.featured === true,
+      status: p.status,
+      publishedAt: iso(p.publishedAt),
+      updatedAt: iso(p.updatedAt),
+    }))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
 async function save(data) {
@@ -111,6 +115,36 @@ async function save(data) {
   return { slug, status };
 }
 
+// Everything the editor needs for one post
+async function adminGet(slug) {
+  const snap = await db.doc('Blog/' + slugify(slug)).get();
+  if (!snap.exists) throw new ApiError('NOT_FOUND');
+  const p = snap.data();
+  return {
+    slug: snap.id,
+    title: p.title || '',
+    deck: p.deck || '',
+    body: p.body || '',
+    author: p.author || '',
+    category: p.category || '',
+    tags: (p.tags || []).join(', '),
+    featured: p.featured === true,
+    status: p.status || 'draft',
+    cover: p.cover ? await publicUrl(p.cover) : '',
+    publishedAt: iso(p.publishedAt),
+    updatedAt: iso(p.updatedAt),
+  };
+}
+
+async function saveCover(data) {
+  const slug = slugify(data.slug);
+  const ref = db.doc('Blog/' + slug);
+  if (!slug || !(await ref.get()).exists) throw new ApiError('SAVE_THE_POST_FIRST');
+  const cover = await savePicture(`blog/${slug}/cover`, data.file);
+  await ref.update({ cover, updatedAt: now() });
+  return adminGet(slug);
+}
+
 export default {
   id: 'blog',
   sides: ['client', 'admin'],
@@ -121,7 +155,9 @@ export default {
     },
     admin: {
       'blog:list': () => adminList(),
+      'blog:get': (caller, data) => adminGet(data.slug),
       'blog:save': (caller, data) => save(data),
+      'blog:cover': (caller, data) => saveCover(data),
       'blog:delete': async (caller, data) => {
         await db.doc('Blog/' + slugify(data.slug)).delete();
         return { deleted: true };

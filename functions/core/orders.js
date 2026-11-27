@@ -24,16 +24,19 @@ import {
 const toCents = (n) => Math.round((Number(n) + Number.EPSILON) * 100);
 
 // items: [{ slug, quantity }]; extra: { source, conversationId, details, customerNotes, … }
+// An admin ordering for someone passes extra.client (the client record):
+// then the caller's own login, email check and verification level don't apply
 export async function createOrder(caller, items, extra = {}) {
-  if (!caller.signedIn) throw new ApiError('AUTH_REQUIRED');
-  if (!caller.emailVerified) throw new ApiError('EMAIL_NOT_VERIFIED');
+  const byAdmin = !!extra.client;
+  if (!byAdmin && !caller.signedIn) throw new ApiError('AUTH_REQUIRED');
+  if (!byAdmin && !caller.emailVerified) throw new ApiError('EMAIL_NOT_VERIFIED');
   if (!Array.isArray(items) || !items.length) throw new ApiError('CART_EMPTY');
   if (items.length > 50) throw new ApiError('CART_LIMIT');
 
-  const client = caller.client || (await clientByUid(caller.uid));
+  const client = extra.client || caller.client || (await clientByUid(caller.uid));
   if (!client) throw new ApiError('PROFILE_REQUIRED');
   if (client.status && client.status !== 'active') throw new ApiError('ACCOUNT_INACTIVE');
-  const level = clientLevel(client);
+  const level = byAdmin ? LEVELS.verified : clientLevel(client);
 
   const seen = new Set();
   let currency = null;
@@ -77,9 +80,9 @@ export async function createOrder(caller, items, extra = {}) {
     serviceId: lines.length === 1 ? lines[0].serviceId : '',
     serviceName: lines.length === 1 ? lines[0].name : lines.length + ' services',
     clientId: client.id,
-    userId: caller.uid,
+    userId: byAdmin ? client.userId || '' : caller.uid,
     customerName: cleanText(extra.customerName || client.displayName || caller.name || '', 120),
-    customerEmail: String(caller.email || '').toLowerCase(),
+    customerEmail: String((byAdmin ? client.email : caller.email) || '').toLowerCase(),
     customerPhone: cleanText(extra.customerPhone || client.phone || '', 40),
     passport: client.passport || '',
     idNumber: client.idNumber || '',
@@ -92,7 +95,7 @@ export async function createOrder(caller, items, extra = {}) {
     total,
     orderStatus: 'placed',
     paymentStatus: 'unpaid',
-    paymentMethod: 'invoice',
+    paymentMethod: extra.paymentMethod || 'invoice',
     paymentProvider: 'bank-transfer',
     paymentReference: orderNumber,
     customerNotes: cleanText(extra.customerNotes || '', 1000),

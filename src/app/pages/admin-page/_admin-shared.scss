@@ -3,6 +3,7 @@
 // Import with: @use '../admin-shared' as *;
 // ==========================================================
 
+@use 'mixins' as *;
 @use 'page' as *;
 
 // Section heading, form controls, tables and messages. Include once at the top level.
@@ -152,6 +153,89 @@
   @keyframes pulse {
     50% {
       opacity: 0.5;
+    }
+  }
+}
+
+// Forms in a yellow-topped card: a two-column grid of fields (.wide spans
+// both), selects in the field shape, and a row of buttons. Include once.
+@mixin admin-editor {
+  .editor {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding: 24px;
+    background: var(--card-bg);
+    border-top: 4px solid rgb(var(--yellow));
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 20px;
+  }
+
+  .wide {
+    grid-column: 1 / -1;
+  }
+
+  .field-box select {
+    width: 100%;
+    height: 100%;
+    padding: 0 12px;
+    border: none;
+    background: none;
+    font-family: var(--font-mono);
+    font-size: 14px;
+  }
+
+  .editor-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    .btn {
+      width: 180px;
+    }
+  }
+
+  @include below(tablet) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+// A row of filter buttons (All / Open / …). Include once.
+@mixin admin-filters {
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .filter {
+    padding: 6px 10px;
+    border: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    transition:
+      color var(--ease),
+      background-color var(--ease);
+
+    &:hover {
+      color: var(--text);
+    }
+
+    &.is-active {
+      border-color: var(--ink-bg);
+      background: var(--ink-bg);
+      color: var(--ink-text);
     }
   }
 }
