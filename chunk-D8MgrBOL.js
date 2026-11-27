@@ -1,0 +1,1 @@
+function n(r){return new Promise((o,a)=>{let e=new FileReader;e.onload=()=>o({name:r.name,type:r.type,data:String(e.result).split(`,`)[1]??``}),e.onerror=()=>a(/* @__PURE__ */ new Error(`The file could not be read.`)),e.readAsDataURL(r)})}export{n as t};
