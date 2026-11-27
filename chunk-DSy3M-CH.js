@@ -1,0 +1,1 @@
+import{t as A}from"./chunk-DY80m3Z3.js";import{ot as bt,u as b}from"./main-O6PWTPGZ.js";var i=class r extends A{door=b.admin;static ɵfac=function(a){return new(a||r)};static ɵprov=bt({token:r,factory:r.ɵfac})};export{i as t};
