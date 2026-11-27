@@ -2,7 +2,8 @@
 // The doors and background jobs
 //   client   the website: chat, profile, checkout, orders, documents,
 //            services and blog pages
-//   lawyer   joining as a lawyer, the Workspace, the lawyer's chat
+//   lawyer   joining as a lawyer, the Workspace: assignments, case chat,
+//            documents, delivery, profile
 //   admin    the admin pages
 //   onOrderPaid  an order marked paid: receipt + its next steps
 //   daily        retries what failed (folders, agreements, emails) and
@@ -23,13 +24,14 @@ import assignments from '../plugins/assignments/index.js';
 import blog from '../plugins/blog/index.js';
 import catalogue from '../plugins/catalogue/index.js';
 import documents from '../plugins/documents/index.js';
+import lawyerProfile from '../plugins/lawyer-profile/index.js';
 import lawyerVerification from '../plugins/lawyer-verification/index.js';
 import myOrders from '../plugins/my-orders/index.js';
 import ordering, { sendReceipt, setupOrder } from '../plugins/ordering/index.js';
 import taskDesk from '../plugins/task-desk/index.js';
 
 const CLIENT = [accounts, catalogue, ordering, myOrders, documents, blog];
-const LAWYER = [lawyerVerification, assignments];
+const LAWYER = [lawyerVerification, assignments, lawyerProfile];
 const ADMIN = [accounts, catalogue, ordering, lawyerVerification, taskDesk, blog];
 
 export const client = door('client', CLIENT);

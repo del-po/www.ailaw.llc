@@ -4,7 +4,8 @@ import { RouterLink } from '@angular/router';
 import { AdminService } from '../../../core/services/admin.service';
 import { AdminPost, AdminPostRow } from '../../../core/models/admin';
 import { Shape } from '../../../shared/kit/shapes/shape';
-import { adminErrorMessage, readUpload } from '../admin-links';
+import { readUpload } from '../../../core/services/read-upload';
+import { adminErrorMessage } from '../admin-links';
 
 // A post nobody has saved yet
 const BLANK: AdminPost = {

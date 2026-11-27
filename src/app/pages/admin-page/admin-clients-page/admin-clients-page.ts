@@ -97,7 +97,8 @@ export class AdminClientsPage {
 
   protected async verify(client: Profile, form: HTMLFormElement, event: Event): Promise<void> {
     event.preventDefault();
-    const field = (name: string) => (form.elements.namedItem(name) as HTMLInputElement).value.trim();
+    const field = (name: string) =>
+      (form.elements.namedItem(name) as HTMLInputElement).value.trim();
     const done = await this.run(client, () =>
       this.admin.verifyClient(client.ClientID, {
         passport: field('passport'),

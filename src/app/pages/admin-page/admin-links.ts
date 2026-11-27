@@ -1,4 +1,3 @@
-import { Upload } from '../../core/models/admin';
 import { authErrorMessage } from '../../core/services/auth-errors';
 
 // Sections of the admin area, in menu order. `ready` is false until the
@@ -48,15 +47,4 @@ export function adminErrorMessage(error: unknown): string {
   return friendly && !friendly.startsWith('Something went wrong')
     ? friendly
     : message || 'Something went wrong.';
-}
-
-// A chosen file → { name, type, data (base64) }, ready to send
-export function readUpload(file: File): Promise<Upload> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () =>
-      resolve({ name: file.name, type: file.type, data: String(reader.result).split(',')[1] ?? '' });
-    reader.onerror = () => reject(new Error('The file could not be read.'));
-    reader.readAsDataURL(file);
-  });
 }

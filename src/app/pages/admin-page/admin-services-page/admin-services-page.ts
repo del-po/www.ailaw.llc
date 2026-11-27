@@ -8,7 +8,8 @@ import {
   ServiceStatus,
 } from '../../../core/models/admin';
 import { Shape } from '../../../shared/kit/shapes/shape';
-import { adminErrorMessage, readUpload } from '../admin-links';
+import { readUpload } from '../../../core/services/read-upload';
+import { adminErrorMessage } from '../admin-links';
 
 const EMPTY: AdminServiceInput = {
   Slug: '',

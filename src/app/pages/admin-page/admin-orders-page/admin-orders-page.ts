@@ -135,8 +135,9 @@ export class AdminOrdersPage {
   protected async createOrder(form: HTMLFormElement, event: Event): Promise<void> {
     event.preventDefault();
     const field = (name: string) =>
-      (form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null)?.value.trim() ??
-      '';
+      (
+        form.elements.namedItem(name) as HTMLInputElement | HTMLSelectElement | null
+      )?.value.trim() ?? '';
     this.busy.set(true);
     this.error.set(null);
     try {
@@ -156,7 +157,9 @@ export class AdminOrdersPage {
         customerNotes: field('notes'),
       });
       this.creating.set(false);
-      this.notice.set(`Order ${order.orderNumber} placed. The agreement was emailed to the client.`);
+      this.notice.set(
+        `Order ${order.orderNumber} placed. The agreement was emailed to the client.`,
+      );
       await this.load();
     } catch (error) {
       this.error.set(adminErrorMessage(error));
@@ -221,7 +224,11 @@ export class AdminOrdersPage {
   protected assign(order: Order, lawyerId: string, role: string): Promise<void> {
     if (!lawyerId) return Promise.resolve();
     return this.act(async () => {
-      await this.admin.assignLawyer(order.orderNumber, lawyerId, role === 'reviewer' ? 'reviewer' : 'lead');
+      await this.admin.assignLawyer(
+        order.orderNumber,
+        lawyerId,
+        role === 'reviewer' ? 'reviewer' : 'lead',
+      );
       return this.orders.adminGet(order.orderId);
     }, 'Lawyer assigned and emailed.');
   }

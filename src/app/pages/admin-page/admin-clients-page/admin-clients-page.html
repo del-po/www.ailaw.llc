@@ -85,7 +85,9 @@
                 type="button"
                 class="action"
                 [disabled]="busyId() === client.ClientID"
-                (click)="verifyingId.set(verifyingId() === client.ClientID ? null : client.ClientID)"
+                (click)="
+                  verifyingId.set(verifyingId() === client.ClientID ? null : client.ClientID)
+                "
               >
                 Verify
               </button>

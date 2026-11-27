@@ -24,7 +24,7 @@
             (click)="select(a)"
           >
             <span class="item-title">{{ a.service }}</span>
-            <span class="item-sub">{{ a.orderNumber }}</span>
+            <span class="item-sub">{{ a.orderNumber }} · {{ a.client }}</span>
             <span class="item-meta">
               <span class="pill" [class.pill--live]="a.status === 'in_progress'">{{
                 a.status === 'in_progress' ? 'in progress' : 'new'
@@ -53,13 +53,15 @@
       }
     </nav>
 
-    <!-- Profile menu: the profile page, earnings and settings come here -->
-    <div class="me">
-      <span class="avatar" aria-hidden="true">{{ me()?.firstName?.charAt(0) ?? '·' }}</span>
-      <span class="me-text">
-        <span class="me-name">{{ me() ? me()!.firstName + ' ' + me()!.lastName : '…' }}</span>
-        <span class="me-code">{{ me()?.lawyerId }}</span>
-      </span>
+    <!-- Profile menu: opens the profile and earnings -->
+    <div class="me" [class.is-active]="view() === 'profile'">
+      <button type="button" class="me-open" (click)="openProfile()">
+        <span class="avatar" aria-hidden="true">{{ me()?.firstName?.charAt(0) ?? '·' }}</span>
+        <span class="me-text">
+          <span class="me-name">{{ me() ? me()!.firstName + ' ' + me()!.lastName : '…' }}</span>
+          <span class="me-code">{{ me()?.lawyerId }} · Profile</span>
+        </span>
+      </button>
       <button type="button" class="sign-out" (click)="signOut()">Log out</button>
     </div>
   </aside>
@@ -67,8 +69,122 @@
   <main class="main">
     @if (error()) {
       <p class="message" role="alert">{{ error() }}</p>
-    } @else {
-      @if (selected(); as a) {
+    }
+    @if (notice()) {
+      <p class="message message--ok" role="status">{{ notice() }}</p>
+    }
+
+    @if (view() === 'profile') {
+      <!-- ---------- Profile and earnings ---------- -->
+      <article class="case">
+        <div class="code" aria-hidden="true"><span class="code-tag">Profile</span></div>
+        <h1 class="title">{{ me() ? me()!.firstName + ' ' + me()!.lastName : 'Profile' }}</h1>
+
+        @if (earnings(); as e) {
+          <dl class="facts">
+            <div>
+              <dt>Earned</dt>
+              <dd>{{ e.earned | number: '1.0-2' }} {{ e.currency }}</dd>
+            </div>
+            <div>
+              <dt>Pending</dt>
+              <dd>{{ e.pending | number: '1.0-2' }} {{ e.currency }}</dd>
+            </div>
+            <div>
+              <dt>Assignments</dt>
+              <dd>{{ e.rows.length }}</dd>
+            </div>
+          </dl>
+        }
+
+        @if (profile(); as p) {
+          <form #profileForm class="panel" (submit)="saveProfile(profileForm, $event)">
+            <h2 class="block-title">Your details</h2>
+            <p class="small">
+              {{ p.email }} · bar licence {{ p.barLicenseNumber }}. Your name, licence and personal
+              ID are changed by AI Law.
+            </p>
+            <div class="grid">
+              <label class="field">
+                <span class="field-label">Phone</span>
+                <app-shape class="field-box" name="field">
+                  <input name="phone" type="tel" maxlength="30" [value]="p.phone" />
+                </app-shape>
+              </label>
+              <label class="field">
+                <span class="field-label">Address</span>
+                <app-shape class="field-box" name="field">
+                  <input name="address" maxlength="300" [value]="p.address" />
+                </app-shape>
+              </label>
+              <label class="field">
+                <span class="field-label">Languages · separated by commas</span>
+                <app-shape class="field-box" name="field">
+                  <input name="languages" [value]="p.languages" />
+                </app-shape>
+              </label>
+              <label class="field">
+                <span class="field-label">Specializations · separated by commas</span>
+                <app-shape class="field-box" name="field">
+                  <input name="specializations" [value]="p.specializations" />
+                </app-shape>
+              </label>
+              <label class="field">
+                <span class="field-label">Availability · e.g. weekdays, 10–18</span>
+                <app-shape class="field-box" name="field">
+                  <input name="availability" maxlength="300" [value]="p.availability" />
+                </app-shape>
+              </label>
+              <label class="field">
+                <span class="field-label">IBAN for your fees · now {{ p.iban || 'not set' }}</span>
+                <app-shape class="field-box" name="field">
+                  <input name="iban" placeholder="Type a new one to change it" />
+                </app-shape>
+              </label>
+              <label class="field wide">
+                <span class="field-label">About you</span>
+                <textarea
+                  class="area"
+                  name="bio"
+                  rows="4"
+                  maxlength="2000"
+                  [value]="p.bio"
+                ></textarea>
+              </label>
+            </div>
+            <button type="submit" class="btn" [disabled]="busy()">
+              <app-shape name="bar-notch">{{ busy() ? 'Saving…' : 'Save' }}</app-shape>
+            </button>
+          </form>
+        }
+
+        @if (earnings(); as e) {
+          <section class="panel">
+            <h2 class="block-title">Earnings</h2>
+            @for (row of e.rows; track row.assignmentId) {
+              <div class="earning">
+                <span class="earning-main">
+                  <span class="file-name">{{ row.service }}</span>
+                  <span class="small"
+                    >{{ row.orderNumber
+                    }}{{
+                      row.completedAt ? ' · ' + (row.completedAt | date: 'MMM d, y') : ''
+                    }}</span
+                  >
+                </span>
+                <span class="pill" [class.pill--live]="row.status === 'done'">{{
+                  row.status === 'done' ? 'earned' : 'pending'
+                }}</span>
+                <span class="small">{{ row.fee | number: '1.0-2' }} {{ row.currency }}</span>
+              </div>
+            } @empty {
+              <p class="small">No assignments yet.</p>
+            }
+          </section>
+        }
+      </article>
+    } @else if (selected(); as a) {
+      <!-- ---------- The case ---------- -->
       <article class="case">
         <div class="code" aria-hidden="true">
           <span class="code-tag">{{ a.role === 'lead' ? 'Lead lawyer' : a.role }}</span>
@@ -76,12 +192,31 @@
         <h1 class="title">{{ a.service }}</h1>
 
         <dl class="facts">
-          <div><dt>Order</dt><dd>{{ a.orderNumber }}</dd></div>
-          <div><dt>Client</dt><dd>{{ a.client || '—' }}</dd></div>
-          <div><dt>Assigned</dt><dd>{{ a.assignedAt | date: 'MMM d, y' }}</dd></div>
-          <div><dt>Payment</dt><dd>{{ a.paymentStatus || '—' }}</dd></div>
+          <div>
+            <dt>Order</dt>
+            <dd>{{ a.orderNumber }}</dd>
+          </div>
+          <div>
+            <dt>Client</dt>
+            <dd>{{ a.client || '—' }}</dd>
+          </div>
+          <div>
+            <dt>Assigned</dt>
+            <dd>{{ a.assignedAt | date: 'MMM d, y' }}</dd>
+          </div>
+          <div>
+            <dt>Payment</dt>
+            <dd>{{ a.paymentStatus || '—' }}</dd>
+          </div>
+          <div>
+            <dt>Status</dt>
+            <dd>{{ a.status === 'done' ? 'delivered' : a.status.replace('_', ' ') }}</dd>
+          </div>
           @if (a.fee !== null) {
-            <div><dt>Your fee</dt><dd>{{ a.fee | number: '1.0-2' }} {{ a.currency }}</dd></div>
+            <div>
+              <dt>Your fee</dt>
+              <dd>{{ a.fee | number: '1.0-2' }} {{ a.currency }}</dd>
+            </div>
           }
         </dl>
 
@@ -98,23 +233,162 @@
           }
         </section>
 
-        <app-shape class="note" name="field">
-          <span>The case chat, documents and delivery for this assignment come here next.</span>
-        </app-shape>
+        @if (current(); as c) {
+          @if (detailRows().length || c.notes) {
+            <section class="panel">
+              <h2 class="block-title">From the client</h2>
+              <dl class="facts">
+                @for (row of detailRows(); track row.label) {
+                  <div>
+                    <dt>{{ row.label }}</dt>
+                    <dd>{{ row.value }}</dd>
+                  </div>
+                }
+                @if (c.notes) {
+                  <div>
+                    <dt>Note</dt>
+                    <dd class="note">{{ c.notes }}</dd>
+                  </div>
+                }
+              </dl>
+            </section>
+          }
+
+          @if (c.steps.length) {
+            <section class="panel">
+              <h2 class="block-title">Order steps</h2>
+              <ol class="steps">
+                @for (step of c.steps; track $index) {
+                  <li
+                    [class.is-done]="step.status === 'done'"
+                    [class.is-current]="step.status === 'active'"
+                  >
+                    {{ step.label }}
+                    @if (step.owner === 'lawyer') {
+                      <span class="pill">lawyer</span>
+                    }
+                  </li>
+                }
+              </ol>
+            </section>
+          }
+
+          <!-- Documents: the client's, then each lawyer's working folder -->
+          <section class="panel">
+            <div class="panel-head">
+              <h2 class="block-title">Documents</h2>
+              @if (a.status !== 'done') {
+                <label class="action upload">
+                  + Upload a working file
+                  <input
+                    #file
+                    type="file"
+                    class="visually-hidden"
+                    accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+                    [disabled]="busy()"
+                    (change)="upload(file)"
+                  />
+                </label>
+              }
+            </div>
+            @for (folder of c.documents; track folder.title) {
+              <p class="folder">{{ folder.title }}</p>
+              @for (f of folder.files; track f.path) {
+                <button type="button" class="file" (click)="download(f.path)">
+                  <span class="file-name">{{ f.name }}</span>
+                  <span class="small">{{ f.size / 1024 | number: '1.0-0' }} KB</span>
+                </button>
+              } @empty {
+                <p class="small">Empty.</p>
+              }
+            } @empty {
+              <p class="small">No documents yet.</p>
+            }
+            <p class="small">
+              Working files stay inside AI Law; the client only sees what you deliver.
+            </p>
+          </section>
+
+          <!-- Case chat: one thread per assignment, about this case only -->
+          <section class="panel chat">
+            <h2 class="block-title">Case assistant</h2>
+            <div #thread class="thread">
+              @for (m of messages(); track m.id) {
+                <div
+                  class="msg"
+                  [class.msg--user]="m.role === 'user'"
+                  [class.msg--failed]="m.failed"
+                >
+                  @for (part of m.parts; track $index) {
+                    @if (part.type === 'text') {
+                      @if (m.role === 'user') {
+                        <p class="msg-text">{{ part.text }}</p>
+                      } @else {
+                        <div
+                          class="msg-text"
+                          [innerHTML]="format(part.text || (m.streaming ? '…' : ''))"
+                        ></div>
+                      }
+                    }
+                  }
+                </div>
+              } @empty {
+                <p class="small">
+                  Ask about this case: the law, a draft, what to check. The assistant knows the case
+                  details and this service's know-how, and nothing about other cases.
+                </p>
+              }
+            </div>
+            <app-chat-input
+              placeholder="Ask about this case…"
+              [disabled]="asking()"
+              (submitted)="ask($event)"
+            />
+          </section>
+
+          <!-- Delivery: the lead lawyer sends the result to the client -->
+          @if (a.role === 'lead' && a.status !== 'done') {
+            <form #deliverForm class="panel deliver" (submit)="deliver(deliverForm, $event)">
+              <h2 class="block-title">Deliver to the client</h2>
+              <p class="small">
+                The file goes to the client's Documents page and by email from info@ailaw.llc. This
+                completes your assignment.
+              </p>
+              <input
+                class="file-input"
+                name="result"
+                type="file"
+                required
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.txt"
+              />
+              <textarea
+                class="area"
+                name="note"
+                rows="2"
+                maxlength="2000"
+                placeholder="A short note for the client (optional)"
+              ></textarea>
+              <button type="submit" class="btn" [disabled]="busy()">
+                <app-shape name="bar-notch">{{ busy() ? 'Sending…' : 'Deliver' }}</app-shape>
+              </button>
+            </form>
+          }
+        } @else {
+          <p class="small">Opening the case…</p>
+        }
       </article>
-    } @else {
+    } @else if (!error()) {
       <div class="empty">
         <div class="code" aria-hidden="true"><span class="code-tag">Workspace</span></div>
         <h1 class="title">Welcome{{ me() ? ', ' + me()!.firstName : '' }}</h1>
         <p class="lead">
-          Your assignments will appear on the left. Each one opens here with the case details,
-          its documents and an AI assistant set up for that task.
+          Your assignments will appear on the left. Each one opens here with the case details, its
+          documents and an AI assistant set up for that task.
         </p>
         <app-shape class="note" name="field">
           <span>When AI Law gives you an assignment, you'll also get an email.</span>
         </app-shape>
       </div>
-      }
     }
   </main>
 </div>

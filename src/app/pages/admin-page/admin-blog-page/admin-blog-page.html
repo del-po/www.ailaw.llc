@@ -89,7 +89,9 @@
         <span class="field-label">Status</span>
         <app-shape class="field-box" name="field">
           <select name="status">
-            <option value="draft" [selected]="post.status === 'draft'">Draft · not on the site</option>
+            <option value="draft" [selected]="post.status === 'draft'">
+              Draft · not on the site
+            </option>
             <option value="published" [selected]="post.status === 'published'">Published</option>
           </select>
         </app-shape>
@@ -134,7 +136,9 @@
         <div class="row post">
           <span class="cell-main">
             <span class="cell-title">{{ post.title }}</span>
-            <span class="cell-sub">{{ post.category || 'No category' }} · /blog/{{ post.slug }}</span>
+            <span class="cell-sub"
+              >{{ post.category || 'No category' }} · /blog/{{ post.slug }}</span
+            >
           </span>
           <span class="cell-mono">{{
             post.publishedAt ? (post.publishedAt | date: 'MMM d, y') : '—'

@@ -96,7 +96,12 @@
       <button type="submit" class="btn" [disabled]="busy()">
         <app-shape name="bar-notch">{{ busy() ? 'Placing…' : 'Place order' }}</app-shape>
       </button>
-      <button type="button" class="btn btn--light" [disabled]="busy()" (click)="creating.set(false)">
+      <button
+        type="button"
+        class="btn btn--light"
+        [disabled]="busy()"
+        (click)="creating.set(false)"
+      >
         <app-shape name="bar-notch">Cancel</app-shape>
       </button>
     </div>

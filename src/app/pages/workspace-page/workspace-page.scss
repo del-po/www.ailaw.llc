@@ -7,6 +7,7 @@
 // ==========================================================
 
 @include page-theme;
+@include form-controls;
 
 .workspace {
   display: grid;
@@ -77,11 +78,33 @@
 // Profile menu at the bottom, like other AI chats
 .me {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   padding-top: 16px;
   border-top: 1px solid var(--line);
+
+  &.is-active .me-code {
+    color: var(--text);
+  }
+}
+
+// Avatar and name open the profile
+.me-open {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover .me-name {
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--yellow));
+  }
 }
 
 .avatar {
@@ -176,14 +199,6 @@
   }
 }
 
-.message {
-  padding: 12px 14px;
-  border-left: 4px solid rgb(var(--yellow));
-  background: var(--card-bg);
-  font-family: var(--font-mono);
-  font-size: 13px;
-}
-
 // ---------- Assignment list ----------
 
 .list-head {
@@ -270,14 +285,20 @@
 // ---------- The chosen assignment ----------
 
 .main:has(.case) {
-  place-items: start stretch;
+  place-items: start center;
+}
+
+.main {
+  align-content: start;
+  gap: 16px;
 }
 
 .case {
   display: flex;
   flex-direction: column;
   gap: 18px;
-  max-width: 760px;
+  width: 100%;
+  max-width: 820px;
 }
 
 .facts {
@@ -322,5 +343,201 @@
     margin: 0;
     padding-left: 20px;
     line-height: 1.55;
+  }
+}
+
+// ---------- Case panels: client details, steps, documents, chat, delivery ----------
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+}
+
+.panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.note {
+  white-space: pre-line;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+  color: var(--text-muted);
+
+  .is-done {
+    color: var(--text);
+    text-decoration: line-through;
+    text-decoration-color: var(--text-muted);
+  }
+
+  .is-current {
+    color: var(--text);
+    font-weight: 700;
+  }
+}
+
+.folder {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+// One file: click to download
+.file {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover .file-name {
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--yellow));
+  }
+}
+
+.file-name {
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+
+// Small text button, like in the admin pages
+.action {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--yellow));
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+// ---------- Case chat ----------
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 480px;
+  overflow-y: auto;
+}
+
+.msg {
+  align-self: flex-start;
+  max-width: 90%;
+  font-size: 15px;
+  line-height: 1.6;
+
+  &--user {
+    align-self: flex-end;
+    padding: 8px 12px;
+    background: var(--ink-bg);
+    color: var(--ink-text);
+  }
+
+  &--failed {
+    color: var(--text-muted);
+    font-style: italic;
+  }
+}
+
+.msg-text {
+  white-space: pre-line;
+
+  :is(p, ul) {
+    margin: 0 0 8px;
+  }
+
+  :last-child {
+    margin-bottom: 0;
+  }
+}
+
+// ---------- Profile ----------
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+
+  @include below(tablet) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+// Text that grows (about you, delivery note)
+.area {
+  width: 100%;
+  padding: 12px 16px;
+  resize: vertical;
+  border: 1px solid var(--card-border);
+  background: var(--bg, transparent);
+  font-family: var(--font-mono);
+  font-size: 14px;
+  line-height: 1.5;
+
+  &:focus {
+    border-color: rgb(var(--yellow));
+  }
+}
+
+.panel .btn {
+  align-self: flex-start;
+  width: 180px;
+}
+
+.file-input {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.earning {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 100px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+
+  .small {
+    text-align: right;
+  }
+}
+
+.earning-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  .small {
+    text-align: left;
   }
 }

@@ -5,6 +5,10 @@
 //     plugins allow (up to MAX_TOOL_ROUNDS rounds of tool calls)
 // A conversation belongs to one person and one side, so a lawyer's case
 // chats and their own client chats never mix.
+// A scope ties a conversation to one piece of work (e.g. a lawyer's
+// assignment): one thread per person and scope, with that work's context
+// in the instructions and only that work's plugins. The door supplies it.
+//   scope = { key, prompt, pluginIds }
 // ==========================================================
 
 import { ApiError, db, now, parseJson, today, toDate } from './app.js';
@@ -25,7 +29,7 @@ export async function listConversations(caller, side) {
   const snap = await db.collection('Chat').where('ownerId', '==', caller.ownerId).get();
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((c) => !c.deleted && (c.side || 'client') === side)
+    .filter((c) => !c.deleted && !c.scope && (c.side || 'client') === side)
     .sort((a, b) => ms(b.updatedAt) - ms(a.updatedAt))
     .map((c) => ({ id: c.id, title: String(c.title), updatedAt: ms(c.updatedAt) }));
 }
@@ -81,16 +85,32 @@ function toClientMessage(m) {
   };
 }
 
+// The thread of one scope (an assignment), or an empty one
+export async function scopedConversation(caller, side, key) {
+  const snap = await db.collection('Chat').where('ownerId', '==', caller.ownerId).where('scope', '==', key).get();
+  const c = snap.docs.map((d) => ({ id: d.id, ...d.data() })).find((x) => !x.deleted && x.side === side);
+  if (!c) return { id: '', title: '', updatedAt: 0, messages: [] };
+  const messages = await conversationMessages(c.id);
+  return { id: c.id, title: String(c.title), updatedAt: ms(c.updatedAt), messages: messages.map(toClientMessage) };
+}
+
 // ---------- Answer ----------
 
 // emit({ type, ... }) sends one event to the page:
 // start → text… / part… → done (or error)
-export async function answer(caller, side, data, emit, env, plugins) {
+export async function answer(caller, side, data, emit, env, plugins, scope = null) {
   const question = String(data.text || '').trim().slice(0, MAX_QUESTION_LENGTH);
   if (!question) throw new ApiError('INVALID_INPUT');
 
   const settings = await chatSettings();
   await countQuestion(caller, settings);
+
+  // A scoped thread is found by its scope; only the scope's own plugins take part
+  if (scope) {
+    const thread = await scopedConversation(caller, side, scope.key);
+    if (thread.id) data = { ...data, conversationId: thread.id };
+    plugins = plugins.filter((p) => p.actions || p.tools || p.prompt || (scope.pluginIds || []).includes(p.id));
+  }
 
   let conversation;
   let earlier = [];
@@ -103,6 +123,7 @@ export async function answer(caller, side, data, emit, env, plugins) {
       ownerId: caller.ownerId,
       email: caller.email || '',
       side,
+      ...(scope ? { scope: scope.key } : {}),
       title: question.length > TITLE_LENGTH ? question.slice(0, TITLE_LENGTH).trim() + '…' : question,
       deleted: false,
       createdAt: now(),
@@ -132,7 +153,7 @@ export async function answer(caller, side, data, emit, env, plugins) {
     .filter((m) => m.content)
     .concat({ role: 'user', content: question });
 
-  const ctx = { caller, side, conversationId: conversation.id, parts: [], settings, env, emit, plugins };
+  const ctx = { caller, side, conversationId: conversation.id, parts: [], settings, env, emit, plugins, scope };
   const text = await runAssistant(ctx, history);
 
   // Saved after the answer, so a failed first question leaves no empty chat behind
@@ -158,7 +179,7 @@ export function addPart(ctx, part) {
 
 async function runAssistant(ctx, history) {
   const tools = toolsOf(ctx.plugins, ctx.side);
-  const prompt = await buildPrompt(ctx.plugins, ctx);
+  const prompt = (await buildPrompt(ctx.plugins, ctx)) + (ctx.scope?.prompt ? '\n\n' + ctx.scope.prompt : '');
   const who = ctx.caller.signedIn
     ? `The person is signed in${ctx.caller.name ? ' as ' + ctx.caller.name : ''}.`
     : 'The person is not signed in.';

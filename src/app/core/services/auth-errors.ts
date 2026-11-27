@@ -50,10 +50,15 @@ const MESSAGES: Record<string, string> = {
   ALREADY_ASSIGNED: 'This lawyer is already on this order.',
   AGREEMENT_FAILED: 'The agreement could not be made. Try again.',
   EMAIL_FAILED: 'The email could not be sent. Try again later.',
-  INVALID_FILE_TYPE: 'Use a JPEG, PNG or WebP picture.',
-  FILE_TOO_LARGE: 'The picture is larger than 5 MB.',
+  INVALID_FILE_TYPE: 'This type of file isn’t accepted here.',
+  FILE_TOO_LARGE: 'The file is too large.',
   SAVE_THE_POST_FIRST: 'Save the post once before adding a cover.',
   INVALID_SLUG: 'Give the post a title.',
+  ONLY_LEAD_DELIVERS: 'Only the lead lawyer delivers the result.',
+  ALREADY_DELIVERED: 'This assignment is already delivered.',
+  DOCUMENT_NOT_FOUND: 'This document could not be found.',
+  INVALID_IBAN: 'Check the IBAN: it looks incomplete.',
+  NOT_FOUND: 'This could not be found.',
 };
 
 // Closing the Google window is the person's choice, not an error

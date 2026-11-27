@@ -18,6 +18,7 @@
 
 import { ApiError, db, log, now, parseJson } from './app.js';
 import { orderByNumber, orderSteps, setting } from './records.js';
+import { readFile } from './files.js';
 import { sendMail } from './send.js';
 
 const capabilities = {};
@@ -27,6 +28,8 @@ export function registerCapabilities(list) {
 }
 
 const isUrl = (v) => /^https?:\/\/\S+$/.test(String(v || ''));
+// A step's result can also be a file in Storage: "file:<path>"
+const isFile = (v) => String(v || '').startsWith('file:');
 const pad = (n) => String(n).padStart(2, '0');
 
 // Copies the plugin's steps into the order, then runs them
@@ -120,7 +123,7 @@ export async function completeStep(orderNumber, stepNo, result, note, env) {
   const step = steps.find((s) => s.stepNo === Number(stepNo));
   if (!step || step.owner !== 'lawyer' || step.status !== 'active') throw new ApiError('NOT_FOUND');
   const text = String(result || '').trim();
-  if (step.config?.needsFile && !isUrl(text)) throw new ApiError('FILE_LINK_REQUIRED');
+  if (step.config?.needsFile && !isUrl(text) && !isFile(text)) throw new ApiError('FILE_LINK_REQUIRED');
   await db.doc(`Orders/${orderNumber}/Steps/${step.id}`).update({
     status: 'done',
     result: text,
@@ -176,13 +179,17 @@ registerCapabilities({
     return `${config.output} = ${value}`;
   },
 
-  // Every link from earlier steps goes to the client: in the chat where they
-  // ordered, and by email when config.email is set
+  // Every result of earlier steps goes to the client: links in the chat where
+  // they ordered and in the email (config.email); files attached to the
+  // email, and already in their Documents page
   deliver: async ({ order, steps, config, env }) => {
-    const links = steps.filter((s) => s.status === 'done' && isUrl(s.result)).map((s) => s.result);
+    const done = steps.filter((s) => s.status === 'done');
+    const links = done.filter((s) => isUrl(s.result)).map((s) => s.result);
+    const files = done.filter((s) => isFile(s.result)).map((s) => s.result.slice(5));
     const text =
       `Your order **${order.orderNumber}** (${order.serviceName}) is complete.` +
-      (links.length ? '\n\n' + links.map((l, i) => `[Document ${i + 1}](${l})`).join('\n') : '');
+      (links.length ? '\n\n' + links.map((l, i) => `[Document ${i + 1}](${l})`).join('\n') : '') +
+      (files.length ? '\n\nThe documents are in your account, under Documents.' : '');
 
     if (order.conversationId) {
       const chat = db.doc('Chat/' + order.conversationId);
@@ -192,12 +199,18 @@ registerCapabilities({
       }
     }
     if (config.email && order.customerEmail) {
+      const attachments = [];
+      for (const path of files) {
+        const file = await readFile(path);
+        if (file) attachments.push({ filename: path.split('/').pop(), content: file.content, contentType: file.contentType });
+      }
       await mail(env, {
         to: order.customerEmail,
         subject: `AI Law — ${order.serviceName} (${order.orderNumber})`,
         text:
           text.replace(/\*\*/g, '').replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1: $2') +
           '\n\nAI Law LLC · www.ailaw.llc',
+        attachments,
       });
     }
     return 'Delivered';

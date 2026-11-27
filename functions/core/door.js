@@ -47,8 +47,10 @@ export function environment(req) {
   };
 }
 
-// side: 'client' | 'lawyer' | 'admin'; modules: the plugin code this door may load
+// side: 'client' | 'lawyer' | 'admin'; modules: the plugin code this door may load.
+// A plugin may give the door a chat scope: chatScope(caller, data) → scope or null
 export function door(side, modules, options = {}) {
+  const chatScope = modules.find((m) => m.chatScope)?.chatScope;
   return onRequest(
     {
       region: 'europe-west1',
@@ -75,7 +77,9 @@ export function door(side, modules, options = {}) {
         try {
           const caller = await enter(side, body);
           const plugins = await loadPlugins(side, modules);
-          await answer(caller, side, body.data || {}, emit, env, plugins);
+          const data = body.data || {};
+          const scope = chatScope ? await chatScope(caller, data) : null;
+          await answer(caller, side, data, emit, env, plugins, scope);
         } catch (err) {
           if (!err.code) await log(side + ' chat:send', err);
           emit({ type: 'error', error: err.code || 'SERVER_ERROR' });
