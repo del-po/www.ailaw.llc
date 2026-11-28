@@ -4,7 +4,8 @@
 // Storage folder like Drive (year folders, order folders, files) and
 // downloads files through the door, so no storage link is ever shown.
 // folderId and fileId are paths inside the client's folder; anything
-// outside it, and every "Internal" folder (lawyers' work), is refused.
+// outside it, every "Internal" folder (lawyers' work) and every "Versions"
+// folder (old copies kept by the Admin Panel) is refused.
 // ==========================================================
 
 import { ApiError, db, iso } from '../../core/app.js';
@@ -12,7 +13,8 @@ import { folderTime, join, listFolder, readFile } from '../../core/files.js';
 import { clientByUid, docs } from '../../core/records.js';
 import { addPart } from '../../core/chat.js';
 
-const INTERNAL = 'Internal';
+// Folders the client never sees
+const HIDDEN = new Set(['Internal', 'Versions']);
 const MAX_BYTES = 25 * 1024 * 1024;
 
 async function root(caller) {
@@ -24,7 +26,7 @@ async function root(caller) {
 // A path inside the client's folder → its parts, or an error
 function inside(path, code) {
   const parts = String(path || '').split('/').filter(Boolean);
-  if (parts.some((p) => p === '..' || p === '.' || p === INTERNAL || p.length > 200)) throw new ApiError(code);
+  if (parts.some((p) => p === '..' || p === '.' || HIDDEN.has(p) || p.length > 200)) throw new ApiError(code);
   return parts;
 }
 
@@ -45,7 +47,7 @@ async function getFolder(caller, data) {
 
   const folders = [];
   for (const f of content.folders) {
-    if (f.name === INTERNAL) continue;
+    if (HIDDEN.has(f.name)) continue;
     folders.push({
       folderId: join(...parts, f.name),
       name: f.name,

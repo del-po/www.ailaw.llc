@@ -23,7 +23,7 @@ const audit = () => db.collection('AuditLog');
 
 // Reads by name: "…:list", "…:get", "adminListOrders" and the like
 const READ =
-  /(^|:)(list|get|counts|tasks|clients|lawyers|my|dashboard|audit|logs|status)$|^adminList|^adminGet|^listUsers$/i;
+  /(^|:)(list|get|search|versions|counts|tasks|clients|lawyers|my|dashboard|audit|logs|status)$|^adminList|^adminGet|^listUsers$/i;
 
 function isRead(action, data) {
   // The admin's own conversations (renaming, deleting) aren't platform changes
@@ -60,7 +60,13 @@ async function targetOf(action, data = {}) {
         : { kind: 'order', id: data.orderId, ref: null };
     }
     if (data.lawyerId) return { kind: 'lawyer', id: data.lawyerId, ref: db.doc('Staff/' + data.lawyerId) };
+    if (action.startsWith('files:')) {
+      return { kind: 'file', id: data.path || [data.folder, data.file?.name || data.name].filter(Boolean).join('/'), ref: null };
+    }
     if (action.startsWith('blog:') && data.slug) return { kind: 'article', id: data.slug, ref: null };
+    if (action.startsWith('workflow:') && data.slug) {
+      return { kind: 'service', id: data.slug, ref: db.doc('Services/' + data.slug) };
+    }
     if (action.startsWith('services:') && data.id != null) return { kind: 'service', id: String(data.id), ref: null };
     if (action.startsWith('categories:') && data.id != null) return { kind: 'category', id: String(data.id), ref: null };
     if (action.startsWith('declarations:') && data.key) return { kind: 'declarations client', id: data.key, ref: null };

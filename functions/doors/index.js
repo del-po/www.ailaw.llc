@@ -27,6 +27,8 @@ import { advance, resumePaid } from '../core/steps.js';
 import accounts from '../plugins/accounts/index.js';
 import adminAssistant from '../plugins/admin-assistant/index.js';
 import adminInsights from '../plugins/admin-insights/index.js';
+import fileDesk from '../plugins/file-desk/index.js';
+import orderDesk from '../plugins/order-desk/index.js';
 import assignments from '../plugins/assignments/index.js';
 import blog from '../plugins/blog/index.js';
 import catalogue from '../plugins/catalogue/index.js';
@@ -41,7 +43,19 @@ import taskDesk from '../plugins/task-desk/index.js';
 
 const CLIENT = [accounts, catalogue, ordering, myOrders, documents, blog, declarations];
 const LAWYER = [lawyerVerification, assignments, lawyerProfile];
-const ADMIN = [accounts, catalogue, ordering, lawyerVerification, taskDesk, blog, declarations, adminAssistant, adminInsights];
+const ADMIN = [
+  accounts,
+  catalogue,
+  ordering,
+  lawyerVerification,
+  taskDesk,
+  orderDesk,
+  fileDesk,
+  blog,
+  declarations,
+  adminAssistant,
+  adminInsights,
+];
 
 export const client = door('client', CLIENT);
 // Applications carry their documents: up to ~25 MB per request

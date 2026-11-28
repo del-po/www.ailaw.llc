@@ -1,0 +1,100 @@
+@use 'mixins' as *;
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin workflow editor (inside Services)
+// ==========================================================
+
+@include admin-page;
+@include admin-editor;
+
+:host {
+  gap: 0;
+}
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+}
+
+.step {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+}
+
+.step-top {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  .field {
+    width: 190px;
+  }
+
+  .grow {
+    flex: 1;
+    min-width: 200px;
+  }
+}
+
+.step-no {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  margin-bottom: 8px;
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.step-tools {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.options {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+}
+
+.days {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  input {
+    width: 70px;
+    height: 30px;
+    padding: 0 8px;
+    border: 1px solid var(--line);
+    background: var(--card-bg);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+@include below(tablet) {
+  .step-top .field {
+    width: 100%;
+  }
+}

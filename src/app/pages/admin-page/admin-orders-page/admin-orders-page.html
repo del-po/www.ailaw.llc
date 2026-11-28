@@ -3,7 +3,8 @@
   <h1 class="title">Orders</h1>
   <p class="lead">
     Every order, newest first. Mark an order paid when its transfer arrives, using the order number
-    in the transfer's purpose. Orders taken by phone or Telegram are added with "New order".
+    in the transfer's purpose. Orders taken by phone or Telegram are added with "New order". Each
+    order's workspace has its workflow, deadlines, documents and history.
   </p>
 </section>
 
@@ -328,6 +329,9 @@
               }
 
               <div class="paperwork">
+                <a class="action" [routerLink]="['/admin/orders', full.orderNumber]"
+                  >Open workspace →</a
+                >
                 <button type="button" class="action" [disabled]="busy()" (click)="remake(full)">
                   Remake agreement
                 </button>

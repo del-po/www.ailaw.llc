@@ -112,6 +112,11 @@ export interface Conversation {
 export interface LawyerTask {
   orderId: string;
   stepNo: number;
+  // active: waiting to be done; review: the lawyer's result, waiting for approval
+  status?: 'active' | 'review';
+  result?: string;
+  note?: string;
+  dueAt?: string;
   label: string;
   task: string;
   needsFile: boolean;

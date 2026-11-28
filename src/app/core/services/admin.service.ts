@@ -9,8 +9,16 @@ import {
   AuditEntry,
   Dashboard,
   ErrorEntry,
+  OrderChanges,
+  OrderWorkspace,
   Period,
+  ServiceWorkflow,
+  StepChange,
+  StepOp,
+  StorageFolder,
+  StoredFile,
   Upload,
+  WorkflowStep,
 } from '../models/admin';
 import {
   DeclarationClient,
@@ -52,6 +60,15 @@ export class AdminService {
 
   uploadServiceImage(id: number, file: Upload): Promise<AdminServiceRow> {
     return this.call('services:image', { id, file });
+  }
+
+  // The steps every new order of a service runs
+  getWorkflow(slug: string): Promise<ServiceWorkflow> {
+    return this.call('workflow:get', { slug });
+  }
+
+  setWorkflow(slug: string, steps: WorkflowStep[]): Promise<ServiceWorkflow> {
+    return this.call('workflow:set', { slug, steps });
   }
 
   // ---------- Categories ----------
@@ -164,6 +181,85 @@ export class AdminService {
 
   assignLawyer(orderNumber: string, lawyerId: string, role: 'lead' | 'reviewer'): Promise<unknown> {
     return this.call('admin:assign', { orderNumber, lawyerId, role });
+  }
+
+  // ---------- One order's workspace ----------
+
+  orderWorkspace(orderNumber: string): Promise<OrderWorkspace> {
+    return this.call('order:get', { orderNumber });
+  }
+
+  editOrder(orderNumber: string, changes: OrderChanges): Promise<OrderWorkspace> {
+    return this.call('order:edit', { orderNumber, ...changes });
+  }
+
+  // Unpaid orders only; the totals follow
+  setOrderPrices(
+    orderNumber: string,
+    items: { orderItemId: string; unitPrice: number; discountAmount: number }[],
+  ): Promise<OrderWorkspace> {
+    return this.call('order:prices', { orderNumber, items });
+  }
+
+  stepAction(
+    orderNumber: string,
+    stepNo: number,
+    op: StepOp,
+    change: StepChange = {},
+  ): Promise<OrderWorkspace> {
+    return this.call('order:step', { orderNumber, stepNo, op, ...change });
+  }
+
+  startWorkflow(orderNumber: string): Promise<OrderWorkspace> {
+    return this.call('order:startWorkflow', { orderNumber });
+  }
+
+  unassignLawyer(orderNumber: string, assignmentId: string): Promise<OrderWorkspace> {
+    return this.call('order:unassign', { orderNumber, assignmentId });
+  }
+
+  // ---------- Documents (all of Storage) ----------
+
+  listFiles(path: string): Promise<StorageFolder> {
+    return this.call('files:list', { path });
+  }
+
+  searchFiles(query: string, period: Partial<Period> = {}): Promise<StoredFile[]> {
+    return this.call('files:search', { query, ...period });
+  }
+
+  getFile(path: string): Promise<{ name: string; mimeType: string; data: string }> {
+    return this.call('files:get', { path });
+  }
+
+  fileVersions(path: string): Promise<StoredFile[]> {
+    return this.call('files:versions', { path });
+  }
+
+  // replace: an existing file of the same name is kept in "Versions" first
+  uploadFile(
+    folder: string,
+    file: Upload,
+    replace = false,
+  ): Promise<{ path: string; replaced: boolean }> {
+    return this.call('files:upload', { folder, file, replace });
+  }
+
+  renameFile(path: string, name: string): Promise<{ path: string }> {
+    return this.call('files:rename', { path, name });
+  }
+
+  moveFile(path: string, folder: string): Promise<{ path: string }> {
+    return this.call('files:move', { path, folder });
+  }
+
+  newFolder(folder: string, name: string): Promise<{ path: string }> {
+    return this.call('files:newFolder', { folder, name });
+  }
+
+  // Moves it to the trash folder
+  deleteFile(path: string): Promise<unknown> {
+    return this.call('files:delete', { path });
   }
 
   // ---------- Blog ----------

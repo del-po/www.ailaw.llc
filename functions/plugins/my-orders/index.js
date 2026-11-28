@@ -8,7 +8,7 @@
 
 import { ApiError, cleanKey, db, toDate } from '../../core/app.js';
 import { addPart } from '../../core/chat.js';
-import { orderCard, toOrder } from '../../core/orders.js';
+import { clientSteps, orderCard, toOrder } from '../../core/orders.js';
 import { docs, orderById, orderItems, orderSteps } from '../../core/records.js';
 import { resumePaid } from '../../core/steps.js';
 
@@ -42,7 +42,7 @@ async function listWithSteps(caller, env) {
       currency: o.currency,
       createdAt: toDate(o.createdAt)?.getTime() || 0,
       details: o.details || {},
-      steps: steps.map((s) => ({ label: s.clientLabel, status: s.status === 'active' ? 'in_progress' : s.status })),
+      steps: clientSteps(steps),
       files: done ? steps.map((s) => s.result).filter(isUrl) : [],
     });
   }

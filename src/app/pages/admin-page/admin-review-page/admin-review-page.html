@@ -2,8 +2,8 @@
   <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
   <h1 class="title">Review</h1>
   <p class="lead">
-    Order steps waiting for you, oldest first. When you mark a step done, the chat continues the
-    order and keeps the client updated.
+    Order steps waiting for you, and lawyers’ results waiting for your approval, oldest first. When
+    you mark a step done or approve it, the chat continues the order and keeps the client updated.
   </p>
 </section>
 
@@ -20,9 +20,15 @@
     @for (task of tasks(); track key(task)) {
       <li class="task">
         <div class="task-head">
-          <span class="tag">{{ task.label }}</span>
-          <span class="task-order">{{ task.orderId }}</span>
-          <span class="task-since">waiting since {{ task.waitingSince | date: 'd MMM, HH:mm' }}</span>
+          <span class="tag"
+            >{{ task.status === 'review' ? 'To approve · ' : '' }}{{ task.label }}</span
+          >
+          <a class="task-order" [routerLink]="['/admin/orders', task.orderId]">{{
+            task.orderId
+          }}</a>
+          <span class="task-since"
+            >waiting since {{ task.waitingSince | date: 'd MMM, HH:mm' }}</span
+          >
         </div>
 
         <h2 class="task-service">{{ task.service }}</h2>
@@ -45,28 +51,70 @@
           }
         </dl>
 
-        <form class="form task-form" (submit)="complete($event, task)">
-          @if (task.needsFile) {
+        @if (task.status === 'review') {
+          <div class="form task-form">
+            <p class="task-text">
+              Result:
+              @if (task.result?.startsWith('file:')) {
+                <button type="button" class="link" (click)="download(task.result!)">
+                  {{ task.result!.split('/').pop() }}
+                </button>
+              } @else {
+                {{ task.result || '—' }}
+              }
+              @if (task.note) {
+                <br />Note: {{ task.note }}
+              }
+            </p>
             <label class="field">
-              <span class="field-label">Link to the document (Drive, PDF)</span>
+              <span class="field-label">If you send it back: what needs changing</span>
               <app-shape class="field-box" name="field">
-                <input name="result" type="url" required placeholder="https://…" />
+                <input #reason maxlength="2000" />
               </app-shape>
             </label>
-          }
-          <label class="field">
-            <span class="field-label">Note for yourself · optional</span>
-            <app-shape class="field-box" name="field">
-              <input name="note" maxlength="300" />
-            </app-shape>
-          </label>
+            <button
+              type="button"
+              class="btn"
+              [disabled]="busyKey() !== null"
+              (click)="review(task, true)"
+            >
+              <app-shape name="bar-notch">{{
+                busyKey() === key(task) ? 'Saving…' : 'Approve'
+              }}</app-shape>
+            </button>
+            <button
+              type="button"
+              class="btn btn--light"
+              [disabled]="busyKey() !== null"
+              (click)="review(task, false, reason.value)"
+            >
+              <app-shape name="bar-notch">Send back</app-shape>
+            </button>
+          </div>
+        } @else {
+          <form class="form task-form" (submit)="complete($event, task)">
+            @if (task.needsFile) {
+              <label class="field">
+                <span class="field-label">Link to the document (Drive, PDF)</span>
+                <app-shape class="field-box" name="field">
+                  <input name="result" type="url" required placeholder="https://…" />
+                </app-shape>
+              </label>
+            }
+            <label class="field">
+              <span class="field-label">Note for yourself · optional</span>
+              <app-shape class="field-box" name="field">
+                <input name="note" maxlength="300" />
+              </app-shape>
+            </label>
 
-          <button type="submit" class="btn" [disabled]="busyKey() !== null">
-            <app-shape name="bar-notch">{{
-              busyKey() === key(task) ? 'Saving…' : 'Mark done'
-            }}</app-shape>
-          </button>
-        </form>
+            <button type="submit" class="btn" [disabled]="busyKey() !== null">
+              <app-shape name="bar-notch">{{
+                busyKey() === key(task) ? 'Saving…' : 'Mark done'
+              }}</app-shape>
+            </button>
+          </form>
+        }
       </li>
     }
   </ul>

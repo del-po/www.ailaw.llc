@@ -231,6 +231,20 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'orders/:orderNumber',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-order-page/admin-order-page').then(
+            (m) => m.AdminOrderPage,
+          ),
+      },
+      {
+        path: 'documents',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-documents-page/admin-documents-page').then(
+            (m) => m.AdminDocumentsPage,
+          ),
+      },
+      {
         path: 'review',
         loadComponent: () =>
           import('./pages/admin-page/admin-review-page/admin-review-page').then(
@@ -269,7 +283,7 @@ export const routes: Routes = [
           ),
       },
       // Sections still being built
-      ...['documents', 'content', 'ai', 'communications', 'settings'].map((path) => ({
+      ...['content', 'ai', 'communications', 'settings'].map((path) => ({
         path,
         loadComponent: () =>
           import('./pages/admin-page/admin-soon/admin-soon').then((m) => m.AdminSoon),

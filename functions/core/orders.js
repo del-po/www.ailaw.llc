@@ -237,6 +237,17 @@ export async function paymentInfo(order) {
   };
 }
 
+// Steps as the client sees them: skipped steps don't show, and a step in
+// review or failed is still "in progress"; never who does a step
+export function clientSteps(steps) {
+  return steps
+    .filter((s) => s.status !== 'skipped')
+    .map((s) => ({
+      label: s.clientLabel,
+      status: ['active', 'review', 'failed'].includes(s.status) ? 'in_progress' : s.status,
+    }));
+}
+
 // The order card the chat shows: labels and statuses, never who does a step
 export async function orderCard(orderNumber) {
   const order = await orderByNumber(orderNumber);
@@ -247,7 +258,7 @@ export async function orderCard(orderNumber) {
     orderId: order.orderNumber,
     title: order.serviceName,
     status: done || order.orderStatus === 'cancelled' ? order.orderStatus : 'in_progress',
-    steps: steps.map((s) => ({ label: s.clientLabel, status: s.status === 'active' ? 'in_progress' : s.status })),
+    steps: clientSteps(steps),
   };
 }
 

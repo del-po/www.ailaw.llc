@@ -1,0 +1,178 @@
+<div class="editor">
+  <h2 class="block-title">Workflow · {{ data()?.name || slug() }}</h2>
+  <p class="small">
+    The steps every new order of this service runs, in order. AI Law’s steps run by themselves; a
+    lawyer’s step waits in Review until it is done. Orders already placed keep their own steps.
+  </p>
+
+  @if (error()) {
+    <p class="message" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="message message--ok" role="status">{{ notice() }}</p>
+  }
+
+  @if (data(); as d) {
+    @if (!steps().length && d.pluginSteps.length) {
+      <p class="small">
+        No workflow yet: chat orders run the {{ d.plugin }} plugin’s
+        {{ d.pluginSteps.length }} steps.
+        <button type="button" class="action" (click)="copyPluginSteps()">Start from them</button>
+      </p>
+    }
+
+    <ol class="steps">
+      @for (step of steps(); track $index; let i = $index, first = $first, last = $last) {
+        <li class="step">
+          <div class="step-top">
+            <span class="step-no">{{ i + 1 }}</span>
+            <label class="field grow">
+              <span class="field-label">What the client sees</span>
+              <app-shape class="field-box" name="field">
+                <input
+                  #label
+                  maxlength="120"
+                  [value]="step.clientLabel"
+                  (input)="set(i, 'clientLabel', label.value)"
+                />
+              </app-shape>
+            </label>
+            <label class="field">
+              <span class="field-label">Who does it</span>
+              <app-shape class="field-box" name="field">
+                <select #owner (change)="set(i, 'owner', $any(owner.value))">
+                  <option value="chat" [selected]="step.owner === 'chat'">AI Law</option>
+                  <option value="lawyer" [selected]="step.owner === 'lawyer'">A lawyer</option>
+                </select>
+              </app-shape>
+            </label>
+            @if (step.owner === 'chat') {
+              <label class="field">
+                <span class="field-label">What it does</span>
+                <app-shape class="field-box" name="field">
+                  <select #kind (change)="set(i, 'capability', kind.value)">
+                    @for (c of d.capabilities; track c) {
+                      @if (c !== 'task') {
+                        <option [value]="c" [selected]="step.capability === c">
+                          {{ labels[c] || c }}
+                        </option>
+                      }
+                    }
+                    @if (!d.capabilities.includes(step.capability)) {
+                      <option [value]="step.capability" selected>{{ step.capability }}</option>
+                    }
+                  </select>
+                </app-shape>
+              </label>
+            }
+            <span class="step-tools">
+              <button
+                type="button"
+                class="action"
+                [disabled]="first"
+                (click)="moveStep(i, -1)"
+                aria-label="Move up"
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                class="action"
+                [disabled]="last"
+                (click)="moveStep(i, 1)"
+                aria-label="Move down"
+              >
+                ↓
+              </button>
+              <button type="button" class="action" (click)="remove(i)">Remove</button>
+            </span>
+          </div>
+
+          @if (step.owner === 'lawyer') {
+            <label class="field">
+              <span class="field-label">The lawyer’s task</span>
+              <textarea
+                #task
+                class="area"
+                rows="2"
+                maxlength="2000"
+                [value]="step.lawyerTask"
+                (input)="set(i, 'lawyerTask', task.value)"
+              ></textarea>
+            </label>
+          }
+
+          <div class="options">
+            <label class="days">
+              <span class="field-label">Deadline · days after it starts</span>
+              <input
+                #days
+                type="number"
+                min="0"
+                max="365"
+                [value]="step.config.dueDays || ''"
+                (input)="setConfig(i, 'dueDays', +days.value || 0)"
+              />
+            </label>
+            @if (step.owner === 'lawyer') {
+              <label class="check">
+                <input
+                  #file
+                  type="checkbox"
+                  [checked]="step.config.needsFile"
+                  (change)="setConfig(i, 'needsFile', file.checked)"
+                />
+                <span>Needs a file</span>
+              </label>
+              <label class="check">
+                <input
+                  #approval
+                  type="checkbox"
+                  [checked]="step.config.needsApproval"
+                  (change)="setConfig(i, 'needsApproval', approval.checked)"
+                />
+                <span>AI Law approves before the client gets it</span>
+              </label>
+            }
+            @if (step.capability === 'deliver') {
+              <label class="check">
+                <input
+                  #email
+                  type="checkbox"
+                  [checked]="step.config.email !== false"
+                  (change)="setConfig(i, 'email', email.checked)"
+                />
+                <span>Also by email</span>
+              </label>
+            }
+          </div>
+
+          @if (step.owner === 'chat' && (step.capability === 'calculate' || step.extra)) {
+            <label class="field">
+              <span class="field-label"
+                >More settings · JSON, e.g. {{ '{' }}"base": "income", "rate": 0.01, "output":
+                "tax"{{ '}' }}</span
+              >
+              <app-shape class="field-box" name="field">
+                <input #extra [value]="step.extra" (input)="set(i, 'extra', extra.value)" />
+              </app-shape>
+            </label>
+          }
+        </li>
+      }
+    </ol>
+
+    <button type="button" class="action" (click)="add()">+ Add a step</button>
+
+    <div class="editor-actions">
+      <button type="button" class="btn" [disabled]="busy()" (click)="save()">
+        <app-shape name="bar-notch">{{ busy() ? 'Saving…' : 'Save workflow' }}</app-shape>
+      </button>
+      <button type="button" class="btn btn--light" (click)="closed.emit()">
+        <app-shape name="bar-notch">Close</app-shape>
+      </button>
+    </div>
+  } @else if (!error()) {
+    <p class="small">Loading…</p>
+  }
+</div>

@@ -65,16 +65,17 @@
 
     <!-- ---------- Delayed workflows ---------- -->
     <section class="panel" aria-labelledby="stuck">
-      <h2 id="stuck" class="block-title">Delayed workflows</h2>
+      <h2 id="stuck" class="block-title">Failed or delayed workflows</h2>
       @if (d.stuck.list.length) {
         <div class="rows">
           @for (s of d.stuck.list; track s.orderNumber + s.step) {
-            <a class="row line" routerLink="/admin/orders">
+            <a class="row line" [routerLink]="['/admin/orders', s.orderNumber]">
               <span class="cell-main">
                 <span class="cell-title">{{ s.orderNumber }} · {{ s.step }}</span>
                 <span class="cell-sub"
-                  >{{ s.service }} · {{ s.owner === 'lawyer' ? 'lawyer' : 'AI' }} · waiting since
-                  {{ s.since | date: 'MMM d' }}</span
+                  >{{ s.service }} · {{ s.owner === 'lawyer' ? 'lawyer' : 'AI' }} ·
+                  {{ reasons[s.reason]
+                  }}{{ s.reason === 'still' ? ' ' + (s.since | date: 'MMM d') : '' }}</span
                 >
               </span>
             </a>
@@ -82,7 +83,8 @@
         </div>
       } @else {
         <p class="small">
-          Nothing is stuck. Every step has moved in the last {{ d.stuck.days }} days.
+          Nothing failed, nothing is late, and every step has moved in the last
+          {{ d.stuck.days }} days.
         </p>
       }
     </section>

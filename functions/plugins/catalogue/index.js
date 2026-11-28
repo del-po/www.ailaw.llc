@@ -6,6 +6,8 @@
 //                   shows a service card
 // Admin:            services and categories: list, create, update, archive;
 //                   services:image uploads a service's picture
+//                   workflow:get, workflow:set: the steps every order of a
+//                   service runs (core/workflow.js)
 // Services/{slug} is the catalogue record; the work behind a service lives
 // in its plugin (service.plugin → Plugins/{id}).
 // ==========================================================
@@ -15,6 +17,7 @@ import { addPart, openService } from '../../core/chat.js';
 import { publicUrl, savePicture } from '../../core/files.js';
 import { CHECKOUT_FIELDS, FIELD_RULES } from '../../core/orders.js';
 import { pluginRecords } from '../../core/loader.js';
+import { CAPABILITIES, cleanWorkflow } from '../../core/workflow.js';
 import { clientByUid, forget, priceOf, serviceBySlug, services, setting } from '../../core/records.js';
 
 const STATUSES = { active: 'Active', inactive: 'Inactive', draft: 'Draft' };
@@ -210,6 +213,33 @@ async function uploadImage(id, file) {
   return toAdmin({ ...old, image });
 }
 
+// ---------- Admin: workflows ----------
+
+// A service's own workflow, and its plugin's steps (what chat orders run
+// while the service has none), for the workflow editor
+async function getWorkflow(slug) {
+  const s = (await allServices()).find((x) => x.serviceId === String(slug || ''));
+  if (!s) throw new ApiError('SERVICE_NOT_FOUND');
+  const plugin = s.plugin ? (await pluginRecords())[s.plugin] : null;
+  return {
+    slug: s.serviceId,
+    name: s.name || '',
+    plugin: s.plugin || '',
+    workflow: Array.isArray(s.workflow) ? s.workflow : [],
+    pluginSteps: plugin?.steps || [],
+    capabilities: CAPABILITIES,
+  };
+}
+
+// Orders already placed keep their own copy of the steps they started with
+async function setWorkflow(slug, steps) {
+  const s = (await allServices()).find((x) => x.serviceId === String(slug || ''));
+  if (!s) throw new ApiError('SERVICE_NOT_FOUND');
+  await db.doc('Services/' + s.id).update({ workflow: cleanWorkflow(steps), updatedAt: now() });
+  forget('services');
+  return getWorkflow(s.serviceId);
+}
+
 // ---------- Admin: categories ----------
 
 async function categoryList() {
@@ -374,6 +404,8 @@ export default {
       'services:update': (caller, data) => updateService(data.id, data.data || {}),
       'services:delete': (caller, data) => archiveService(data.id),
       'services:image': (caller, data) => uploadImage(data.id, data.file),
+      'workflow:get': (caller, data) => getWorkflow(data.slug),
+      'workflow:set': (caller, data) => setWorkflow(data.slug, data.steps),
       'categories:list': async () => (await categoryList()).map(toAdminCategory),
       'categories:create': (caller, data) => createCategory(data.data || data),
       'categories:update': (caller, data) => updateCategory(data.id, data.data || {}),

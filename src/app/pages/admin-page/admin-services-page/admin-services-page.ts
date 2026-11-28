@@ -8,6 +8,7 @@ import {
   ServiceStatus,
 } from '../../../core/models/admin';
 import { Shape } from '../../../shared/kit/shapes/shape';
+import { AdminWorkflowEditor } from '../admin-workflow-editor/admin-workflow-editor';
 import { readUpload } from '../../../core/services/read-upload';
 import { adminErrorMessage } from '../admin-links';
 import { CHECKOUT_FIELDS, CheckoutRules, FieldRule } from '../../../core/models/checkout-fields';
@@ -32,7 +33,7 @@ const EMPTY: AdminServiceInput = {
 
 @Component({
   selector: 'app-admin-services-page',
-  imports: [DecimalPipe, Shape],
+  imports: [DecimalPipe, Shape, AdminWorkflowEditor],
   templateUrl: './admin-services-page.html',
   styleUrl: './admin-services-page.scss',
 })
@@ -53,6 +54,8 @@ export class AdminServicesPage {
   protected readonly busy = signal(false);
 
   // The service open in the editor: null = closed, ID 0 = new
+  // The service whose workflow editor is open
+  protected readonly workflowSlug = signal<string | null>(null);
   protected readonly editing = signal<(AdminServiceInput & { ID: number }) | null>(null);
 
   constructor() {

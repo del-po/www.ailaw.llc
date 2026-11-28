@@ -470,6 +470,54 @@ const serviceTools = {
       return proposeAction(ctx, { action: 'services:update', data: { id: s.ID, data: changes }, title: `Change ${s.Name}`, lines });
     },
   ),
+  service_workflow: tool(
+    "A service's workflow: the steps every order of it runs (owner chat = AI Law, lawyer = a lawyer's task), with " +
+      'deadlines (dueDays) and approval; also its plugin\'s steps, which chat orders run while the service has none.',
+    { service: str('slug or name') },
+    ['service'],
+    async (ctx, a) => ask(ctx, 'workflow:get', { slug: (await findService(ctx, a.service)).Slug }),
+  ),
+  service_workflow_set: tool(
+    "Proposes replacing a service's workflow. steps: in order, each { clientLabel (what the client sees), owner " +
+      '(chat | lawyer), capability (chat steps: collect, await_payment, calculate, deliver), lawyerTask (lawyer ' +
+      'steps), config: { needsFile, needsApproval (lawyer steps: AI Law approves before the client gets it), ' +
+      'dueDays, email (deliver) } }. Read service_workflow first and send the whole list. Orders already placed ' +
+      'keep their steps.' +
+      CHANGE,
+    {
+      service: str('slug or name'),
+      steps: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            clientLabel: { type: 'string' },
+            owner: { type: 'string', enum: ['chat', 'lawyer'] },
+            capability: { type: 'string' },
+            lawyerTask: { type: 'string' },
+            config: { type: 'object' },
+          },
+          required: ['clientLabel', 'owner'],
+        },
+      },
+    },
+    ['service', 'steps'],
+    async (ctx, a) => {
+      const s = await findService(ctx, a.service);
+      const steps = Array.isArray(a.steps) ? a.steps : [];
+      return proposeAction(ctx, {
+        action: 'workflow:set',
+        data: { slug: s.Slug, steps },
+        title: `New workflow for ${s.Name}`,
+        lines: steps.map(
+          (st, i) =>
+            `${i + 1}. ${st.clientLabel} · ${st.owner === 'lawyer' ? 'lawyer' : st.capability || 'AI'}` +
+            (st.config?.dueDays ? ` · ${st.config.dueDays} days` : '') +
+            (st.config?.needsApproval ? ' · approval' : ''),
+        ),
+      });
+    },
+  ),
   service_create: tool(
     'Proposes a new service (saved as Draft unless Status is given): Name, Price, Category, and optionally ' +
       'ShortDescription, Description, Currency, Billing, UnitLabel.' +

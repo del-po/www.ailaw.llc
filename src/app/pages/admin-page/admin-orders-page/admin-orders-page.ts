@@ -1,5 +1,6 @@
 import { Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { DatePipe, DecimalPipe } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { AdminService } from '../../../core/services/admin.service';
 import { OrderService } from '../../../core/services/order.service';
 import {
@@ -19,7 +20,7 @@ type Filter = 'all' | 'open' | 'unpaid' | OrderStatus;
 
 @Component({
   selector: 'app-admin-orders-page',
-  imports: [DatePipe, DecimalPipe, Shape],
+  imports: [DatePipe, DecimalPipe, RouterLink, Shape],
   templateUrl: './admin-orders-page.html',
   styleUrl: './admin-orders-page.scss',
 })

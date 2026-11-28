@@ -57,7 +57,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   {
     label: 'Documents',
     link: '/admin/documents',
-    ready: false,
+    ready: true,
     text: 'One place to find and manage the documents of every client and order.',
   },
   {

@@ -180,6 +180,8 @@ async function deliver(caller, data, env) {
   // A service with steps: the lawyer's step is done with this file, and the
   // service's own delivery step sends it on
   const steps = await orderSteps(order.orderNumber);
+  // A result already waiting for AI Law's approval: nothing goes to the client meanwhile
+  if (steps.some((s) => s.owner === 'lawyer' && s.status === 'review')) throw new ApiError('WAITING_FOR_APPROVAL');
   const waiting = steps.find((s) => s.owner === 'lawyer' && s.status === 'active');
   if (waiting) {
     await completeStep(order.orderNumber, waiting.stepNo, 'file:' + path, note, env);

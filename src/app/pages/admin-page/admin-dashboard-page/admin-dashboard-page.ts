@@ -50,6 +50,11 @@ export class AdminDashboardPage {
   protected readonly error = signal<string | null>(null);
 
   protected readonly actionLabel = actionLabel;
+  protected readonly reasons = {
+    failed: 'failed',
+    late: 'past its deadline',
+    still: 'waiting since',
+  };
   protected readonly targetLabel = targetLabel;
 
   protected readonly tiles = computed<Tile[]>(() => {
@@ -89,15 +94,16 @@ export class AdminDashboardPage {
         alert: d.lawyers.applications > 0,
       },
       {
-        value: String(d.tasksWaiting),
+        value: String(d.tasksWaiting + d.toApprove),
         label: 'Tasks awaiting action',
+        sub: `${d.toApprove} to approve`,
         link: '/admin/review',
-        alert: d.tasksWaiting > 0,
+        alert: d.tasksWaiting + d.toApprove > 0,
       },
       {
         value: String(d.stuck.count),
-        label: 'Delayed workflows',
-        sub: `steps still after ${d.stuck.days} days`,
+        label: 'Failed or delayed',
+        sub: `failed, late, or still for ${d.stuck.days} days`,
         alert: d.stuck.count > 0,
       },
       {

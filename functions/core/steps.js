@@ -7,6 +7,11 @@
 //   - for a lawyer (owner "lawyer": it waits in the admin's task desk)
 // or until the last step is done, which completes the order.
 //
+// Step statuses: waiting → active → done; also
+//   review   a lawyer's result waiting for AI Law's approval (config.needsApproval)
+//   failed   the step's work threw an error; it stays until restarted
+//   skipped  cancelled by AI Law; the run goes on past it
+// A step with config.dueDays gets a deadline (dueAt) when it becomes active.
 // Step types (capabilities) built into the core:
 //   collect        the details were gathered in the chat before ordering
 //   calculate      config { base, rate, output }: e.g. 1% of income → tax
@@ -51,6 +56,7 @@ export async function startSteps(orderNumber, steps, env) {
         status: 'waiting',
         result: '',
         note: '',
+        dueAt: null,
         updatedAt: now(),
       });
     });
@@ -66,26 +72,36 @@ export async function advance(orderNumber, env) {
   const stepRef = (s) => db.doc(`Orders/${orderNumber}/Steps/${s.id}`);
 
   for (const step of steps) {
-    if (step.status === 'done') continue;
+    if (step.status === 'done' || step.status === 'skipped') continue;
+    // Waiting for AI Law: an approval, or a restart after an error
+    if (step.status === 'review' || step.status === 'failed') return;
 
     if (step.owner === 'lawyer') {
       if (step.status !== 'active') {
-        await stepRef(step).update({ status: 'active', updatedAt: now() });
+        await stepRef(step).update({ status: 'active', ...deadline(step), updatedAt: now() });
         await notifyLawyer(order, step, env);
       }
       return;
     }
 
-    const capability = capabilities[step.capability];
-    if (!capability) throw new ApiError('UNKNOWN_CAPABILITY');
-    const result = (await capability({ order, step, steps, config: step.config || {}, env })) || '';
+    let result;
+    try {
+      const capability = capabilities[step.capability];
+      if (!capability) throw new ApiError('UNKNOWN_CAPABILITY');
+      result = (await capability({ order, step, steps, config: step.config || {}, env })) || '';
+    } catch (err) {
+      // The step shows as failed in the order's workflow until it is restarted
+      await stepRef(step).update({ status: 'failed', error: String(err.code || err.message || err).slice(0, 500), updatedAt: now() });
+      await log('step ' + orderNumber + ' #' + step.stepNo, err);
+      return;
+    }
 
     // A step that has to wait stays active and stops the run here
     if (result && typeof result === 'object' && result.wait) {
-      if (step.status !== 'active') await stepRef(step).update({ status: 'active', updatedAt: now() });
+      if (step.status !== 'active') await stepRef(step).update({ status: 'active', ...deadline(step), updatedAt: now() });
       return;
     }
-    await stepRef(step).update({ status: 'done', result: String(result), updatedAt: now() });
+    await stepRef(step).update({ status: 'done', result: String(result), error: '', updatedAt: now() });
     step.status = 'done';
     step.result = String(result);
   }
@@ -95,6 +111,14 @@ export async function advance(orderNumber, env) {
     completedAt: now(),
     updatedAt: now(),
   });
+}
+
+// The deadline a step gets when it becomes active, from config.dueDays;
+// a deadline set by hand is kept
+function deadline(step) {
+  const days = Number(step.config?.dueDays) || 0;
+  if (step.dueAt || days <= 0) return {};
+  return { dueAt: new Date(Date.now() + days * 24 * 60 * 60 * 1000) };
 }
 
 // Orders waiting for payment move on once paid (also run by the daily job)
@@ -117,21 +141,40 @@ export async function resumePaid(env) {
 }
 
 // A lawyer step done: its result (a link when the step needs a file) is
-// saved and the order goes on
+// saved and the order goes on. A step that needs approval waits in review
+// for AI Law instead (approveStep).
 export async function completeStep(orderNumber, stepNo, result, note, env) {
   const steps = await orderSteps(orderNumber);
   const step = steps.find((s) => s.stepNo === Number(stepNo));
   if (!step || step.owner !== 'lawyer' || step.status !== 'active') throw new ApiError('NOT_FOUND');
   const text = String(result || '').trim();
   if (step.config?.needsFile && !isUrl(text) && !isFile(text)) throw new ApiError('FILE_LINK_REQUIRED');
+  const review = step.config?.needsApproval === true;
   await db.doc(`Orders/${orderNumber}/Steps/${step.id}`).update({
-    status: 'done',
+    status: review ? 'review' : 'done',
     result: text,
     note: String(note || '').trim(),
     updatedAt: now(),
   });
-  await advance(orderNumber, env);
+  if (!review) await advance(orderNumber, env);
 }
+
+// AI Law's answer to a step in review: approved → done and the order goes
+// on; sent back → active again for the lawyer, with the reason as its note
+export async function approveStep(orderNumber, stepNo, approved, note, env) {
+  const step = (await orderSteps(orderNumber)).find((s) => s.stepNo === Number(stepNo));
+  if (!step || step.status !== 'review') throw new ApiError('NOT_IN_REVIEW');
+  const ref = db.doc(`Orders/${orderNumber}/Steps/${step.id}`);
+  if (approved) {
+    await ref.update({ status: 'done', approvedAt: now(), updatedAt: now() });
+    await advance(orderNumber, env);
+  } else {
+    await ref.update({ status: 'active', note: String(note || '').trim(), updatedAt: now() });
+  }
+}
+
+// What a step's result can be: a link or a stored file ("file:<path>")
+export const isResult = (value) => isUrl(value) || isFile(value);
 
 // ---------- Email helper ----------
 

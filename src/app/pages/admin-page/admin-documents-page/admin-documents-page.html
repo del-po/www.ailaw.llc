@@ -1,0 +1,154 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Documents</h1>
+  <p class="lead">
+    Every client’s and order’s documents, where they are stored. Search by client code or name,
+    order number, service or file name. Clients never see Internal or Versions folders.
+  </p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="message message--ok" role="status">{{ notice() }}</p>
+}
+
+<!-- ---------- Search ---------- -->
+<form class="search-bar" (submit)="$event.preventDefault(); search(q.value, from.value, to.value)">
+  <label class="search">
+    <span class="visually-hidden">Search documents</span>
+    <app-shape class="field-box" name="field">
+      <input #q type="search" placeholder="ID-…, AIL-…, a name, a file…" />
+    </app-shape>
+  </label>
+  <label class="day">
+    <span class="day-label">Changed from</span>
+    <input #from type="date" />
+  </label>
+  <label class="day">
+    <span class="day-label">To</span>
+    <input #to type="date" />
+  </label>
+  <button type="submit" class="btn find" [disabled]="busy()">
+    <app-shape name="bar-notch">Search</app-shape>
+  </button>
+</form>
+
+@if (results(); as found) {
+  <section class="panel" aria-labelledby="found">
+    <div class="panel-head">
+      <h2 id="found" class="block-title">{{ found.length }} found</h2>
+      <button type="button" class="action" (click)="results.set(null)">Back to the folder</button>
+    </div>
+    <div class="rows">
+      @for (f of found; track f.path) {
+        <div class="row file">
+          <span class="cell-main">
+            <button type="button" class="cell-title link" (click)="download(f.path)">
+              {{ f.name }}
+            </button>
+            <button type="button" class="cell-sub crumb" (click)="open(parent(f.path))">
+              {{ parent(f.path) }}
+            </button>
+          </span>
+          <span class="cell-mono">{{ f.updatedAt | date: 'MMM d, y' }} · {{ size(f.size) }}</span>
+        </div>
+      } @empty {
+        <p class="small">Nothing matches.</p>
+      }
+    </div>
+  </section>
+} @else if (folder(); as f) {
+  <!-- ---------- Folder ---------- -->
+  <nav class="crumbs" aria-label="Folder">
+    @for (c of f.crumbs; track c.path; let last = $last) {
+      @if (last) {
+        <span class="crumb is-here">{{ c.name }}</span>
+      } @else {
+        <button type="button" class="crumb" (click)="open(c.path)">{{ c.name }}</button>
+        <span aria-hidden="true">›</span>
+      }
+    }
+  </nav>
+
+  <div class="tools">
+    <label class="field">
+      <span class="field-label">Upload here</span>
+      <input #file class="file-input" type="file" />
+    </label>
+    <label class="check">
+      <input #replace type="checkbox" />
+      <span>Replace a file of the same name</span>
+    </label>
+    <button
+      type="button"
+      class="action"
+      [disabled]="busy()"
+      (click)="upload(file, replace.checked)"
+    >
+      Upload
+    </button>
+    <button type="button" class="action" [disabled]="busy()" (click)="newFolder()">
+      + New folder
+    </button>
+  </div>
+
+  <div class="rows">
+    @for (d of f.folders; track d.path) {
+      <button type="button" class="row folder" (click)="open(d.path)">
+        <span class="cell-main">
+          <span class="cell-title">{{ d.name }}</span>
+          @if (d.name === 'Internal') {
+            <span class="cell-sub">lawyers’ work · never shown to the client</span>
+          } @else if (d.name === 'Versions') {
+            <span class="cell-sub">older copies of replaced files</span>
+          }
+        </span>
+        <span class="cell-mono">Folder</span>
+      </button>
+    }
+    @for (file of f.files; track file.path) {
+      <div class="file-block">
+        <div class="row file">
+          <span class="cell-main">
+            <button type="button" class="cell-title link" (click)="download(file.path)">
+              {{ file.name }}
+            </button>
+            <span class="cell-sub"
+              >{{ file.updatedAt | date: 'MMM d, y, HH:mm' }} · {{ size(file.size) }}</span
+            >
+          </span>
+          <span class="actions">
+            <button type="button" class="action" (click)="showVersions(file)">Versions</button>
+            <button type="button" class="action" [disabled]="busy()" (click)="rename(file)">
+              Rename
+            </button>
+            <button type="button" class="action" [disabled]="busy()" (click)="move(file)">
+              Move
+            </button>
+            <button type="button" class="action" [disabled]="busy()" (click)="remove(file)">
+              Delete
+            </button>
+          </span>
+        </div>
+        @if (versions()?.path === file.path) {
+          <ul class="versions">
+            @for (v of versions()!.list; track v.path) {
+              <li>
+                <button type="button" class="link" (click)="download(v.path)">{{ v.name }}</button>
+              </li>
+            } @empty {
+              <li class="cell-sub">No older copies.</li>
+            }
+          </ul>
+        }
+      </div>
+    }
+    @if (!f.folders.length && !f.files.length) {
+      <p class="small">This folder is empty.</p>
+    }
+  </div>
+} @else if (!error()) {
+  <div class="skeleton" aria-busy="true"></div>
+}

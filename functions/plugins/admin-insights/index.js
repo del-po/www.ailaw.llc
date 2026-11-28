@@ -16,7 +16,8 @@
 import { ApiError, db, formatDate, iso, toDate } from '../../core/app.js';
 import { docs } from '../../core/records.js';
 
-// A step still active after this many days counts as stuck
+// A step still active after this many days counts as stuck (as does a
+// failed step, or one past its deadline)
 const STUCK_DAYS = 3;
 const DAY = 24 * 60 * 60 * 1000;
 // Longer periods are charted by month instead of by day
@@ -68,7 +69,7 @@ async function dashboard(data) {
     db.collection('Orders').get(),
     db.collection('Services').get(),
     db.collection('Staff').get(),
-    db.collectionGroup('Steps').where('owner', 'in', ['chat', 'lawyer']).where('status', '==', 'active').get(),
+    db.collectionGroup('Steps').where('owner', 'in', ['chat', 'lawyer']).where('status', 'in', ['active', 'review', 'failed']).get(),
     db.collection('Logs').where('time', '>=', p.from).where('time', '<=', p.to).orderBy('time', 'desc').get(),
     db.collection('Usage').where('date', '>=', p.fromDay).where('date', '<=', p.toDay).get(),
     db.collection('AuditLog').orderBy('time', 'desc').limit(10).get(),
@@ -87,20 +88,28 @@ async function dashboard(data) {
   const paidInPeriod = orders.filter((o) => o.paymentStatus === 'paid' && within(o.paidAt, p));
   const outstanding = orders.filter((o) => o.paymentStatus === 'unpaid' && o.orderStatus !== 'cancelled');
 
-  // Work: lawyer steps waiting, and steps that have sat still too long
+  // Work: lawyer steps waiting, and steps that failed, passed their deadline
+  // or have sat still too long (waiting for a payment doesn't count)
   const orderOf = Object.fromEntries(orders.map((o) => [o.id, o]));
-  const active = stepSnap.docs.map((d) => ({ ...d.data(), orderNumber: d.ref.parent.parent.id }));
+  const open = stepSnap.docs
+    .map((d) => ({ ...d.data(), orderNumber: d.ref.parent.parent.id }))
+    .filter((s) => ['placed', 'in_progress'].includes(orderOf[s.orderNumber]?.orderStatus));
   const stuckBefore = Date.now() - STUCK_DAYS * DAY;
-  const stuck = active
-    .filter((s) => s.capability !== 'await_payment')
-    .filter((s) => ['placed', 'in_progress'].includes(orderOf[s.orderNumber]?.orderStatus))
-    .filter((s) => (toDate(s.updatedAt)?.getTime() || 0) < stuckBefore)
+  const why = (s) => {
+    if (s.status === 'failed') return 'failed';
+    if (s.dueAt && toDate(s.dueAt) < new Date()) return 'late';
+    if (s.capability !== 'await_payment' && (toDate(s.updatedAt)?.getTime() || 0) < stuckBefore) return 'still';
+    return '';
+  };
+  const stuck = open
+    .filter((s) => why(s))
     .map((s) => ({
       orderNumber: s.orderNumber,
       service: orderOf[s.orderNumber]?.serviceName || '',
       step: s.clientLabel || s.lawyerTask || s.capability,
       owner: s.owner,
       since: iso(s.updatedAt),
+      reason: why(s),
     }))
     .sort((a, b) => a.since.localeCompare(b.since));
 
@@ -130,7 +139,8 @@ async function dashboard(data) {
       active: lawyers.filter((l) => ['approved', 'active'].includes(l.status)).length,
       applications: lawyers.filter((l) => l.status === 'applied').length,
     },
-    tasksWaiting: active.filter((s) => s.owner === 'lawyer').length,
+    tasksWaiting: open.filter((s) => s.owner === 'lawyer' && s.status === 'active').length,
+    toApprove: open.filter((s) => s.status === 'review').length,
     stuck: { days: STUCK_DAYS, count: stuck.length, list: stuck.slice(0, 20) },
     errors: {
       count: logs.length,

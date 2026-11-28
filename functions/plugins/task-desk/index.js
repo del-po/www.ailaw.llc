@@ -5,7 +5,8 @@
 //   adminUpdateOrder   statuses; paid → PaidAt and "in progress" here, the
 //                      receipt and the next steps by the on-paid job
 // Lawyer work:
-//   admin:tasks         lawyer steps waiting to be done, oldest first
+//   admin:tasks         lawyer steps waiting to be done, and results waiting
+//                       for approval (status review), oldest first
 //   admin:completeStep  marks one done (with its file link) and moves on
 //   admin:assign        gives an order to a lawyer: an Assignments record,
 //                       their own folder under the order's "Internal"
@@ -67,7 +68,8 @@ async function updateOrder(data) {
 
 async function tasks(env) {
   await resumePaid(env);
-  const snap = await db.collectionGroup('Steps').where('owner', '==', 'lawyer').where('status', '==', 'active').get();
+  // Lawyer steps waiting to be done, and results waiting for AI Law's approval
+  const snap = await db.collectionGroup('Steps').where('owner', '==', 'lawyer').where('status', 'in', ['active', 'review']).get();
   const list = [];
   for (const doc of snap.docs) {
     const s = doc.data();
@@ -75,6 +77,10 @@ async function tasks(env) {
     list.push({
       orderId: order.orderNumber,
       stepNo: Number(s.stepNo),
+      status: s.status,
+      result: s.result || '',
+      note: s.note || '',
+      dueAt: iso(s.dueAt),
       label: s.clientLabel,
       task: s.lawyerTask,
       needsFile: !!s.config?.needsFile,

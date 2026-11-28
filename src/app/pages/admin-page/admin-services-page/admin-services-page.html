@@ -228,8 +228,21 @@
           >
             {{ service.Status }}
           </span>
-          <button type="button" class="action" (click)="edit(service)">Edit</button>
+          <span class="row-actions">
+            <button type="button" class="action" (click)="edit(service)">Edit</button>
+            <button
+              type="button"
+              class="action"
+              [attr.aria-expanded]="workflowSlug() === service.Slug"
+              (click)="workflowSlug.set(workflowSlug() === service.Slug ? null : service.Slug)"
+            >
+              Workflow
+            </button>
+          </span>
         </div>
+        @if (workflowSlug() === service.Slug) {
+          <app-admin-workflow-editor [slug]="service.Slug" (closed)="workflowSlug.set(null)" />
+        }
       } @empty {
         <p class="small">No services yet.</p>
       }

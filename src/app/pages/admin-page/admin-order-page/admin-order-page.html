@@ -1,0 +1,719 @@
+<a class="back" routerLink="/admin/orders">← Orders</a>
+
+@if (w(); as w) {
+  @let order = w.order;
+
+  <section class="head">
+    <div class="code" aria-hidden="true"><span class="code-tag">Order workspace</span></div>
+    <h1 class="title">{{ order.orderNumber }}</h1>
+    <p class="lead">
+      {{ order.service }} · {{ order.customerName }} · placed
+      {{ order.createdAt | date: 'MMM d, y, HH:mm'
+      }}{{ order.source ? ' · from ' + order.source : '' }}
+    </p>
+    <div class="labels">
+      <span class="status" [class.status--active]="order.orderStatus === 'completed'">{{
+        orderLabels[order.orderStatus]
+      }}</span>
+      <span class="status" [class.status--active]="order.paymentStatus === 'paid'">{{
+        paymentLabels[order.paymentStatus]
+      }}</span>
+      @if (order.dueAt) {
+        <span class="status status--draft">Due {{ order.dueAt | date: 'MMM d' }}</span>
+      }
+    </div>
+  </section>
+
+  @if (error()) {
+    <p class="message" role="alert">{{ error() }}</p>
+  }
+  @if (notice()) {
+    <p class="message message--ok" role="status">{{ notice() }}</p>
+  }
+
+  <!-- ==================== Order and client ==================== -->
+  <div class="columns">
+    <section class="panel" aria-labelledby="order-info">
+      <h2 id="order-info" class="block-title">Order</h2>
+
+      <ul class="items">
+        @for (item of order.items ?? []; track item.orderItemId) {
+          <li class="item">
+            <span>
+              {{ item.name }}
+              @if (item.quantity > 1) {
+                <span class="qty">× {{ item.quantity }}</span>
+              }
+            </span>
+            <span class="cell-mono">{{ item.lineTotal | number: '1.2-2' }}</span>
+          </li>
+        }
+        <li class="item item--total">
+          <span
+            >Total{{
+              order.discountTotal > 0
+                ? ' (discount ' + (order.discountTotal | number: '1.2-2') + ')'
+                : ''
+            }}</span
+          >
+          <span class="cell-mono">{{ order.total | number: '1.2-2' }} {{ order.currency }}</span>
+        </li>
+      </ul>
+
+      @if (order.paymentStatus === 'unpaid' && order.billing !== 'ongoing') {
+        <button type="button" class="action" (click)="editingPrices.set(!editingPrices())">
+          {{ editingPrices() ? 'Close prices' : 'Change prices' }}
+        </button>
+      }
+      @if (editingPrices()) {
+        <form #prices class="editor" (submit)="savePrices(prices, $event)">
+          @for (item of order.items ?? []; track item.orderItemId) {
+            <div class="grid">
+              <label class="field">
+                <span class="field-label">{{ item.name }} · unit price</span>
+                <app-shape class="field-box" name="field">
+                  <input
+                    [name]="'price-' + item.orderItemId"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [value]="item.unitPrice"
+                  />
+                </app-shape>
+              </label>
+              <label class="field">
+                <span class="field-label">Discount for the line</span>
+                <app-shape class="field-box" name="field">
+                  <input
+                    [name]="'discount-' + item.orderItemId"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    [value]="item.discountAmount"
+                  />
+                </app-shape>
+              </label>
+            </div>
+          }
+          <div class="editor-actions">
+            <button type="submit" class="btn" [disabled]="busy()">
+              <app-shape name="bar-notch">Save prices</app-shape>
+            </button>
+          </div>
+        </form>
+      }
+
+      <div class="controls">
+        <label class="field">
+          <span class="field-label">Order status</span>
+          <app-shape class="field-box" name="field">
+            <select #orderStatus>
+              @for (status of orderStatuses; track status) {
+                <option [value]="status" [selected]="status === order.orderStatus">
+                  {{ orderLabels[status] }}
+                </option>
+              }
+            </select>
+          </app-shape>
+        </label>
+        <label class="field">
+          <span class="field-label">Payment</span>
+          <app-shape class="field-box" name="field">
+            <select #paymentStatus>
+              @for (status of paymentStatuses; track status) {
+                <option [value]="status" [selected]="status === order.paymentStatus">
+                  {{ paymentLabels[status] }}
+                </option>
+              }
+            </select>
+          </app-shape>
+        </label>
+        <button
+          type="button"
+          class="btn save"
+          [disabled]="busy()"
+          (click)="saveStatus(orderStatus.value, paymentStatus.value)"
+        >
+          <app-shape name="bar-notch">Save</app-shape>
+        </button>
+      </div>
+
+      <div class="controls">
+        <label class="field">
+          <span class="field-label">Deadline for the whole order</span>
+          <app-shape class="field-box" name="field">
+            <input #due type="date" [value]="order.dueAt.slice(0, 10)" />
+          </app-shape>
+        </label>
+        <button type="button" class="btn save" [disabled]="busy()" (click)="setDeadline(due.value)">
+          <app-shape name="bar-notch">{{ due.value ? 'Set' : 'Clear' }}</app-shape>
+        </button>
+      </div>
+
+      <div class="paperwork">
+        <button type="button" class="action" [disabled]="busy()" (click)="remake()">
+          Remake agreement
+        </button>
+        <button type="button" class="action" [disabled]="busy()" (click)="resend()">
+          Resend email
+        </button>
+        @if (order.agreement) {
+          <button type="button" class="action" (click)="download(order.agreement)">
+            Download agreement
+          </button>
+        }
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="client-info">
+      <div class="panel-head">
+        <h2 id="client-info" class="block-title">Client and details</h2>
+        <button type="button" class="action" (click)="editingDetails.set(!editingDetails())">
+          {{ editingDetails() ? 'Close' : 'Edit' }}
+        </button>
+      </div>
+
+      @if (!editingDetails()) {
+        <dl class="facts">
+          <div class="fact">
+            <dt>Client</dt>
+            <dd>
+              {{ order.customerName || '—' }}
+              @if (w.client) {
+                <span class="cell-mono"> · {{ w.client.clientId }} · {{ w.client.type }}</span>
+              }
+            </dd>
+          </div>
+          <div class="fact">
+            <dt>Email</dt>
+            <dd>
+              <a class="link" [href]="'mailto:' + order.customerEmail">{{ order.customerEmail }}</a>
+            </dd>
+          </div>
+          <div class="fact">
+            <dt>Phone</dt>
+            <dd>{{ order.customerPhone || '—' }}</dd>
+          </div>
+          @if (order.billingAddress) {
+            <div class="fact">
+              <dt>Address</dt>
+              <dd>{{ order.billingAddress }}</dd>
+            </div>
+          }
+          @for (d of order.details | keyvalue: keepOrder; track d.key) {
+            <div class="fact">
+              <dt>{{ d.key }}</dt>
+              <dd>{{ d.value }}</dd>
+            </div>
+          }
+          @if (order.customerNotes) {
+            <div class="fact">
+              <dt>Client’s note</dt>
+              <dd class="note">{{ order.customerNotes }}</dd>
+            </div>
+          }
+          <div class="fact">
+            <dt>AI Law notes</dt>
+            <dd class="note">{{ order.adminNotes || '—' }}</dd>
+          </div>
+          @if (w.client?.notes) {
+            <div class="fact">
+              <dt>Client notes</dt>
+              <dd class="note">{{ w.client?.notes }}</dd>
+            </div>
+          }
+        </dl>
+      } @else {
+        <form #details class="editor" (submit)="saveDetails(details, $event)">
+          <div class="grid">
+            <label class="field">
+              <span class="field-label">Client’s name</span>
+              <app-shape class="field-box" name="field">
+                <input name="customerName" maxlength="200" [value]="order.customerName" />
+              </app-shape>
+            </label>
+            <label class="field">
+              <span class="field-label">Email</span>
+              <app-shape class="field-box" name="field">
+                <input name="customerEmail" type="email" [value]="order.customerEmail" />
+              </app-shape>
+            </label>
+            <label class="field">
+              <span class="field-label">Phone</span>
+              <app-shape class="field-box" name="field">
+                <input name="customerPhone" maxlength="30" [value]="order.customerPhone" />
+              </app-shape>
+            </label>
+            <label class="field">
+              <span class="field-label">Address</span>
+              <app-shape class="field-box" name="field">
+                <input name="billingAddress" maxlength="300" [value]="order.billingAddress" />
+              </app-shape>
+            </label>
+            <label class="field wide">
+              <span class="field-label">The service’s details · one "name: value" per line</span>
+              <textarea
+                class="area"
+                name="details"
+                rows="4"
+                [value]="detailsText(order.details)"
+              ></textarea>
+            </label>
+            <label class="field wide">
+              <span class="field-label">Client’s note</span>
+              <textarea
+                class="area"
+                name="customerNotes"
+                rows="2"
+                maxlength="2000"
+                [value]="order.customerNotes"
+              ></textarea>
+            </label>
+            <label class="field wide">
+              <span class="field-label">AI Law notes · never shown to the client</span>
+              <textarea
+                class="area"
+                name="adminNotes"
+                rows="3"
+                maxlength="5000"
+                [value]="order.adminNotes"
+              ></textarea>
+            </label>
+          </div>
+          <div class="editor-actions">
+            <button type="submit" class="btn" [disabled]="busy()">
+              <app-shape name="bar-notch">Save details</app-shape>
+            </button>
+          </div>
+        </form>
+      }
+    </section>
+  </div>
+
+  <!-- ==================== Workflow ==================== -->
+  <section class="panel" aria-labelledby="workflow">
+    <div class="panel-head">
+      <h2 id="workflow" class="block-title">Workflow and progress</h2>
+      @if (w.steps.length) {
+        <span class="cell-mono">{{ progress().done }} of {{ progress().total }} steps</span>
+      }
+    </div>
+
+    @if (w.steps.length) {
+      <div class="progress" aria-hidden="true">
+        <span class="progress-fill" [style.width.%]="progress().percent"></span>
+      </div>
+
+      <ol class="steps">
+        @for (step of w.steps; track step.stepNo) {
+          <li
+            class="step"
+            [class.is-done]="step.status === 'done' || step.status === 'skipped'"
+            [class.is-now]="step.status === 'active' || step.status === 'review'"
+            [class.is-failed]="step.status === 'failed'"
+          >
+            <div class="step-head">
+              <span class="step-no">{{ step.stepNo }}</span>
+              <span class="cell-main">
+                <span class="cell-title">{{ step.clientLabel }}</span>
+                <span class="cell-sub"
+                  >{{ step.owner === 'lawyer' ? 'Lawyer' : 'AI Law' }} ·
+                  {{ capabilityLabels[step.capability] || step.capability
+                  }}{{ step.config.needsApproval ? ' · needs approval' : ''
+                  }}{{ step.dueAt ? ' · due ' + (step.dueAt | date: 'MMM d') : ''
+                  }}{{ step.late ? ' · late' : '' }}</span
+                >
+              </span>
+              <span class="status" [class.status--active]="step.status === 'done'">{{
+                stepLabels[step.status]
+              }}</span>
+            </div>
+
+            @if (step.lawyerTask) {
+              <p class="step-text">{{ step.lawyerTask }}</p>
+            }
+            @if (step.error) {
+              <p class="step-text step-error">Error: {{ step.error }}</p>
+            }
+            @if (step.result) {
+              <p class="step-text">
+                Result:
+                @if (step.result.startsWith('file:')) {
+                  <button type="button" class="link" (click)="download(step.result)">
+                    {{ resultName(step.result) }}
+                  </button>
+                } @else if (isLink(step.result)) {
+                  <a class="link" [href]="step.result" target="_blank" rel="noopener">{{
+                    step.result
+                  }}</a>
+                } @else {
+                  {{ step.result }}
+                }
+              </p>
+            }
+            @if (step.note) {
+              <p class="step-text cell-sub">Note: {{ step.note }}</p>
+            }
+
+            <div class="step-actions">
+              @switch (step.status) {
+                @case ('review') {
+                  <button
+                    type="button"
+                    class="action"
+                    [disabled]="busy()"
+                    (click)="stepOp(step, 'approve')"
+                  >
+                    Approve
+                  </button>
+                  <button type="button" class="action" (click)="openForm(step, 'sendBack')">
+                    Send back
+                  </button>
+                }
+                @case ('done') {
+                  <button type="button" class="action" (click)="openForm(step, 'correct')">
+                    Correct result
+                  </button>
+                  <button
+                    type="button"
+                    class="action"
+                    [disabled]="busy()"
+                    (click)="stepOp(step, 'restart')"
+                  >
+                    Restart
+                  </button>
+                }
+                @case ('skipped') {
+                  <button
+                    type="button"
+                    class="action"
+                    [disabled]="busy()"
+                    (click)="stepOp(step, 'restart')"
+                  >
+                    Restart
+                  </button>
+                }
+                @default {
+                  <button type="button" class="action" (click)="openForm(step, 'complete')">
+                    Complete
+                  </button>
+                  @if (step.status !== 'waiting') {
+                    <button
+                      type="button"
+                      class="action"
+                      [disabled]="busy()"
+                      (click)="stepOp(step, 'restart')"
+                    >
+                      Restart
+                    </button>
+                  }
+                  <button
+                    type="button"
+                    class="action"
+                    [disabled]="busy()"
+                    (click)="stepOp(step, 'skip')"
+                  >
+                    Skip
+                  </button>
+                }
+              }
+              <button type="button" class="action" (click)="openForm(step, 'edit')">Edit</button>
+            </div>
+
+            @if (isForm(step, 'complete') || isForm(step, 'correct')) {
+              @let op = isForm(step, 'complete') ? 'complete' : 'correct';
+              <form #result class="editor" (submit)="submitResult(step, op, result, $event)">
+                <div class="grid">
+                  <label class="field">
+                    <span class="field-label">Result · text or link</span>
+                    <app-shape class="field-box" name="field">
+                      <input
+                        name="result"
+                        maxlength="2000"
+                        [value]="op === 'correct' ? step.result : ''"
+                      />
+                    </app-shape>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Or a file · saved in the order’s folder</span>
+                    <input class="file" name="file" type="file" />
+                  </label>
+                  <label class="check wide">
+                    <input name="replace" type="checkbox" />
+                    <span>Replace a file of the same name (the old one is kept in Versions)</span>
+                  </label>
+                  <label class="field wide">
+                    <span class="field-label">Note · optional</span>
+                    <app-shape class="field-box" name="field">
+                      <input name="note" maxlength="2000" />
+                    </app-shape>
+                  </label>
+                </div>
+                <div class="editor-actions">
+                  <button type="submit" class="btn" [disabled]="busy()">
+                    <app-shape name="bar-notch">{{
+                      op === 'complete' ? 'Mark done' : 'Save result'
+                    }}</app-shape>
+                  </button>
+                </div>
+              </form>
+            }
+
+            @if (isForm(step, 'sendBack')) {
+              <div class="editor">
+                <label class="field">
+                  <span class="field-label">What needs changing · the lead lawyer gets this</span>
+                  <textarea #reason class="area" rows="3" maxlength="2000"></textarea>
+                </label>
+                <div class="editor-actions">
+                  <button
+                    type="button"
+                    class="btn"
+                    [disabled]="busy()"
+                    (click)="sendBack(step, reason.value)"
+                  >
+                    <app-shape name="bar-notch">Send back</app-shape>
+                  </button>
+                </div>
+              </div>
+            }
+
+            @if (isForm(step, 'edit')) {
+              <form #edit class="editor" (submit)="saveStep(step, edit, $event)">
+                <div class="grid">
+                  <label class="field">
+                    <span class="field-label">Name the client sees</span>
+                    <app-shape class="field-box" name="field">
+                      <input
+                        name="clientLabel"
+                        maxlength="120"
+                        required
+                        [value]="step.clientLabel"
+                      />
+                    </app-shape>
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Deadline</span>
+                    <app-shape class="field-box" name="field">
+                      <input name="dueAt" type="date" [value]="step.dueAt.slice(0, 10)" />
+                    </app-shape>
+                  </label>
+                  <label class="field wide">
+                    <span class="field-label">Task for the lawyer</span>
+                    <textarea
+                      class="area"
+                      name="lawyerTask"
+                      rows="3"
+                      maxlength="2000"
+                      [value]="step.lawyerTask"
+                    ></textarea>
+                  </label>
+                </div>
+                <div class="editor-actions">
+                  <button type="submit" class="btn" [disabled]="busy()">
+                    <app-shape name="bar-notch">Save step</app-shape>
+                  </button>
+                </div>
+              </form>
+            }
+          </li>
+        }
+      </ol>
+    } @else if (w.canStartWorkflow && isOpen()) {
+      <p class="small">This order has no steps yet, but its service has a workflow.</p>
+      <button type="button" class="btn start" [disabled]="busy()" (click)="startWorkflow()">
+        <app-shape name="bar-notch">Start the workflow</app-shape>
+      </button>
+    } @else {
+      <p class="small">
+        This order has no workflow. Give its service one in Services → Workflow, and new orders will
+        run it.
+      </p>
+    }
+  </section>
+
+  <!-- ==================== Lawyers ==================== -->
+  <section class="panel" aria-labelledby="lawyers">
+    <h2 id="lawyers" class="block-title">Lawyers</h2>
+    <div class="rows">
+      @for (a of w.assignments; track a.assignmentId) {
+        <div class="row lawyer" [class.is-off]="a.status === 'cancelled'">
+          <span class="cell-main">
+            <span class="cell-title">{{ a.lawyerName }}</span>
+            <span class="cell-sub"
+              >{{ a.lawyerId }} · {{ a.role }} · assigned {{ a.assignedAt | date: 'MMM d'
+              }}{{ a.fee ? ' · fee ' + a.fee : '' }}</span
+            >
+          </span>
+          <span class="status" [class.status--active]="a.status === 'done'">{{ a.status }}</span>
+          @if (a.status !== 'cancelled') {
+            <button
+              type="button"
+              class="action"
+              [disabled]="busy()"
+              (click)="unassign(a.assignmentId, a.lawyerName)"
+            >
+              Remove
+            </button>
+          } @else {
+            <span></span>
+          }
+        </div>
+      } @empty {
+        <p class="small">No lawyer on this order yet.</p>
+      }
+    </div>
+    @if (isOpen()) {
+      <div class="controls">
+        <label class="field">
+          <span class="field-label">Assign a lawyer · to reassign, remove the old one</span>
+          <app-shape class="field-box" name="field">
+            <select #lawyer>
+              <option value="">Choose…</option>
+              @for (l of available(); track l.lawyerId) {
+                <option [value]="l.lawyerId">
+                  {{ l.firstName }} {{ l.lastName }} · {{ l.lawyerId }}
+                </option>
+              }
+            </select>
+          </app-shape>
+        </label>
+        <label class="field">
+          <span class="field-label">Role</span>
+          <app-shape class="field-box" name="field">
+            <select #role>
+              <option value="lead">Lead · does the work</option>
+              <option value="reviewer">Reviewer · checks it</option>
+            </select>
+          </app-shape>
+        </label>
+        <button
+          type="button"
+          class="btn save"
+          [disabled]="busy() || !lawyer.value"
+          (click)="assign(lawyer.value, role.value)"
+        >
+          <app-shape name="bar-notch">Assign</app-shape>
+        </button>
+      </div>
+    }
+  </section>
+
+  <!-- ==================== Documents ==================== -->
+  <section class="panel" aria-labelledby="documents">
+    <h2 id="documents" class="block-title">Documents and deliverables</h2>
+    @if (w.files; as root) {
+      <ng-template #tree let-node>
+        <ul class="tree">
+          @for (file of node.files; track file.path) {
+            <li class="tree-file">
+              <button type="button" class="link" (click)="download(file.path)">
+                {{ file.name }}
+              </button>
+              <span class="cell-mono">{{ file.updatedAt | date: 'MMM d, y' }}</span>
+            </li>
+          }
+          @for (folder of node.folders; track folder.path) {
+            <li class="tree-folder">
+              <span class="tree-name"
+                >{{ folder.name }}{{ folder.name === 'Internal' ? ' · lawyers only' : '' }}</span
+              >
+              <ng-container *ngTemplateOutlet="tree; context: { $implicit: folder }" />
+            </li>
+          }
+          @if (!node.files.length && !node.folders.length) {
+            <li class="cell-sub">Empty</li>
+          }
+        </ul>
+      </ng-template>
+      <ng-container *ngTemplateOutlet="tree; context: { $implicit: root }" />
+
+      <div class="controls">
+        <label class="field">
+          <span class="field-label">Upload into</span>
+          <app-shape class="field-box" name="field">
+            <select #target>
+              @for (f of folders(); track f.path) {
+                <option [value]="f.path">{{ f.name }}</option>
+              }
+            </select>
+          </app-shape>
+        </label>
+        <label class="field">
+          <span class="field-label">File</span>
+          <input #file class="file" type="file" />
+        </label>
+        <label class="check">
+          <input #replace type="checkbox" />
+          <span>Replace</span>
+        </label>
+        <button
+          type="button"
+          class="btn save"
+          [disabled]="busy()"
+          (click)="upload(target.value, file, replace.checked)"
+        >
+          <app-shape name="bar-notch">Upload</app-shape>
+        </button>
+      </div>
+      <p class="small">
+        The client sees the order’s folder in their Documents, except Internal and Versions.
+        <a class="link" routerLink="/admin/documents" [queryParams]="{ path: root.path }"
+          >Open in Documents</a
+        >
+      </p>
+    } @else {
+      <p class="small">This order has no folder yet. Remake its agreement to make one.</p>
+    }
+  </section>
+
+  <!-- ==================== History ==================== -->
+  <section class="panel" aria-labelledby="history">
+    <h2 id="history" class="block-title">History</h2>
+    <div class="rows">
+      @for (h of w.history; track h.id) {
+        <div class="entry">
+          <button
+            type="button"
+            class="row entry-row"
+            [attr.aria-expanded]="openHistory() === h.id"
+            (click)="openHistory.set(openHistory() === h.id ? null : h.id)"
+          >
+            <span class="cell-mono">{{ h.time | date: 'MMM d, y · HH:mm' }}</span>
+            <span class="cell-main">
+              <span class="cell-title"
+                >{{ actionLabel(h.action) }}{{ h.ok ? '' : ' · failed' }}</span
+              >
+              <span class="cell-sub"
+                >{{ h.who }} · {{ h.via === 'chat' ? 'AI chat' : 'panel' }}</span
+              >
+            </span>
+          </button>
+          @if (openHistory() === h.id && h.changes) {
+            <table class="changes">
+              <tbody>
+                @for (c of h.changes | keyvalue; track c.key) {
+                  <tr>
+                    <th scope="row">{{ c.key }}</th>
+                    <td>{{ shown(c.value.from) }}</td>
+                    <td>{{ shown(c.value.to) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        </div>
+      } @empty {
+        <p class="small">
+          No admin changes recorded yet. Placed {{ order.createdAt | date: 'MMM d, y, HH:mm'
+          }}{{ order.emailedAt ? ', emailed ' + (order.emailedAt | date: 'MMM d, HH:mm') : ''
+          }}{{ order.paidAt ? ', paid ' + (order.paidAt | date: 'MMM d, HH:mm') : '' }}.
+        </p>
+      }
+    </div>
+  </section>
+} @else if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+} @else {
+  <div class="skeleton" aria-busy="true"></div>
+}

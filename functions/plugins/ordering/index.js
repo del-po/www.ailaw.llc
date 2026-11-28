@@ -5,7 +5,8 @@
 //                customerName, fields (what the services ask for), paymentMethod }
 //                Only "invoice" is accepted for now: AI Law confirms payments by hand
 //   start_order  the chat's tool: one service, with the details the client
-//                confirmed; the order then runs its plugin's steps
+//                confirmed; the order then runs the service's workflow, or its
+//                plugin's steps when the service has none (core/workflow.js)
 // Admin:
 //   admin:createOrder      an order taken by phone or Telegram, for an
 //                          existing client or a new guest
@@ -16,6 +17,7 @@
 //   2. the Legal Services Agreement PDF (+ invoice page when paying by invoice
 //      and something is due); ongoing services get the Ongoing agreement
 //   3. the confirmation email with the PDF attached
+//   4. the service's workflow, for an order of one service (startWorkflow)
 // sendReceipt is used by the on-paid job.
 // ==========================================================
 
@@ -45,9 +47,11 @@ import {
   orderById,
   orderByNumber,
   orderItems,
+  orderSteps,
   serviceBySlug,
 } from '../../core/records.js';
 import { mail, startSteps } from '../../core/steps.js';
+import { workflowOf } from '../../core/workflow.js';
 import { agreementBlocks, agreementData, invoiceBlocks } from './agreement.js';
 
 // ---------- After an order ----------
@@ -180,6 +184,20 @@ async function setupSafely(orderNumber, env) {
   }
 }
 
+// A checkout or admin order of one service runs that service's workflow
+// (Admin Panel → Services → Workflow); an order of several services, or of
+// a service without one, has no steps
+export async function startWorkflow(orderNumber, env) {
+  try {
+    const order = await orderByNumber(orderNumber);
+    if (!order?.serviceId || (await orderSteps(orderNumber)).length) return;
+    const steps = await workflowOf(await serviceBySlug(order.serviceId));
+    if (steps.length) await startSteps(orderNumber, steps, env);
+  } catch (err) {
+    await log('workflow ' + orderNumber, err);
+  }
+}
+
 // ---------- Client ----------
 
 const PAYMENT_METHODS = ['invoice'];
@@ -197,6 +215,7 @@ async function placeOrder(caller, data, env) {
     paymentMethod,
   });
   await setupSafely(order.orderNumber, env);
+  await startWorkflow(order.orderNumber, env);
   return paymentInfo(order);
 }
 
@@ -263,7 +282,8 @@ const startOrder = {
     }
     const { order } = placed;
     await setupSafely(order.orderNumber, ctx.env);
-    await startSteps(order.orderNumber, plugin.steps || [], ctx.env);
+    // The service's own workflow, or else its plugin's steps
+    await startSteps(order.orderNumber, await workflowOf(service, true), ctx.env);
 
     const current = await orderByNumber(order.orderNumber);
     addPart(ctx, await orderCard(order.orderNumber));
@@ -335,6 +355,7 @@ async function adminCreateOrder(caller, data, env) {
     paymentMethod: paid ? 'checkout' : 'invoice',
   });
   await setupSafely(order.orderNumber, env);
+  await startWorkflow(order.orderNumber, env);
   // Already paid: the on-paid job sends the receipt and starts the work
   if (paid) await db.doc('Orders/' + order.orderNumber).update({ paymentStatus: 'paid', updatedAt: now() });
   return toOrder(await orderByNumber(order.orderNumber), await orderItems(order.orderNumber));

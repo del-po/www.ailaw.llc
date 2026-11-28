@@ -30,7 +30,7 @@
 // ---------- Lists ----------
 
 .service {
-  grid-template-columns: minmax(0, 1fr) 150px 80px 48px;
+  grid-template-columns: minmax(0, 1fr) 150px 80px 130px;
 }
 
 .category {
@@ -42,6 +42,12 @@
   grid-template-columns: minmax(0, 320px) auto;
   align-items: center;
   gap: 16px;
+}
+
+.row-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 14px;
 }
 
 // ==========================================================
