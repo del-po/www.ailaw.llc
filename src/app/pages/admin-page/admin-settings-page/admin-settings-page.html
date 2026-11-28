@@ -1,0 +1,175 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">System Settings</h1>
+  <p class="lead">
+    The details that appear on agreements, invoices and emails, and the switches for the whole
+    platform. Every change is recorded in Analytics &amp; Logs.
+  </p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="message message--ok" role="status">{{ notice() }}</p>
+}
+
+@if (data(); as d) {
+  <!-- ---------- Platform ---------- -->
+  <section class="editor" [class.is-paused]="!d.platform.orderingOpen" aria-labelledby="platform">
+    <h2 id="platform" class="block-title">New orders</h2>
+    <p class="state">
+      <span class="status" [class.status--active]="d.platform.orderingOpen">{{
+        d.platform.orderingOpen ? 'Open' : 'Paused'
+      }}</span>
+      {{
+        d.platform.orderingOpen
+          ? 'Clients can order on the site and in the chat.'
+          : 'Clients can’t order. You can still place orders from Orders.'
+      }}
+    </p>
+    <label class="field">
+      <span class="field-label">Message while paused · optional</span>
+      <app-shape class="field-box" name="field">
+        <input #pausedText maxlength="300" [value]="d.platform.orderingPausedText" />
+      </app-shape>
+    </label>
+    <div class="editor-actions">
+      <button
+        type="button"
+        class="btn"
+        [disabled]="busy()"
+        (click)="setOrdering(!d.platform.orderingOpen, pausedText.value)"
+      >
+        <app-shape name="bar-notch">{{
+          d.platform.orderingOpen ? 'Pause new orders' : 'Open new orders'
+        }}</app-shape>
+      </button>
+    </div>
+  </section>
+
+  <!-- ---------- Company ---------- -->
+  <form #company class="editor" (submit)="saveCompany(company, $event)">
+    <h2 class="block-title">Company</h2>
+    <div class="grid">
+      @for (f of companyFields; track f.key) {
+        <label class="field" [class.wide]="f.key === 'verifyContact'">
+          <span class="field-label">{{ f.label }}</span>
+          <app-shape class="field-box" name="field">
+            <input
+              [name]="f.key"
+              maxlength="300"
+              [value]="d.company[f.key]"
+              [placeholder]="d.defaults[f.key]"
+            />
+          </app-shape>
+        </label>
+      }
+    </div>
+    <div class="editor-actions">
+      <button type="submit" class="btn" [disabled]="busy()">
+        <app-shape name="bar-notch">Save company</app-shape>
+      </button>
+    </div>
+  </form>
+
+  <!-- ---------- Bank ---------- -->
+  <form #bank class="editor" (submit)="saveBank(bank, $event)">
+    <h2 class="block-title">Bank details · on invoices and payment cards</h2>
+    <div class="grid">
+      <label class="field">
+        <span class="field-label">Recipient</span>
+        <app-shape class="field-box" name="field">
+          <input name="BankRecipient" maxlength="120" [value]="d.bank.BankRecipient" />
+        </app-shape>
+      </label>
+      <label class="field">
+        <span class="field-label">Bank</span>
+        <app-shape class="field-box" name="field">
+          <input name="BankName" maxlength="120" [value]="d.bank.BankName" />
+        </app-shape>
+      </label>
+      <label class="field wide">
+        <span class="field-label">IBAN</span>
+        <app-shape class="field-box" name="field">
+          <input name="BankIban" maxlength="40" [value]="d.bank.BankIban" />
+        </app-shape>
+      </label>
+    </div>
+    <div class="editor-actions">
+      <button type="submit" class="btn" [disabled]="busy()">
+        <app-shape name="bar-notch">Save bank details</app-shape>
+      </button>
+    </div>
+  </form>
+
+  <!-- ---------- Notifications ---------- -->
+  <form #notes class="editor" (submit)="saveNotifications(notes, $event)">
+    <h2 class="block-title">Notifications</h2>
+    <div class="grid">
+      <label class="field">
+        <span class="field-label">Lawyer tasks with no lawyer assigned go to</span>
+        <app-shape class="field-box" name="field">
+          <input name="lawyerTasksEmail" type="email" [value]="d.notifications.lawyerTasksEmail" />
+        </app-shape>
+      </label>
+      <p class="small">
+        Emails go out from {{ d.notifications.sendsFrom }}; lawyer applications are announced to
+        {{ d.notifications.applicationsEmail }} (both under Company).
+      </p>
+    </div>
+    <div class="editor-actions">
+      <button type="submit" class="btn" [disabled]="busy()">
+        <app-shape name="bar-notch">Save</app-shape>
+      </button>
+    </div>
+  </form>
+
+  <!-- ---------- Integrations and access ---------- -->
+  <div class="columns">
+    <section class="panel" aria-labelledby="integrations">
+      <h2 id="integrations" class="block-title">Integrations</h2>
+      <div class="rows">
+        @for (i of d.integrations; track i.name) {
+          <div class="row line">
+            <span class="cell-title">{{ i.name }}</span>
+            <span class="status" [class.status--active]="i.connected">{{
+              i.connected ? 'Connected' : 'Not connected'
+            }}</span>
+          </div>
+        }
+      </div>
+      <p class="small">Keys are set with firebase functions:secrets:set, never on a page.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="access">
+      <h2 id="access" class="block-title">Access</h2>
+      <div class="rows">
+        @for (a of d.access.admins; track a.clientId) {
+          <div class="row line">
+            <span class="cell-main">
+              <span class="cell-title">{{ a.name || a.email }}</span>
+              <span class="cell-sub">{{ a.clientId }} · {{ a.email }}</span>
+            </span>
+            <span class="status status--active">Admin</span>
+          </div>
+        }
+        @for (l of d.access.lawyers; track l.lawyerId) {
+          <div class="row line">
+            <span class="cell-main">
+              <span class="cell-title">{{ l.name || l.email }}</span>
+              <span class="cell-sub">{{ l.lawyerId }} · {{ l.email }}</span>
+            </span>
+            <span class="status">Lawyer · {{ l.status }}</span>
+          </div>
+        }
+      </div>
+      <p class="small">
+        Lawyers get access when you approve them in Lawyers &amp; Staff. Admin access is given in
+        Firestore (Clients → role).
+      </p>
+    </section>
+  </div>
+} @else if (!error()) {
+  <div class="skeleton" aria-busy="true"></div>
+}

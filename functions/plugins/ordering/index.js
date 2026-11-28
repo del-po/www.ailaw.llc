@@ -48,6 +48,7 @@ import {
   orderByNumber,
   orderItems,
   orderSteps,
+  platform,
   serviceBySlug,
 } from '../../core/records.js';
 import { mail, startSteps } from '../../core/steps.js';
@@ -272,6 +273,15 @@ const startOrder = {
         details,
       });
     } catch (err) {
+      if (err.code === 'ORDERING_PAUSED') {
+        const { orderingPausedText } = await platform();
+        return {
+          error: 'ORDERING_PAUSED',
+          instruction:
+            orderingPausedText ||
+            'New orders are paused for the moment. Tell the client kindly, and that they can order a little later.',
+        };
+      }
       if (err.code === 'VERIFICATION_REQUIRED') {
         return {
           error: 'VERIFICATION_REQUIRED',

@@ -70,13 +70,13 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   {
     label: 'AI Management',
     link: '/admin/ai',
-    ready: false,
+    ready: true,
     text: 'Models, instructions, knowledge, plugins and AI usage.',
   },
   {
     label: 'Communications',
     link: '/admin/communications',
-    ready: false,
+    ready: true,
     text: 'Client conversations, notifications and their templates.',
   },
   {
@@ -88,7 +88,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   {
     label: 'System Settings',
     link: '/admin/settings',
-    ready: false,
+    ready: true,
     text: 'Company details, integrations, notifications and permissions.',
   },
   {

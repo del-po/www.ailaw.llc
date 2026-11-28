@@ -1,0 +1,232 @@
+@use 'mixins' as *;
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin AI Management
+// ==========================================================
+
+@include admin-page;
+@include admin-editor;
+@include admin-filters;
+
+.editor--light {
+  border-top-color: var(--line);
+}
+
+.small {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.grow {
+  flex: 1;
+  min-width: 200px;
+}
+
+// ---------- Instructions and know-how ----------
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  background: var(--card-bg);
+}
+
+.card-top {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.card-tools,
+.row-tools,
+.actions,
+.sides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.versions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-left: 3px solid rgb(var(--yellow));
+  background: var(--card-bg);
+}
+
+.version {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+// ---------- Plugins ----------
+
+.plugin {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding-inline: 8px;
+
+  &.is-off .cell-title {
+    color: var(--text-muted);
+    text-decoration: line-through;
+  }
+}
+
+// ---------- Test ----------
+
+.answer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border-left: 3px solid rgb(var(--yellow));
+  background: var(--card-bg);
+}
+
+.answer-text {
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+// ---------- Usage ----------
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.total {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+}
+
+.total-value {
+  font-family: var(--font-display);
+  font-size: clamp(18px, 2vw, 28px);
+  font-weight: 800;
+}
+
+.total-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+
+  th,
+  td {
+    padding: 8px;
+    border-bottom: 1px solid var(--line);
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  thead th {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .num {
+    text-align: right;
+  }
+}
+
+.price-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 140px 140px;
+  align-items: end;
+  gap: 12px;
+}
+
+// ---------- Mistakes ----------
+
+.mistake {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 8px;
+  border-bottom: 1px solid var(--line);
+
+  &.is-done {
+    opacity: 0.7;
+  }
+}
+
+.mistake-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.quote {
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+}
+
+.controls {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  .save {
+    width: 140px;
+  }
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet) {
+  .plugin,
+  .price-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

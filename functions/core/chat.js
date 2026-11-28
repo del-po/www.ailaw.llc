@@ -3,6 +3,9 @@
 //   - conversations: list, open, rename, delete (Chat/{id} + Messages)
 //   - answer: one question → streamed answer, with the tools the door's
 //     plugins allow (up to MAX_TOOL_ROUNDS rounds of tool calls)
+//   - a failed or unfinished answer marks the conversation needsHuman, for
+//     the Admin Panel's Communications
+//   - a message the AI Law team writes there is { role: assistant, team: true }
 // A conversation belongs to one person and one side, so a lawyer's case
 // chats and their own client chats never mix.
 // A scope ties a conversation to one piece of work (e.g. a lawyer's
@@ -18,11 +21,13 @@ import { ApiError, db, now, parseJson, today, toDate } from './app.js';
 import { streamTurn } from './ai.js';
 import { countQuestion } from './guard.js';
 import { buildPrompt, toolsOf } from './loader.js';
-import { chatSettings, serviceBySlug } from './records.js';
+import { chatSettings, serviceBySlug, setting } from './records.js';
 
 const TITLE_LENGTH = 40;
 const MAX_QUESTION_LENGTH = 4000;
 const MAX_TOOL_ROUNDS = 5;
+// The answer when the AI ran out of tool rounds without writing anything
+const UNFINISHED = 'Sorry, I could not finish that. Please try again.';
 
 const ms = (value) => toDate(value)?.getTime() || 0;
 
@@ -105,7 +110,8 @@ export async function answer(caller, side, data, emit, env, plugins, scope = nul
   const question = String(data.text || '').trim().slice(0, MAX_QUESTION_LENGTH);
   if (!question) throw new ApiError('INVALID_INPUT');
 
-  const settings = await chatSettings();
+  // The assistant's own model settings (Settings/{side}.ai) over the shared ones
+  const settings = { ...(await chatSettings()), ...((await setting(side)).ai || {}) };
   await countQuestion(caller, settings);
 
   // A scoped thread is found by its scope
@@ -171,14 +177,23 @@ export async function answer(caller, side, data, emit, env, plugins, scope = nul
     services: [],
   };
   await settleServices(ctx);
-  const text = await runAssistant(ctx, history);
+  let text;
+  try {
+    text = await runAssistant(ctx, history);
+  } catch (err) {
+    // A conversation whose answer failed waits for a person (Admin Panel → Communications)
+    if (!conversation.isNew) await chatRef.update({ needsHuman: true, needsHumanReason: 'answer failed' });
+    throw err;
+  }
+  const unfinished = text === UNFINISHED;
 
   // Saved after the answer, so a failed first question leaves no empty chat behind
+  const attention = unfinished ? { needsHuman: true, needsHumanReason: 'answer not finished' } : {};
   if (conversation.isNew) {
     const { id, isNew, ...record } = conversation;
-    await chatRef.set({ ...record, activeService: ctx.activeService });
+    await chatRef.set({ ...record, activeService: ctx.activeService, ...attention });
   } else {
-    await chatRef.update({ updatedAt: now(), activeService: ctx.activeService });
+    await chatRef.update({ updatedAt: now(), activeService: ctx.activeService, ...attention });
   }
   const { id: userId, ...userRecord } = userMessage;
   await chatRef.collection('Messages').doc(userId).set(userRecord);
@@ -246,6 +261,7 @@ async function runAssistant(ctx, history) {
       tools: toolList(),
       settings: ctx.settings,
       keys: ctx.env.keys,
+      side: ctx.side,
       onText: (text) => {
         if (first && written && !written.endsWith('\n\n')) write('\n\n');
         first = false;
@@ -268,5 +284,5 @@ async function runAssistant(ctx, history) {
       messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(result) });
     }
   }
-  return written.trim() || 'Sorry, I could not finish that. Please try again.';
+  return written.trim() || UNFINISHED;
 }

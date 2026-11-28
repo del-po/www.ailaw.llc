@@ -282,8 +282,27 @@ export const routes: Routes = [
             (m) => m.AdminDeclarationsPage,
           ),
       },
+      {
+        path: 'ai',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-ai-page/admin-ai-page').then((m) => m.AdminAiPage),
+      },
+      {
+        path: 'communications',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-communications-page/admin-communications-page').then(
+            (m) => m.AdminCommunicationsPage,
+          ),
+      },
+      {
+        path: 'settings',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-settings-page/admin-settings-page').then(
+            (m) => m.AdminSettingsPage,
+          ),
+      },
       // Sections still being built
-      ...['content', 'ai', 'communications', 'settings'].map((path) => ({
+      ...['content'].map((path) => ({
         path,
         loadComponent: () =>
           import('./pages/admin-page/admin-soon/admin-soon').then((m) => m.AdminSoon),

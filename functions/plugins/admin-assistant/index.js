@@ -585,7 +585,8 @@ const blogTools = {
       category: str(''),
       tags: str('comma-separated'),
       featured: { type: 'boolean' },
-      status: { type: 'string', enum: ['draft', 'published'] },
+      status: { type: 'string', enum: ['draft', 'scheduled', 'published'] },
+      publishAt: str('for scheduled: yyyy-MM-ddTHH:mm, Tbilisi time'),
     },
     [],
     async (ctx, a) => {
@@ -612,12 +613,19 @@ const blogTools = {
           category: post.category || '',
           tags: post.tags || '',
           featured: post.featured === true,
-          status: post.status === 'published' ? 'published' : 'draft',
+          status: ['scheduled', 'published'].includes(post.status) ? post.status : 'draft',
+          publishAt: post.publishAt || '',
         },
         title: old ? `Change the article "${post.title}"` : `New article "${post.title}"`,
         lines: [
           old ? `Changes: ${changed.join(', ') || 'none'}` : `${post.body.split(/\s+/).length} words`,
-          `Status: ${post.status === 'published' ? 'published (on the site)' : 'draft'}`,
+          `Status: ${
+            post.status === 'published'
+              ? 'published (on the site)'
+              : post.status === 'scheduled'
+                ? 'scheduled for ' + (post.publishAt || '?')
+                : 'draft'
+          }`,
         ],
       });
     },

@@ -112,6 +112,17 @@ const MESSAGES: Record<string, string> = {
   SEARCH_WORDS_REQUIRED: 'Type something to look for, or choose dates.',
   DOCUMENT_TOO_LARGE: 'This file is too large to download here.',
   INVALID_FILE: 'The file is empty or could not be read.',
+  // AI Management, Communications, System Settings, blog
+  INVALID_SETTING: 'Check the values: one is missing or out of range.',
+  INVALID_INSTRUCTIONS: 'Every instruction needs a title and its text.',
+  INVALID_KNOWLEDGE: 'Every know-how item needs a title and its text.',
+  PLUGIN_NOT_FOUND: 'This plugin has no record in Firestore yet.',
+  VERSION_NOT_FOUND: 'This version could not be found.',
+  ORDERING_PAUSED: 'New orders are paused for the moment. Please try again later.',
+  PUBLISH_TIME_REQUIRED: 'Choose when the article should appear.',
+  INVALID_INPUT: 'Type something first.',
+  AI_NOT_CONFIGURED: 'This AI provider has no key connected.',
+  AI_UNAVAILABLE: 'The AI is unavailable right now. Try again in a minute.',
 };
 
 // Closing the Google window is the person's choice, not an error

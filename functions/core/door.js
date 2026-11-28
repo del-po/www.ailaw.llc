@@ -17,6 +17,7 @@ import { defineSecret } from 'firebase-functions/params';
 import { ApiError, log } from './app.js';
 import { allowed, identify } from './guard.js';
 import { actionsOf, loadPlugins } from './loader.js';
+import { refreshCompany } from './records.js';
 import { actionRoutes } from './chat-actions.js';
 import { audited } from './audit.js';
 import {
@@ -80,6 +81,8 @@ export function door(side, modules, options = {}) {
             ? safeJson(req.body)
             : req.body || {};
       const env = environment(req);
+      // The company's details as System Settings has them now
+      await refreshCompany();
 
       // ---------- Streamed answer ----------
       if (body.action === 'chat:send') {

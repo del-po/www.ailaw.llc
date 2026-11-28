@@ -9,7 +9,7 @@
 // Reads that change rarely (settings, services) are kept for a minute.
 // ==========================================================
 
-import { ApiError, db, toDate, today } from './app.js';
+import { ApiError, COMPANY, COMPANY_DEFAULTS, db, toDate, today } from './app.js';
 
 const cache = new Map();
 
@@ -33,6 +33,21 @@ export { all as docs, data as doc };
 
 export async function setting(name) {
   return cached('setting:' + name, 60, async () => data(await db.doc('Settings/' + name).get()) || {});
+}
+
+// Settings → company over the defaults in core/app.js: empty values keep the default
+export async function refreshCompany() {
+  const saved = (await setting('company')).values || {};
+  const given = Object.fromEntries(
+    Object.entries(saved).filter(([k, v]) => k in COMPANY_DEFAULTS && typeof v === 'string' && v.trim()),
+  );
+  Object.assign(COMPANY, COMPANY_DEFAULTS, given);
+}
+
+// Settings → platform: switches that change how the whole site behaves
+export async function platform() {
+  const values = (await setting('platform')).values || {};
+  return { orderingOpen: values.orderingOpen !== false, orderingPausedText: values.orderingPausedText || '' };
 }
 
 // Settings → chat: provider, model, limits, bank details

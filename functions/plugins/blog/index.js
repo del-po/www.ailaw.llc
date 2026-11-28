@@ -2,15 +2,20 @@
 // Plugin: blog (client + admin)
 // Client (public):  getPosts, getPost — published posts only
 // Admin:            blog:list, blog:get, blog:save, blog:cover, blog:delete —
-//                   the admin blog editor (posts are written in Markdown)
+//                   the admin blog editor (posts are written in Markdown);
+//                   blog:preview shows the body as the site will
 // Blog/{slug}: title, deck, body (Markdown), author, category, tags,
-// featured, cover (a Storage path), status draft/published, publishedAt.
+// featured, cover (a Storage path), status draft/scheduled/published,
+// publishedAt. A scheduled post appears on its publishedAt time by itself:
+// the public reads count it as published from then on.
 // ==========================================================
 
 import { Marked } from 'marked';
-import { ApiError, cleanText, db, formatDate, iso, now, slugify } from '../../core/app.js';
+import { ApiError, cleanText, db, formatDate, iso, now, slugify, toDate } from '../../core/app.js';
 import { publicUrl, savePicture } from '../../core/files.js';
 import { docs } from '../../core/records.js';
+
+const STATUSES = ['draft', 'scheduled', 'published'];
 
 const escapeHtml = (text) =>
   String(text ?? '')
@@ -59,16 +64,20 @@ async function toPost(p, withContent) {
   return post;
 }
 
+// Published, or scheduled for a time that has come
+const isLive = (p) =>
+  p.status === 'published' || (p.status === 'scheduled' && !!toDate(p.publishedAt) && toDate(p.publishedAt) <= new Date());
+
 async function posts() {
-  const snap = await db.collection('Blog').where('status', '==', 'published').get();
-  const list = await Promise.all(docs(snap).map((p) => toPost(p, false)));
+  const snap = await db.collection('Blog').where('status', 'in', ['published', 'scheduled']).get();
+  const list = await Promise.all(docs(snap).filter(isLive).map((p) => toPost(p, false)));
   return list.sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title));
 }
 
 async function post(slug) {
   if (!/^[\p{L}\p{N}-]{1,120}$/u.test(String(slug || ''))) throw new ApiError('Invalid article slug.');
   const snap = await db.doc('Blog/' + slug).get();
-  if (!snap.exists || snap.data().status !== 'published') throw new ApiError('Article not found.');
+  if (!snap.exists || !isLive(snap.data())) throw new ApiError('Article not found.');
   return toPost({ id: snap.id, ...snap.data() }, true);
 }
 
@@ -93,7 +102,13 @@ async function save(data) {
   if (!slug) throw new ApiError('INVALID_SLUG');
   const ref = db.doc('Blog/' + slug);
   const old = (await ref.get()).data() || {};
-  const status = data.status === 'published' ? 'published' : 'draft';
+  const status = STATUSES.includes(data.status) ? data.status : 'draft';
+  // A scheduled post needs its time: "2026-12-05T09:00", Tbilisi time
+  let scheduledAt = null;
+  if (status === 'scheduled') {
+    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(String(data.publishAt || ''))) throw new ApiError('PUBLISH_TIME_REQUIRED');
+    scheduledAt = new Date(data.publishAt + ':00+04:00');
+  }
   const record = {
     slug,
     title: cleanText(data.title, 200),
@@ -107,7 +122,12 @@ async function save(data) {
     featured: data.featured === true,
     cover: old.cover || '',
     status,
-    publishedAt: status === 'published' ? old.publishedAt || now() : old.publishedAt || null,
+    publishedAt:
+      status === 'scheduled'
+        ? scheduledAt
+        : status === 'published'
+          ? (old.status !== 'scheduled' && old.publishedAt) || now()
+          : old.publishedAt || null,
     createdAt: old.createdAt || now(),
     updatedAt: now(),
   };
@@ -158,6 +178,7 @@ export default {
       'blog:get': (caller, data) => adminGet(data.slug),
       'blog:save': (caller, data) => save(data),
       'blog:cover': (caller, data) => saveCover(data),
+      'blog:preview': (caller, data) => ({ html: markdown.parse(String(data.body || '').slice(0, 200000)) }),
       'blog:delete': async (caller, data) => {
         await db.doc('Blog/' + slugify(data.slug)).delete();
         return { deleted: true };

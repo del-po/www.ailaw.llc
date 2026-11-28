@@ -26,6 +26,7 @@ import {
   clientLevel,
   orderByNumber,
   orderSteps,
+  platform,
   priceOf,
   serviceBySlug,
 } from './records.js';
@@ -72,6 +73,8 @@ export async function createOrder(caller, items, extra = {}) {
   const byAdmin = !!extra.client;
   if (!byAdmin && !caller.signedIn) throw new ApiError('AUTH_REQUIRED');
   if (!byAdmin && !caller.emailVerified) throw new ApiError('EMAIL_NOT_VERIFIED');
+  // New orders paused in System Settings; AI Law can still place orders itself
+  if (!byAdmin && !(await platform()).orderingOpen) throw new ApiError('ORDERING_PAUSED');
   if (!Array.isArray(items) || !items.length) throw new ApiError('CART_EMPTY');
   if (items.length > 50) throw new ApiError('CART_LIMIT');
 

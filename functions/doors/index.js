@@ -22,13 +22,16 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import { db, log } from '../core/app.js';
 import { SECRETS, botToken, door } from '../core/door.js';
 import { loadPlugins } from '../core/loader.js';
-import { docs } from '../core/records.js';
+import { docs, refreshCompany } from '../core/records.js';
 import { advance, resumePaid } from '../core/steps.js';
 import accounts from '../plugins/accounts/index.js';
 import adminAssistant from '../plugins/admin-assistant/index.js';
 import adminInsights from '../plugins/admin-insights/index.js';
+import aiDesk from '../plugins/ai-desk/index.js';
+import commsDesk from '../plugins/comms-desk/index.js';
 import fileDesk from '../plugins/file-desk/index.js';
 import orderDesk from '../plugins/order-desk/index.js';
+import systemDesk from '../plugins/system-desk/index.js';
 import assignments from '../plugins/assignments/index.js';
 import blog from '../plugins/blog/index.js';
 import catalogue from '../plugins/catalogue/index.js';
@@ -55,6 +58,9 @@ const ADMIN = [
   declarations,
   adminAssistant,
   adminInsights,
+  aiDesk,
+  commsDesk,
+  systemDesk,
 ];
 
 export const client = door('client', CLIENT);
@@ -87,6 +93,7 @@ export const onOrderPaid = onDocumentUpdated(
     if (before.paymentStatus === 'paid' || after.paymentStatus !== 'paid') return;
 
     const env = jobEnvironment();
+    await refreshCompany();
     await loadPlugins('client', CLIENT);
     const ref = event.data.after.ref;
     // Paid in the console by hand: the order page's own changes, done here
@@ -120,6 +127,7 @@ export const daily = onSchedule(
   },
   async () => {
     const env = jobEnvironment();
+    await refreshCompany();
     await loadPlugins('client', CLIENT);
     const open = docs(await db.collection('Orders').where('orderStatus', 'in', ['placed', 'in_progress']).get());
     for (const order of open) {
@@ -166,6 +174,7 @@ export const declarationsBot = onRequest(
       return;
     }
     try {
+      await refreshCompany();
       await handleUpdate(req.body || {}, jobEnvironment());
     } catch (err) {
       await log('declarationsBot', err);

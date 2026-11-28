@@ -1,0 +1,52 @@
+@use 'mixins' as *;
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin System Settings
+// ==========================================================
+
+@include admin-page;
+@include admin-editor;
+
+.editor.is-paused {
+  border-top-color: var(--text);
+}
+
+.state {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.small {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.columns {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 40px);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.line {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet-wide) {
+  .columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

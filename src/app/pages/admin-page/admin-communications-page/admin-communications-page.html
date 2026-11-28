@@ -1,0 +1,181 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Communications</h1>
+  <p class="lead">
+    Every conversation with the assistants. A failed or unfinished answer marks its conversation as
+    needing a person. Your replies appear in the client’s chat as the AI Law team.
+  </p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="message message--ok" role="status">{{ notice() }}</p>
+}
+
+<div class="toolbar">
+  <nav class="filters" aria-label="Assistant">
+    @for (s of sides; track s) {
+      <button type="button" class="filter" [class.is-active]="side() === s" (click)="side.set(s)">
+        {{ sideLabels[s] }}
+      </button>
+    }
+    <button
+      type="button"
+      class="filter"
+      [class.is-active]="attention()"
+      [attr.aria-pressed]="attention()"
+      (click)="attention.set(!attention())"
+    >
+      Needs a person
+    </button>
+  </nav>
+  <label class="search">
+    <span class="visually-hidden">Search conversations</span>
+    <app-shape class="field-box" name="field">
+      <input #box type="search" placeholder="Title, email…" (change)="query.set(box.value)" />
+    </app-shape>
+  </label>
+</div>
+<app-admin-period [(period)]="period" />
+
+<div class="split">
+  <!-- ---------- The list ---------- -->
+  <section class="list" aria-label="Conversations">
+    @if (list(); as rows) {
+      <div class="rows">
+        @for (c of rows; track c.id) {
+          <button
+            type="button"
+            class="row talk"
+            [class.is-open]="open()?.id === c.id"
+            [class.is-waiting]="c.needsHuman"
+            (click)="show(c.id)"
+          >
+            <span class="cell-main">
+              <span class="cell-title">{{ c.title || 'Untitled' }}</span>
+              <span class="cell-sub"
+                >{{ c.side }} · {{ c.guest ? 'visitor' : c.email || 'no email' }} ·
+                {{ c.updatedAt | date: 'MMM d, HH:mm' }}</span
+              >
+            </span>
+            @if (c.needsHuman) {
+              <span class="status status--draft">Needs a person</span>
+            }
+          </button>
+        } @empty {
+          <p class="small">No conversations match.</p>
+        }
+      </div>
+    } @else if (!error()) {
+      <div class="skeleton" aria-busy="true"></div>
+    }
+  </section>
+
+  <!-- ---------- One conversation ---------- -->
+  <section class="thread" aria-label="Conversation">
+    @if (open(); as c) {
+      <div class="thread-head">
+        <h2 class="block-title">{{ c.title || 'Untitled' }}</h2>
+        <p class="cell-sub">
+          {{ c.side }} assistant ·
+          @if (c.owner) {
+            {{ c.owner.name || c.owner.email }} ({{ c.owner.clientId }}, {{ c.owner.type }})
+          } @else if (c.guest) {
+            a visitor without an account
+          } @else {
+            {{ c.email || '—' }}
+          }
+          {{ c.activeService ? ' · service ' + c.activeService : '' }}
+        </p>
+        @if (c.needsHuman) {
+          <p class="cell-sub">Needs a person: {{ c.needsHumanReason }}</p>
+        }
+        <div class="thread-tools">
+          @if (c.needsHuman) {
+            <button type="button" class="action" [disabled]="busy()" (click)="mark(false)">
+              Mark settled
+            </button>
+          } @else {
+            <button type="button" class="action" [disabled]="busy()" (click)="mark(true)">
+              Needs a person
+            </button>
+          }
+          @if (c.owner) {
+            <a class="action" routerLink="/admin/clients">Client</a>
+          }
+        </div>
+      </div>
+
+      <ol class="messages">
+        @for (m of c.messages; track m.id) {
+          <li
+            class="msg"
+            [class.msg--user]="m.role === 'user'"
+            [class.msg--team]="m.team"
+            [class.msg--gone]="m.deleted"
+          >
+            <span class="msg-meta"
+              >{{ m.role === 'user' ? 'Asked' : m.team ? 'AI Law team' : 'Assistant' }} ·
+              {{ m.createdAt | date: 'MMM d, HH:mm' }}{{ m.deleted ? ' · removed by an edit' : ''
+              }}{{ m.parts.length ? ' · cards: ' + m.parts.join(', ') : '' }}</span
+            >
+            <p class="msg-text">{{ m.text }}</p>
+            @if (m.role === 'assistant' && !m.team) {
+              @if (m.mistakeId) {
+                <span class="status status--draft">Marked as a mistake</span>
+              } @else if (flagging() === m.id) {
+                <div class="flag">
+                  <label class="field">
+                    <span class="field-label">What was wrong</span>
+                    <app-shape class="field-box" name="field"
+                      ><input #note maxlength="2000"
+                    /></app-shape>
+                  </label>
+                  <button
+                    type="button"
+                    class="action"
+                    [disabled]="busy()"
+                    (click)="flag(m, note.value)"
+                  >
+                    Save
+                  </button>
+                  <button type="button" class="action" (click)="flagging.set(null)">Cancel</button>
+                </div>
+              } @else {
+                <button type="button" class="action" (click)="flagging.set(m.id)">
+                  Mark as a mistake
+                </button>
+              }
+            }
+          </li>
+        }
+      </ol>
+
+      <div class="editor">
+        <label class="field">
+          <span class="field-label">Reply as the AI Law team</span>
+          <textarea #answer class="area" rows="4" maxlength="8000"></textarea>
+        </label>
+        <div class="editor-actions">
+          <button type="button" class="btn" [disabled]="busy()" (click)="reply(answer, false)">
+            <app-shape name="bar-notch">Send in the chat</app-shape>
+          </button>
+          @if (c.owner?.email || c.email) {
+            <button
+              type="button"
+              class="btn btn--light"
+              [disabled]="busy()"
+              (click)="reply(answer, true)"
+            >
+              <app-shape name="bar-notch">Chat + email</app-shape>
+            </button>
+          }
+        </div>
+      </div>
+    } @else {
+      <p class="small">Choose a conversation to read it.</p>
+    }
+  </section>
+</div>

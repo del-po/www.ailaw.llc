@@ -1,0 +1,165 @@
+@use 'mixins' as *;
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin Communications
+// ==========================================================
+
+@include admin-page;
+@include admin-editor;
+@include admin-filters;
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.search {
+  width: 280px;
+
+  input {
+    font-size: 13px;
+  }
+}
+
+.small {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+// The list on the left, the open conversation on the right
+.split {
+  display: grid;
+  grid-template-columns: minmax(260px, 2fr) minmax(0, 3fr);
+  align-items: start;
+  gap: clamp(16px, 2vw, 28px);
+}
+
+.list {
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
+.talk {
+  width: 100%;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding-inline: 8px;
+  text-align: left;
+  border-left: 3px solid transparent;
+  transition: background-color var(--ease);
+
+  &:hover,
+  &.is-open {
+    background: var(--card-bg);
+  }
+
+  &.is-open {
+    border-left-color: var(--text);
+  }
+
+  // Waiting for a person: a yellow edge, and the label says so too
+  &.is-waiting {
+    border-left-color: rgb(var(--yellow));
+  }
+}
+
+.thread {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.thread-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.thread-tools {
+  display: flex;
+  gap: 14px;
+}
+
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 60vh;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.msg {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-self: flex-start;
+  max-width: 90%;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  background: var(--card-bg);
+
+  &--user {
+    align-self: flex-end;
+    background: var(--ink-bg);
+    color: var(--ink-text);
+
+    .msg-meta {
+      color: inherit;
+      opacity: 0.7;
+    }
+  }
+
+  &--team {
+    border-color: rgb(var(--yellow));
+  }
+
+  &--gone {
+    opacity: 0.45;
+  }
+}
+
+.msg-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+}
+
+.msg-text {
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.flag {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet-wide) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .list {
+    max-height: 40vh;
+  }
+}
+
+@include below(tablet) {
+  .search {
+    width: 100%;
+  }
+}

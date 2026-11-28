@@ -8,13 +8,14 @@
 //                    from the panel or the chat
 //   admin:logs       failed jobs and requests (Logs, written by core/app.js log())
 // Dates come as "yyyy-MM-dd" (Tbilisi days); the default is the last 30 days.
-// Website traffic and AI spending aren't counted anywhere yet: they come
-// back as null until they are.
+// Website traffic isn't counted anywhere yet: it comes back as null. AI
+// spending comes from AI Management (usage × the prices set there).
 // The same three answers are the admin chat's tools below.
 // ==========================================================
 
 import { ApiError, db, formatDate, iso, toDate } from '../../core/app.js';
 import { docs } from '../../core/records.js';
+import { aiSpending } from '../ai-desk/index.js';
 
 // A step still active after this many days counts as stuck (as does a
 // failed step, or one past its deadline)
@@ -148,7 +149,8 @@ async function dashboard(data) {
     },
     // Questions asked in the chat (admins are not counted, see core/guard.js)
     chat: { questions: docs(usageSnap).reduce((n, u) => n + Number(u.count || 0), 0) },
-    aiSpending: null,
+    // From AiUsage and the prices set in AI Management; null until a price is set
+    aiSpending: await aiSpending({ from: p.fromDay, to: p.toDay }),
     traffic: null,
     recent: docs(auditSnap).map(auditRow),
     series: series(orders, p),

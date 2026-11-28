@@ -1,11 +1,13 @@
 // ==========================================================
 // Core: the AI connection. Both providers speak the "chat completions"
 // format (Gemini through its OpenAI-compatible endpoint), so switching is one
-// value in Settings → chat. Answers are streamed: onText receives the words
-// as they are written.
+// value in Settings → chat (or per assistant: Settings/{side}.ai). Answers
+// are streamed: onText receives the words as they are written.
+// Every turn is counted in AiUsage/{day_side_model}: requests, tokens and
+// failures, which the Admin Panel's AI Management turns into costs.
 // ==========================================================
 
-import { ApiError } from './app.js';
+import { ApiError, FieldValue, db, log, today } from './app.js';
 
 const PROVIDERS = {
   gemini: {
@@ -18,8 +20,9 @@ const PROVIDERS = {
   },
 };
 
-// One AI turn: streams text through onText and returns the full text and any tool calls
-export async function streamTurn({ messages, tools, settings, keys, onText }) {
+// One AI turn: streams text through onText and returns the full text and any
+// tool calls. side: whose assistant asked (client, lawyer, admin, test)
+export async function streamTurn({ messages, tools, settings, keys, onText, side = 'client' }) {
   const providerName = String(settings.Provider || 'gemini').toLowerCase();
   const provider = PROVIDERS[providerName];
   const key = keys[providerName];
@@ -29,6 +32,8 @@ export async function streamTurn({ messages, tools, settings, keys, onText }) {
   const maxTokens = Number(settings.MaxAnswerTokens || 2000);
   const payload = { model, messages, stream: true };
   if (tools && tools.length) payload.tools = tools;
+  // OpenAI sends the token counts only when asked; Gemini sends them anyway
+  if (providerName === 'openai') payload.stream_options = { include_usage: true };
 
   if (providerName === 'gemini') {
     payload.max_tokens = maxTokens;
@@ -55,11 +60,13 @@ export async function streamTurn({ messages, tools, settings, keys, onText }) {
 
   if (!res.ok) {
     console.error(`${providerName} ${res.status}: ${await res.text()}`);
+    await countUsage({ side, provider: providerName, model, failed: true });
     throw new ApiError('AI_UNAVAILABLE');
   }
 
   // Server-sent events: "data: {json}" lines, ending with "data: [DONE]"
   let content = '';
+  let usage = null;
   const calls = [];
   const decoder = new TextDecoder();
   let buffer = '';
@@ -81,6 +88,8 @@ export async function streamTurn({ messages, tools, settings, keys, onText }) {
       } catch {
         continue;
       }
+      // The last event carries the token counts
+      if (event.usage) usage = event.usage;
       const delta = event.choices?.[0]?.delta;
       if (!delta) continue;
 
@@ -107,7 +116,38 @@ export async function streamTurn({ messages, tools, settings, keys, onText }) {
   }
 
   const toolCalls = calls.filter(Boolean).map((c, i) => ({ ...c, id: c.id || 'call_' + i }));
+  await countUsage({
+    side,
+    provider: providerName,
+    model,
+    promptTokens: Number(usage?.prompt_tokens) || 0,
+    completionTokens: Number(usage?.completion_tokens) || 0,
+  });
   return { content, toolCalls };
+}
+
+// ---------- Usage ----------
+
+// One line per day, assistant and model; a failed count never breaks the answer
+async function countUsage({ side, provider, model, promptTokens = 0, completionTokens = 0, failed = false }) {
+  const id = `${today()}_${side}_${model}`.replace(/[^A-Za-z0-9_.-]/g, '-');
+  try {
+    await db.doc('AiUsage/' + id).set(
+      {
+        date: today(),
+        side,
+        provider,
+        model,
+        requests: FieldValue.increment(1),
+        failures: FieldValue.increment(failed ? 1 : 0),
+        promptTokens: FieldValue.increment(promptTokens),
+        completionTokens: FieldValue.increment(completionTokens),
+      },
+      { merge: true },
+    );
+  } catch (err) {
+    await log('ai usage', err);
+  }
 }
 
 function sleep(ms) {

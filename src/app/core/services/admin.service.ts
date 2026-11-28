@@ -6,17 +6,30 @@ import {
   AdminPostRow,
   AdminServiceInput,
   AdminServiceRow,
+  AiMistake,
+  AiOverview,
+  AiTestResult,
+  AiUsage,
+  AiVersion,
   AuditEntry,
+  ConversationDetail,
+  ConversationRow,
   Dashboard,
   ErrorEntry,
+  Instruction,
+  KnowledgeItem,
+  ModelSettings,
   OrderChanges,
   OrderWorkspace,
   Period,
   ServiceWorkflow,
+  Side,
   StepChange,
   StepOp,
   StorageFolder,
   StoredFile,
+  SystemChanges,
+  SystemSettings,
   Upload,
   WorkflowStep,
 } from '../models/admin';
@@ -262,6 +275,106 @@ export class AdminService {
     return this.call('files:delete', { path });
   }
 
+  // ---------- AI Management ----------
+
+  aiOverview(): Promise<AiOverview> {
+    return this.call('ai:get');
+  }
+
+  // side '' = the shared settings; an assistant's '' values use the shared ones
+  setModel(side: Side | '', values: ModelSettings): Promise<AiOverview> {
+    return this.call('ai:setModel', { side, values });
+  }
+
+  setInstructions(side: Side, instructions: Instruction[]): Promise<AiOverview> {
+    return this.call('ai:setInstructions', { side, instructions });
+  }
+
+  setPlugin(pluginId: string, changes: { enabled?: boolean; sides?: Side[] }): Promise<AiOverview> {
+    return this.call('ai:setPlugin', { pluginId, ...changes });
+  }
+
+  setKnowledge(pluginId: string, items: KnowledgeItem[]): Promise<AiOverview> {
+    return this.call('ai:setKnowledge', { pluginId, items });
+  }
+
+  // Of an assistant's instructions ({ side }) or a plugin's know-how ({ pluginId })
+  aiVersions(of: { side?: Side; pluginId?: string }): Promise<AiVersion[]> {
+    return this.call('ai:versions', of);
+  }
+
+  restoreVersion(of: { side?: Side; pluginId?: string }, versionId: string): Promise<AiOverview> {
+    return this.call('ai:restore', { ...of, versionId });
+  }
+
+  // instructions: a draft to try before saving it
+  testAi(side: Side, question: string, instructions?: Instruction[]): Promise<AiTestResult> {
+    return this.call('ai:test', { side, question, instructions });
+  }
+
+  aiUsage(period: Period): Promise<AiUsage> {
+    return this.call('ai:usage', period);
+  }
+
+  setPrices(prices: AiOverview['prices']): Promise<AiOverview> {
+    return this.call('ai:setPrices', { prices });
+  }
+
+  aiMistakes(status: '' | 'open' | 'resolved' = ''): Promise<AiMistake[]> {
+    return this.call('ai:mistakes', { status });
+  }
+
+  flagMistake(conversationId: string, messageId: string, note: string): Promise<{ id: string }> {
+    return this.call('ai:flag', { conversationId, messageId, note });
+  }
+
+  resolveMistake(id: string, resolution: string): Promise<AiMistake[]> {
+    return this.call('ai:resolveMistake', { id, resolution });
+  }
+
+  // ---------- Communications ----------
+
+  conversations(filters: {
+    side?: Side | '';
+    query?: string;
+    attention?: boolean;
+    from?: string;
+    to?: string;
+  }): Promise<ConversationRow[]> {
+    return this.call('comms:list', filters);
+  }
+
+  conversation(conversationId: string): Promise<ConversationDetail> {
+    return this.call('comms:get', { conversationId });
+  }
+
+  // From the AI Law team, into the client's chat (and by email when asked)
+  replyInConversation(
+    conversationId: string,
+    text: string,
+    email: boolean,
+  ): Promise<ConversationDetail> {
+    return this.call('comms:reply', { conversationId, text, email });
+  }
+
+  setAttention(
+    conversationId: string,
+    needsHuman: boolean,
+    note = '',
+  ): Promise<ConversationDetail> {
+    return this.call('comms:attention', { conversationId, needsHuman, note });
+  }
+
+  // ---------- System Settings ----------
+
+  systemSettings(): Promise<SystemSettings> {
+    return this.call('system:get');
+  }
+
+  saveSystemSettings(changes: SystemChanges): Promise<SystemSettings> {
+    return this.call('system:set', changes);
+  }
+
   // ---------- Blog ----------
 
   listPosts(): Promise<AdminPostRow[]> {
@@ -272,12 +385,20 @@ export class AdminService {
     return this.call('blog:get', { slug });
   }
 
-  savePost(post: Partial<AdminPost> & { tags: string }): Promise<{ slug: string }> {
+  // publishAt: for a scheduled post, "yyyy-MM-ddTHH:mm" in Tbilisi time
+  savePost(
+    post: Partial<AdminPost> & { tags: string; publishAt?: string },
+  ): Promise<{ slug: string }> {
     return this.call('blog:save', post);
   }
 
   uploadCover(slug: string, file: Upload): Promise<AdminPost> {
     return this.call('blog:cover', { slug, file });
+  }
+
+  // The body as the site will show it
+  previewPost(body: string): Promise<{ html: string }> {
+    return this.call('blog:preview', { body });
   }
 
   deletePost(slug: string): Promise<unknown> {

@@ -19,8 +19,11 @@ export { FieldValue, Timestamp };
 export const TIME_ZONE = 'Asia/Tbilisi';
 export const SITE = 'https://www.ailaw.llc';
 
-// The company, as it appears on agreements, invoices and emails
-export const COMPANY = Object.freeze({
+// The company, as it appears on agreements, invoices and emails. These are
+// the defaults; the Admin Panel's System Settings (Settings/company) can
+// change each one, and every request and job reads them first
+// (refreshCompany in core/records.js), so COMPANY is always current.
+export const COMPANY_DEFAULTS = Object.freeze({
   name: 'AI Law LLC',
   registration: '405408401',
   address: 'Chavchavadze Ave. 83, Tbilisi, 0162 GEO',
@@ -30,7 +33,10 @@ export const COMPANY = Object.freeze({
   signatory: 'Gocha Okreshidze',
   // Who clients contact to get verified
   verifyContact: 'our lawyer Gocha Okreshidze (info@ailaw.llc, (+995) 591-893-893)',
+  // Where new lawyer applications are announced
+  applicationsEmail: 'gochaokreshidze@gmail.com',
 });
+export const COMPANY = { ...COMPANY_DEFAULTS };
 
 export class ApiError extends Error {
   constructor(code) {

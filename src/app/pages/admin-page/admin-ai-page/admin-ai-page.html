@@ -1,0 +1,591 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">AI Management</h1>
+  <p class="lead">
+    The models the assistants use, what they are told, the plugins and know-how they draw on, and
+    what it all costs. Every change is recorded; instructions and know-how keep their earlier
+    versions.
+  </p>
+</section>
+
+<nav class="filters" aria-label="AI Management">
+  @for (t of tabs; track t.value) {
+    <button
+      type="button"
+      class="filter"
+      [class.is-active]="tab() === t.value"
+      [attr.aria-pressed]="tab() === t.value"
+      (click)="setTab(t.value)"
+    >
+      {{ t.label }}
+    </button>
+  }
+</nav>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="message message--ok" role="status">{{ notice() }}</p>
+}
+
+@if (data(); as d) {
+  @switch (tab()) {
+    <!-- ==================== Models ==================== -->
+    @case ('models') {
+      <form #shared class="editor" (submit)="saveShared(shared, $event)">
+        <h2 class="block-title">Shared by every assistant</h2>
+        <div class="grid">
+          @for (f of sharedFields; track f.key) {
+            <label class="field">
+              <span class="field-label">{{ f.label }}</span>
+              <app-shape class="field-box" name="field">
+                @if (f.type === 'select') {
+                  <select [name]="f.key">
+                    @for (o of f.options; track o) {
+                      <option [value]="o" [selected]="value(d.shared, f.key) === o">{{ o }}</option>
+                    }
+                  </select>
+                } @else {
+                  <input
+                    [name]="f.key"
+                    [type]="f.type"
+                    step="any"
+                    [value]="value(d.shared, f.key)"
+                  />
+                }
+              </app-shape>
+            </label>
+          }
+        </div>
+        <div class="editor-actions">
+          <button type="submit" class="btn" [disabled]="busy()">
+            <app-shape name="bar-notch">Save</app-shape>
+          </button>
+        </div>
+      </form>
+
+      @for (s of sides; track s) {
+        <form #ownForm class="editor editor--light" (submit)="saveOwn(s, ownForm, $event)">
+          <h2 class="block-title">{{ sideLabels[s] }} · its own settings</h2>
+          <p class="small">Leave a field empty to use the shared value.</p>
+          <div class="grid">
+            @for (f of ownFields; track f.key) {
+              <label class="field">
+                <span class="field-label">{{ f.label }}</span>
+                <app-shape class="field-box" name="field">
+                  @if (f.type === 'select') {
+                    <select [name]="f.key">
+                      <option value="">Shared ({{ value(d.shared, f.key) || 'default' }})</option>
+                      @for (o of f.options; track o) {
+                        <option [value]="o" [selected]="value(own(s), f.key) === o">{{ o }}</option>
+                      }
+                    </select>
+                  } @else {
+                    <input
+                      [name]="f.key"
+                      [type]="f.type"
+                      step="any"
+                      [placeholder]="'Shared: ' + (value(d.shared, f.key) || 'default')"
+                      [value]="value(own(s), f.key)"
+                    />
+                  }
+                </app-shape>
+              </label>
+            }
+          </div>
+          <div class="editor-actions">
+            <button type="submit" class="btn" [disabled]="busy()">
+              <app-shape name="bar-notch">Save</app-shape>
+            </button>
+          </div>
+        </form>
+      }
+    }
+
+    <!-- ==================== Instructions ==================== -->
+    @case ('instructions') {
+      <nav class="filters" aria-label="Assistant">
+        @for (s of sides; track s) {
+          <button
+            type="button"
+            class="filter"
+            [class.is-active]="side() === s"
+            (click)="pickSide(s)"
+          >
+            {{ sideLabels[s] }}
+          </button>
+        }
+      </nav>
+      <p class="small">
+        Read first by the {{ sideLabels[side()] }}, in this order, before any plugin’s know-how. A
+        switched-off instruction stays here but isn’t used.
+      </p>
+
+      <ol class="list">
+        @for (i of draft(); track $index; let n = $index, first = $first, last = $last) {
+          <li class="card">
+            <div class="card-top">
+              <label class="field grow">
+                <span class="field-label">Title</span>
+                <app-shape class="field-box" name="field">
+                  <input
+                    #t
+                    maxlength="120"
+                    [value]="i.title"
+                    (input)="setInstruction(n, 'title', t.value)"
+                  />
+                </app-shape>
+              </label>
+              <label class="check">
+                <input
+                  #a
+                  type="checkbox"
+                  [checked]="i.active"
+                  (change)="setInstruction(n, 'active', a.checked)"
+                />
+                <span>In use</span>
+              </label>
+              <span class="card-tools">
+                <button
+                  type="button"
+                  class="action"
+                  [disabled]="first"
+                  (click)="moveInstruction(n, -1)"
+                  aria-label="Move up"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  class="action"
+                  [disabled]="last"
+                  (click)="moveInstruction(n, 1)"
+                  aria-label="Move down"
+                >
+                  ↓
+                </button>
+                <button type="button" class="action" (click)="removeInstruction(n)">Remove</button>
+              </span>
+            </div>
+            <textarea
+              #x
+              class="area"
+              rows="6"
+              maxlength="20000"
+              [value]="i.text"
+              (input)="setInstruction(n, 'text', x.value)"
+            ></textarea>
+          </li>
+        }
+      </ol>
+      <div class="row-tools">
+        <button type="button" class="action" (click)="addInstruction()">
+          + Add an instruction
+        </button>
+        <button type="button" class="action" (click)="showVersions({ side: side() })">
+          Earlier versions
+        </button>
+        <button type="button" class="action" (click)="setTab('test')">Try it in Test</button>
+      </div>
+      <div class="editor-actions">
+        <button type="button" class="btn" [disabled]="busy()" (click)="saveInstructions()">
+          <app-shape name="bar-notch">Save instructions</app-shape>
+        </button>
+        <button type="button" class="btn btn--light" [disabled]="busy()" (click)="pickSide(side())">
+          <app-shape name="bar-notch">Undo changes</app-shape>
+        </button>
+      </div>
+
+      @if (versions(); as list) {
+        <ng-container
+          *ngTemplateOutlet="versionList; context: { $implicit: list, of: { side: side() } }"
+        />
+      }
+    }
+
+    <!-- ==================== Plugins ==================== -->
+    @case ('plugins') {
+      <div class="rows">
+        @for (p of d.plugins; track p.id) {
+          <div class="row plugin" [class.is-off]="!p.enabled">
+            <span class="cell-main">
+              <span class="cell-title">{{ p.id }}</span>
+              <span class="cell-sub"
+                >{{ p.kind === 'service' ? 'Service plugin' : 'General'
+                }}{{ p.version ? ' · version ' + p.version : '' }} · {{ p.items.length }} know-how
+                items{{ p.steps ? ' · ' + p.steps + ' steps' : '' }}</span
+              >
+            </span>
+            <span class="sides">
+              @for (s of sides; track s) {
+                <label class="check">
+                  <input
+                    type="checkbox"
+                    [checked]="p.sides.includes(s)"
+                    [disabled]="busy()"
+                    (change)="toggleSide(p, s)"
+                  />
+                  <span>{{ s }}</span>
+                </label>
+              }
+            </span>
+            <span class="actions">
+              <button type="button" class="action" [disabled]="busy()" (click)="togglePlugin(p)">
+                {{ p.enabled ? 'Switch off' : 'Switch on' }}
+              </button>
+              <button type="button" class="action" (click)="openPlugin(p.id)">Know-how</button>
+            </span>
+          </div>
+          @if (pluginId() === p.id) {
+            <div class="editor">
+              <h2 class="block-title">{{ p.id }} · know-how</h2>
+              <p class="small">
+                What the assistants read when this plugin is in play. Tick who may read each item: a
+                court decision for lawyers, say, but not for clients.
+              </p>
+              <ol class="list">
+                @for (i of knowledge(); track $index; let n = $index) {
+                  <li class="card">
+                    <div class="card-top">
+                      <label class="field grow">
+                        <span class="field-label">Title</span>
+                        <app-shape class="field-box" name="field">
+                          <input
+                            #t
+                            maxlength="200"
+                            [value]="i.title"
+                            (input)="setItem(n, 'title', t.value)"
+                          />
+                        </app-shape>
+                      </label>
+                      <span class="sides">
+                        @for (s of sides; track s) {
+                          <label class="check">
+                            <input
+                              type="checkbox"
+                              [checked]="i.audience.includes(s)"
+                              (change)="toggleAudience(n, s)"
+                            />
+                            <span>{{ s }}</span>
+                          </label>
+                        }
+                      </span>
+                      <label class="check">
+                        <input
+                          #a
+                          type="checkbox"
+                          [checked]="i.active"
+                          (change)="setItem(n, 'active', a.checked)"
+                        />
+                        <span>In use</span>
+                      </label>
+                      <button type="button" class="action" (click)="removeItem(n)">Remove</button>
+                    </div>
+                    <textarea
+                      #x
+                      class="area"
+                      rows="6"
+                      maxlength="50000"
+                      [value]="i.text"
+                      (input)="setItem(n, 'text', x.value)"
+                    ></textarea>
+                  </li>
+                }
+              </ol>
+              <div class="row-tools">
+                <button type="button" class="action" (click)="addItem()">+ Add an item</button>
+                <button type="button" class="action" (click)="showVersions({ pluginId: p.id })">
+                  Earlier versions
+                </button>
+              </div>
+              <div class="editor-actions">
+                <button type="button" class="btn" [disabled]="busy()" (click)="saveKnowledge()">
+                  <app-shape name="bar-notch">Save know-how</app-shape>
+                </button>
+                <button type="button" class="btn btn--light" (click)="pluginId.set(null)">
+                  <app-shape name="bar-notch">Close</app-shape>
+                </button>
+              </div>
+              @if (versions(); as list) {
+                <ng-container
+                  *ngTemplateOutlet="
+                    versionList;
+                    context: { $implicit: list, of: { pluginId: p.id } }
+                  "
+                />
+              }
+            </div>
+          }
+        } @empty {
+          <p class="small">No plugin records in Firestore yet.</p>
+        }
+      </div>
+      <p class="small">
+        A plugin’s code version is switched in Firestore (Plugins → version), since it changes how
+        the code runs.
+      </p>
+    }
+
+    <!-- ==================== Test ==================== -->
+    @case ('test') {
+      <div class="editor">
+        <h2 class="block-title">Ask an assistant</h2>
+        <p class="small">
+          One question, answered with the assistant’s instructions and general know-how, without
+          tools: nothing is saved and nothing can change. Tick the box to try the instructions you
+          are editing before saving them.
+        </p>
+        <div class="grid">
+          <label class="field">
+            <span class="field-label">Assistant</span>
+            <app-shape class="field-box" name="field">
+              <select #testSide>
+                @for (s of sides; track s) {
+                  <option [value]="s" [selected]="s === side()">{{ sideLabels[s] }}</option>
+                }
+              </select>
+            </app-shape>
+          </label>
+          <label class="check">
+            <input #useDraft type="checkbox" />
+            <span>Use the unsaved instructions of the {{ sideLabels[side()] }}</span>
+          </label>
+          <label class="field wide">
+            <span class="field-label">Question</span>
+            <textarea #question class="area" rows="3" maxlength="4000"></textarea>
+          </label>
+        </div>
+        <div class="editor-actions">
+          <button
+            type="button"
+            class="btn"
+            [disabled]="busy()"
+            (click)="test($any(testSide.value), question.value, useDraft.checked)"
+          >
+            <app-shape name="bar-notch">{{ busy() ? 'Asking…' : 'Ask' }}</app-shape>
+          </button>
+        </div>
+        @if (testResult(); as r) {
+          <div class="answer">
+            <p class="cell-mono">
+              {{ r.provider }} · {{ r.model }} · {{ r.seconds }} s · instructions
+              {{ r.promptCharacters | number }} characters
+            </p>
+            <p class="answer-text">{{ r.answer || '(no answer)' }}</p>
+          </div>
+        }
+      </div>
+    }
+
+    <!-- ==================== Usage ==================== -->
+    @case ('usage') {
+      <app-admin-period [(period)]="period" />
+      @if (usage(); as u) {
+        <div class="totals">
+          <div class="total">
+            <span class="total-value">{{ u.totals.requests | number }}</span
+            ><span class="total-label">Requests</span>
+          </div>
+          <div class="total">
+            <span class="total-value">{{ u.totals.failures | number }}</span
+            ><span class="total-label">Failed</span>
+          </div>
+          <div class="total">
+            <span class="total-value">{{
+              u.totals.promptTokens + u.totals.completionTokens | number
+            }}</span
+            ><span class="total-label">Tokens</span>
+          </div>
+          <div class="total">
+            <span class="total-value">{{ u.totals.cost | number: '1.2-4' }} USD</span
+            ><span class="total-label">Cost</span>
+          </div>
+        </div>
+        @if (u.totals.unpriced.length) {
+          <p class="small">
+            No price yet for {{ u.totals.unpriced.join(', ') }}: their cost isn’t in the total.
+          </p>
+        }
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Day</th>
+                <th scope="col">Assistant</th>
+                <th scope="col">Model</th>
+                <th scope="col" class="num">Requests</th>
+                <th scope="col" class="num">Failed</th>
+                <th scope="col" class="num">Tokens in</th>
+                <th scope="col" class="num">Tokens out</th>
+                <th scope="col" class="num">USD</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (l of u.lines; track l.date + l.side + l.model) {
+                <tr>
+                  <td>{{ l.date }}</td>
+                  <td>{{ l.side }}</td>
+                  <td>{{ l.model }}</td>
+                  <td class="num">{{ l.requests | number }}</td>
+                  <td class="num">{{ l.failures | number }}</td>
+                  <td class="num">{{ l.promptTokens | number }}</td>
+                  <td class="num">{{ l.completionTokens | number }}</td>
+                  <td class="num">{{ l.cost === null ? '—' : (l.cost | number: '1.2-4') }}</td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="8">No AI use recorded in this period.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else if (!error()) {
+        <div class="skeleton" aria-busy="true"></div>
+      }
+
+      <form #prices class="editor" (submit)="savePrices(prices, $event)">
+        <h2 class="block-title">Prices · USD per million tokens</h2>
+        <p class="small">From the provider’s price page. The Dashboard’s AI spending uses these.</p>
+        @for (row of priceRows(); track row.model) {
+          <div class="price-row">
+            <span class="cell-mono">{{ row.model }}</span>
+            <label class="field">
+              <span class="field-label">Input</span>
+              <app-shape class="field-box" name="field">
+                <input
+                  [name]="'in-' + row.model"
+                  type="number"
+                  step="any"
+                  min="0"
+                  [value]="row.input"
+                />
+              </app-shape>
+            </label>
+            <label class="field">
+              <span class="field-label">Output</span>
+              <app-shape class="field-box" name="field">
+                <input
+                  [name]="'out-' + row.model"
+                  type="number"
+                  step="any"
+                  min="0"
+                  [value]="row.output"
+                />
+              </app-shape>
+            </label>
+          </div>
+        }
+        <div class="price-row">
+          <label class="field">
+            <span class="field-label">Another model</span>
+            <app-shape class="field-box" name="field"
+              ><input name="newModel" placeholder="gpt-4.1-mini"
+            /></app-shape>
+          </label>
+          <label class="field">
+            <span class="field-label">Input</span>
+            <app-shape class="field-box" name="field"
+              ><input name="newIn" type="number" step="any" min="0"
+            /></app-shape>
+          </label>
+          <label class="field">
+            <span class="field-label">Output</span>
+            <app-shape class="field-box" name="field"
+              ><input name="newOut" type="number" step="any" min="0"
+            /></app-shape>
+          </label>
+        </div>
+        <div class="editor-actions">
+          <button type="submit" class="btn" [disabled]="busy()">
+            <app-shape name="bar-notch">Save prices</app-shape>
+          </button>
+        </div>
+      </form>
+    }
+
+    <!-- ==================== Mistakes ==================== -->
+    @case ('mistakes') {
+      <p class="small">
+        Answers marked wrong in
+        <a class="link" routerLink="/admin/communications">Communications</a>. Fix the cause in the
+        instructions or the know-how, then settle the mistake with what you changed.
+      </p>
+      @if (mistakes(); as list) {
+        <div class="rows">
+          @for (m of list; track m.id) {
+            <div class="mistake" [class.is-done]="m.status === 'resolved'">
+              <div class="mistake-head">
+                <span class="status" [class.status--active]="m.status === 'resolved'">{{
+                  m.status
+                }}</span>
+                <span class="cell-mono"
+                  >{{ m.createdAt | date: 'MMM d, y, HH:mm' }} · {{ m.side }} · {{ m.by }}</span
+                >
+                <a
+                  class="action"
+                  routerLink="/admin/communications"
+                  [queryParams]="{ open: m.conversationId }"
+                  >Conversation</a
+                >
+              </div>
+              <p class="quote"><b>Asked:</b> {{ m.question || '—' }}</p>
+              <p class="quote"><b>Answered:</b> {{ m.answer }}</p>
+              @if (m.note) {
+                <p class="quote"><b>What was wrong:</b> {{ m.note }}</p>
+              }
+              @if (m.status === 'resolved') {
+                <p class="quote">
+                  <b>Settled:</b> {{ m.resolution || '—' }} · {{ m.resolvedAt | date: 'MMM d' }}
+                </p>
+              } @else {
+                <div class="controls">
+                  <label class="field grow">
+                    <span class="field-label">What you changed</span>
+                    <app-shape class="field-box" name="field"
+                      ><input #fix maxlength="2000"
+                    /></app-shape>
+                  </label>
+                  <button
+                    type="button"
+                    class="btn save"
+                    [disabled]="busy()"
+                    (click)="resolve(m, fix.value)"
+                  >
+                    <app-shape name="bar-notch">Settle</app-shape>
+                  </button>
+                </div>
+              }
+            </div>
+          } @empty {
+            <p class="small">No answers marked as mistakes.</p>
+          }
+        </div>
+      } @else if (!error()) {
+        <div class="skeleton" aria-busy="true"></div>
+      }
+    }
+  }
+} @else if (!error()) {
+  <div class="skeleton" aria-busy="true"></div>
+}
+
+<!-- Earlier versions of instructions or know-how -->
+<ng-template #versionList let-list let-of="of">
+  <div class="versions">
+    <h3 class="block-title">Earlier versions</h3>
+    @for (v of list; track v.id) {
+      <div class="version">
+        <span class="cell-mono"
+          >{{ v.savedAt | date: 'MMM d, y, HH:mm' }} · {{ v.by || '—' }} · {{ v.count }} items</span
+        >
+        <button type="button" class="action" [disabled]="busy()" (click)="restore(of, v)">
+          Restore
+        </button>
+      </div>
+    } @empty {
+      <p class="small">No earlier versions yet: one is kept every time you save.</p>
+    }
+  </div>
+</ng-template>

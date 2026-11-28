@@ -61,6 +61,39 @@
   gap: 6px;
 }
 
+.preview-btn {
+  align-self: flex-start;
+}
+
+// The article text as the site shows it
+.body-preview {
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 20px 24px;
+  border: 1px solid var(--card-border);
+  background: var(--card-bg);
+  font-size: 15px;
+  line-height: 1.7;
+
+  :is(h2, h3, h4) {
+    margin: 1.2em 0 0.4em;
+    font-family: var(--font-display);
+  }
+
+  :is(p, ul, ol, blockquote) {
+    margin-bottom: 0.8em;
+  }
+
+  :is(ul, ol) {
+    padding-left: 1.4em;
+  }
+
+  a {
+    text-decoration: underline;
+    text-decoration-color: rgb(var(--yellow));
+  }
+}
+
 // ==========================================================
 // Responsive (largest → smallest)
 // ==========================================================

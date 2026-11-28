@@ -10,12 +10,11 @@
 // ==========================================================
 
 import { getAuth } from 'firebase-admin/auth';
-import { ApiError, cleanText, db, iso, newCode, now } from '../../core/app.js';
+import { ApiError, COMPANY, cleanText, db, iso, newCode, now } from '../../core/app.js';
 import { join, makeFolder, saveFile } from '../../core/files.js';
 import { docs, lawyerById } from '../../core/records.js';
 import { mail } from '../../core/steps.js';
 
-const NOTIFY = 'gochaokreshidze@gmail.com';
 const BUCKET_CONSOLE = 'https://console.firebase.google.com/project/website-ai-law/storage/website-ai-law.firebasestorage.app/files/~2F';
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
 const FILE_TYPES = { 'application/pdf': '.pdf', 'image/jpeg': '.jpg', 'image/png': '.png' };
@@ -124,7 +123,7 @@ async function apply(_, data, env) {
     ].join('\n'),
   });
   await mail(env, {
-    to: NOTIFY,
+    to: COMPANY.applicationsEmail,
     subject: `New lawyer application — ${fullName}`,
     text: [
       `New lawyer application: ${fullName} (${lawyerId})`,

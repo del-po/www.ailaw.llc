@@ -56,7 +56,7 @@ export interface AdminNewOrder {
 
 // ---------- Blog ----------
 
-export type PostStatus = 'draft' | 'published';
+export type PostStatus = 'draft' | 'scheduled' | 'published';
 
 export interface AdminPostRow {
   slug: string;
@@ -309,4 +309,169 @@ export interface ServiceWorkflow {
   workflow: WorkflowStep[];
   pluginSteps: WorkflowStep[];
   capabilities: string[];
+}
+
+// ---------- AI Management (ai:…) ----------
+
+export type Side = 'client' | 'lawyer' | 'admin';
+
+export interface Instruction {
+  title: string;
+  text: string;
+  order: number;
+  active: boolean;
+}
+
+// One piece of a plugin's know-how; audience: the assistants that read it
+export interface KnowledgeItem {
+  title: string;
+  text: string;
+  audience: Side[];
+  active: boolean;
+}
+
+export interface AiPlugin {
+  id: string;
+  enabled: boolean;
+  sides: Side[];
+  kind: string;
+  menu: string;
+  version: string;
+  items: KnowledgeItem[];
+  steps: number;
+}
+
+// Model settings; '' = not set (an assistant then uses the shared value)
+export type ModelSettings = Record<string, string | number>;
+
+export interface AiOverview {
+  shared: ModelSettings;
+  assistants: { side: Side; ai: ModelSettings; instructions: Instruction[] }[];
+  plugins: AiPlugin[];
+  // USD per million tokens
+  prices: Record<string, { input: number; output: number }>;
+}
+
+export interface AiVersion {
+  id: string;
+  savedAt: string;
+  by: string;
+  count: number;
+  value: (Instruction | KnowledgeItem)[];
+}
+
+export interface AiTestResult {
+  answer: string;
+  promptCharacters: number;
+  model: string;
+  provider: string;
+  seconds: number;
+}
+
+export interface AiUsageLine {
+  date: string;
+  side: string;
+  provider: string;
+  model: string;
+  requests: number;
+  failures: number;
+  promptTokens: number;
+  completionTokens: number;
+  cost: number | null;
+}
+
+export interface AiUsage {
+  period: Period;
+  totals: {
+    requests: number;
+    failures: number;
+    promptTokens: number;
+    completionTokens: number;
+    cost: number;
+    unpriced: string[];
+  };
+  lines: AiUsageLine[];
+}
+
+export interface AiMistake {
+  id: string;
+  conversationId: string;
+  messageId: string;
+  side: string;
+  question: string;
+  answer: string;
+  note: string;
+  status: 'open' | 'resolved';
+  resolution: string;
+  by: string;
+  createdAt: string;
+  resolvedAt: string;
+}
+
+// ---------- Communications (comms:…) ----------
+
+export interface ConversationRow {
+  id: string;
+  side: Side;
+  title: string;
+  email: string;
+  guest: boolean;
+  scope: string;
+  activeService: string;
+  updatedAt: string;
+  createdAt: string;
+  needsHuman: boolean;
+  needsHumanReason: string;
+  answeredByTeamAt: string;
+}
+
+export interface ConversationMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  text: string;
+  parts: string[];
+  team: boolean;
+  deleted: boolean;
+  mistakeId: string;
+  createdAt: string;
+}
+
+export interface ConversationDetail extends ConversationRow {
+  owner: { clientId: string; name: string; email: string; type: string } | null;
+  messages: ConversationMessage[];
+  emailed?: string;
+}
+
+// ---------- System Settings (system:…) ----------
+
+export interface CompanyDetails {
+  name: string;
+  registration: string;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  signatory: string;
+  verifyContact: string;
+  applicationsEmail: string;
+}
+
+export interface SystemSettings {
+  company: CompanyDetails;
+  defaults: CompanyDetails;
+  bank: { BankRecipient: string; BankName: string; BankIban: string };
+  notifications: { lawyerTasksEmail: string; applicationsEmail: string; sendsFrom: string };
+  platform: { orderingOpen: boolean; orderingPausedText: string };
+  integrations: { name: string; connected: boolean }[];
+  access: {
+    admins: { clientId: string; name: string; email: string; status: string }[];
+    lawyers: { lawyerId: string; name: string; email: string; status: string }[];
+  };
+}
+
+export interface SystemChanges {
+  company?: Partial<CompanyDetails>;
+  bank?: Partial<SystemSettings['bank']>;
+  notifications?: { lawyerTasksEmail?: string };
+  platform?: Partial<SystemSettings['platform']>;
 }

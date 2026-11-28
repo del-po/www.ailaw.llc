@@ -68,8 +68,16 @@
 
       <label class="field wide">
         <span class="field-label">Text · Markdown</span>
-        <textarea class="area body" name="body" rows="18" [value]="post.body"></textarea>
+        <textarea #body class="area body" name="body" rows="18" [value]="post.body"></textarea>
       </label>
+      <div class="field wide">
+        <button type="button" class="action preview-btn" (click)="showPreview(body.value)">
+          {{ bodyPreview() ? 'Preview again' : 'Preview the text' }}
+        </button>
+        @if (bodyPreview(); as html) {
+          <div class="body-preview" [innerHTML]="html"></div>
+        }
+      </div>
 
       <div class="field">
         <span class="field-label">Cover picture · JPEG, PNG or WebP, up to 5 MB</span>
@@ -92,9 +100,22 @@
             <option value="draft" [selected]="post.status === 'draft'">
               Draft · not on the site
             </option>
+            <option value="scheduled" [selected]="post.status === 'scheduled'">
+              Scheduled · appears at the time below
+            </option>
             <option value="published" [selected]="post.status === 'published'">Published</option>
           </select>
         </app-shape>
+        <label class="field">
+          <span class="field-label">Publish at · Tbilisi time, for a scheduled article</span>
+          <app-shape class="field-box" name="field">
+            <input
+              name="publishAt"
+              type="datetime-local"
+              [value]="post.status === 'scheduled' ? tbilisiTime(post.publishedAt) : ''"
+            />
+          </app-shape>
+        </label>
         <label class="check">
           <input name="featured" type="checkbox" [checked]="post.featured" />
           Featured · shown first on the blog page

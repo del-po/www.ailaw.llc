@@ -125,7 +125,8 @@ export class AdminDashboardPage {
       {
         value: d.aiSpending == null ? '—' : amounts(d.aiSpending),
         label: 'AI spending',
-        sub: d.aiSpending == null ? 'not counted yet' : '',
+        sub: d.aiSpending == null ? 'set prices in AI Management' : 'from AI usage',
+        link: '/admin/ai',
       },
     ];
   });
