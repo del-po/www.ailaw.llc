@@ -255,6 +255,7 @@ const clientShort = (c) => ({
   status: c.Status,
   hasLogin: !!c.UserID,
   role: c.Role,
+  notes: c.Notes,
 });
 
 async function findClientRecord(ctx, clientId) {
@@ -331,6 +332,22 @@ const clientTools = {
         title: `${a.status === 'suspended' ? 'Suspend' : 'Reactivate'} ${c.DisplayName}'s account`,
         lines: [c.Email],
         danger: a.status === 'suspended',
+      });
+    },
+  ),
+  client_set_notes: tool(
+    "Proposes replacing AI Law's internal notes on a client (never shown to the client). To add a line, read the " +
+      'current notes with clients_find first and send them with the new line.' +
+      CHANGE,
+    { clientId: str('ID-…'), notes: str('the full notes text') },
+    ['clientId', 'notes'],
+    async (ctx, a) => {
+      const c = await findClientRecord(ctx, a.clientId);
+      return proposeAction(ctx, {
+        action: 'admin:setClientNotes',
+        data: { clientId: c.ClientID, notes: String(a.notes || '') },
+        title: `Internal notes on ${c.DisplayName || c.ClientID}`,
+        lines: [String(a.notes || '(empty)').slice(0, 300)],
       });
     },
   ),

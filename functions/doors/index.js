@@ -4,7 +4,8 @@
 //            services and blog pages
 //   lawyer   joining as a lawyer, the Workspace: assignments, case chat,
 //            documents, delivery, profile
-//   admin    the admin pages
+//   admin    the Admin Panel and the admin chat; every change is recorded
+//            in AuditLog (core/audit.js)
 //   onOrderPaid  an order marked paid: receipt + its next steps
 //   daily        retries what failed (folders, agreements, emails) and
 //                moves paid orders on
@@ -25,6 +26,7 @@ import { docs } from '../core/records.js';
 import { advance, resumePaid } from '../core/steps.js';
 import accounts from '../plugins/accounts/index.js';
 import adminAssistant from '../plugins/admin-assistant/index.js';
+import adminInsights from '../plugins/admin-insights/index.js';
 import assignments from '../plugins/assignments/index.js';
 import blog from '../plugins/blog/index.js';
 import catalogue from '../plugins/catalogue/index.js';
@@ -39,7 +41,7 @@ import taskDesk from '../plugins/task-desk/index.js';
 
 const CLIENT = [accounts, catalogue, ordering, myOrders, documents, blog, declarations];
 const LAWYER = [lawyerVerification, assignments, lawyerProfile];
-const ADMIN = [accounts, catalogue, ordering, lawyerVerification, taskDesk, blog, declarations, adminAssistant];
+const ADMIN = [accounts, catalogue, ordering, lawyerVerification, taskDesk, blog, declarations, adminAssistant, adminInsights];
 
 export const client = door('client', CLIENT);
 // Applications carry their documents: up to ~25 MB per request

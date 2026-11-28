@@ -20,21 +20,39 @@
         }
       </a>
       @if (auth.user(); as user) {
-        <button
-          class="nav-btn nav-profile"
-          type="button"
-          aria-label="Account menu"
-          [attr.aria-expanded]="accountOpen()"
-          (click)="toggleAccount($event)"
-        >
-          <app-shape name="square-cut" [front]="!!user.photoURL">
-            @if (user.photoURL) {
-              <img class="avatar-img" [src]="user.photoURL" alt="" referrerpolicy="no-referrer" />
-            } @else {
-              <span class="avatar-initials">{{ initials() }}</span>
-            }
-          </app-shape>
-        </button>
+        <!-- The administrator's profile icon opens the Admin Control Panel -->
+        @if (auth.profile()?.Role === 'admin') {
+          <a
+            class="nav-btn nav-profile"
+            routerLink="/admin"
+            routerLinkActive="is-active"
+            aria-label="Admin Control Panel"
+          >
+            <app-shape name="square-cut" [front]="!!user.photoURL">
+              @if (user.photoURL) {
+                <img class="avatar-img" [src]="user.photoURL" alt="" referrerpolicy="no-referrer" />
+              } @else {
+                <span class="avatar-initials">{{ initials() }}</span>
+              }
+            </app-shape>
+          </a>
+        } @else {
+          <button
+            class="nav-btn nav-profile"
+            type="button"
+            aria-label="Account menu"
+            [attr.aria-expanded]="accountOpen()"
+            (click)="toggleAccount($event)"
+          >
+            <app-shape name="square-cut" [front]="!!user.photoURL">
+              @if (user.photoURL) {
+                <img class="avatar-img" [src]="user.photoURL" alt="" referrerpolicy="no-referrer" />
+              } @else {
+                <span class="avatar-initials">{{ initials() }}</span>
+              }
+            </app-shape>
+          </button>
+        }
       } @else {
         <a class="nav-btn nav-profile" routerLink="/login" aria-label="Log in">
           <app-shape name="square-cut"><app-icon name="user" /></app-shape>

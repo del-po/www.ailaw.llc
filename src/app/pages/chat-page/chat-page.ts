@@ -1,17 +1,20 @@
 import {
   Component,
   ElementRef,
+  Injector,
   PLATFORM_ID,
   afterNextRender,
   computed,
   effect,
   inject,
   signal,
+  untracked,
   viewChild,
 } from '@angular/core';
 import { DecimalPipe, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ChatService } from '../../core/services/chat.service';
+import { AdminChatService } from '../../core/services/admin-chat.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { ChatMessage, DeclarationPart, DocumentPart } from '../../core/models/chat';
@@ -38,7 +41,35 @@ const STICK_DISTANCE = 80;
   },
 })
 export class ChatPage {
-  protected readonly chat = inject(ChatService);
+  private readonly auth = inject(AuthService);
+  private readonly injector = inject(Injector);
+  private readonly clientChat = inject(ChatService);
+
+  // ---------- Admin Assistant ----------
+  // An administrator gets the Admin Assistant here: the same page, through
+  // the admin door (admin instructions and tools, Confirm before changes).
+  // "Client view" switches back to the website's own chat, to see it as
+  // clients do.
+
+  protected readonly isAdmin = computed(() => this.auth.profile()?.Role === 'admin');
+  protected readonly clientView = signal(false);
+  // Made only once an admin is signed in, so visitors never call the admin door
+  private readonly adminChat = signal<AdminChatService | null>(null);
+  protected readonly adminMode = computed(
+    () => this.isAdmin() && !this.clientView() && !!this.adminChat(),
+  );
+
+  // The chat this page shows: the admin's or the website's
+  protected get chat(): ChatService {
+    return (this.adminMode() && this.adminChat()) || this.clientChat;
+  }
+
+  protected toggleView(): void {
+    this.clientView.update((client) => !client);
+    this.cancelEdit();
+    this.stickToBottom = true;
+  }
+
   private readonly theme = inject(ThemeService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -47,7 +78,7 @@ export class ChatPage {
   private readonly input = viewChild.required(ChatInput);
   private readonly scroller = viewChild<ElementRef<HTMLElement>>('scroller');
 
-  protected readonly loggedIn = inject(AuthService).signedIn;
+  protected readonly loggedIn = this.auth.signedIn;
 
   protected readonly robot = computed(() =>
     this.theme.isDark()
@@ -198,6 +229,14 @@ export class ChatPage {
   }
 
   constructor() {
+    effect(() => {
+      if (!this.isAdmin() || !this.isBrowser) return;
+      // Outside the reactive context: the service sets up its own effects
+      untracked(() => {
+        if (!this.adminChat()) this.adminChat.set(this.injector.get(AdminChatService));
+      });
+    });
+
     effect(() => {
       this.messages();
       const el = this.scroller()?.nativeElement;

@@ -39,6 +39,8 @@ export class AdminClientsPage {
   protected readonly verifyingId = signal<string | null>(null);
   // The client (without a login) being joined to a website account
   protected readonly linkingId = signal<string | null>(null);
+  // The client whose internal notes are open
+  protected readonly notesId = signal<string | null>(null);
 
   // Website accounts that can be joined to a client: ordinary client logins
   protected readonly accounts = computed(() =>
@@ -143,6 +145,14 @@ export class AdminClientsPage {
     } finally {
       this.busyId.set(null);
     }
+  }
+
+  // Internal notes are AI Law's own; the client never sees them
+  protected async saveNotes(client: Profile, area: HTMLTextAreaElement): Promise<void> {
+    const done = await this.run(client, () =>
+      this.admin.setClientNotes(client.ClientID, area.value.trim()),
+    );
+    if (done) this.notesId.set(null);
   }
 
   protected async unverify(client: Profile): Promise<void> {

@@ -1,0 +1,155 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Analytics &amp; Logs</h1>
+  <p class="lead">
+    Every change an administrator makes is recorded here: who, when, which record, what it was
+    before and after, and whether it was done in the panel or through the Admin Assistant.
+  </p>
+</section>
+
+<nav class="filters tabs" aria-label="Logs">
+  @for (t of tabs; track t.value) {
+    <button
+      type="button"
+      class="filter"
+      [class.is-active]="tab() === t.value"
+      [attr.aria-pressed]="tab() === t.value"
+      (click)="setTab(t.value)"
+    >
+      {{ t.label }}
+    </button>
+  }
+</nav>
+
+<div class="toolbar">
+  <app-admin-period [(period)]="period" />
+  <label class="search">
+    <span class="visually-hidden">Search the log</span>
+    <app-shape class="field-box" name="field">
+      <input
+        #box
+        type="search"
+        [placeholder]="tab() === 'activity' ? 'Action, person, record…' : 'Action, error…'"
+        (input)="search.set(box.value)"
+      />
+    </app-shape>
+  </label>
+</div>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+
+@if (tab() === 'activity') {
+  <nav class="filters" aria-label="Where the change came from">
+    @for (v of vias; track v.value) {
+      <button
+        type="button"
+        class="filter"
+        [class.is-active]="via() === v.value"
+        [attr.aria-pressed]="via() === v.value"
+        (click)="via.set(v.value)"
+      >
+        {{ v.label }}
+      </button>
+    }
+  </nav>
+
+  @if (activity()) {
+    <div class="rows">
+      @for (a of activityList(); track a.id) {
+        <div class="entry">
+          <button
+            type="button"
+            class="row entry-row"
+            [attr.aria-expanded]="openId() === a.id"
+            (click)="toggle(a.id)"
+          >
+            <span class="cell-mono">{{ a.time | date: 'MMM d, y · HH:mm' }}</span>
+            <span class="cell-main">
+              <span class="cell-title">{{ actionLabel(a.action) }}</span>
+              <span class="cell-sub"
+                >{{ a.who }}{{ targetLabel(a) ? ' · ' + targetLabel(a) : '' }}</span
+              >
+            </span>
+            <span class="labels">
+              <span class="status" [class.status--draft]="a.via === 'chat'">{{
+                a.via === 'chat' ? 'AI chat' : 'Panel'
+              }}</span>
+              @if (!a.ok) {
+                <span class="status status--failed">Failed</span>
+              }
+            </span>
+          </button>
+
+          @if (openId() === a.id) {
+            <div class="details">
+              <p class="cell-mono">{{ a.action }} · {{ a.email }}</p>
+              @if (!a.ok) {
+                <p class="cell-mono">Error: {{ a.error }}</p>
+              }
+              @if (a.changes) {
+                <table class="changes">
+                  <thead>
+                    <tr>
+                      <th scope="col">Field</th>
+                      <th scope="col">Before</th>
+                      <th scope="col">After</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (c of a.changes | keyvalue; track c.key) {
+                      <tr>
+                        <th scope="row">{{ c.key }}</th>
+                        <td>{{ shown(c.value.from) }}</td>
+                        <td>{{ shown(c.value.to) }}</td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              } @else if (a.data) {
+                <p class="cell-sub">Sent:</p>
+                <pre class="sent">{{ a.data | json }}</pre>
+              }
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="small">No changes recorded in this period.</p>
+      }
+    </div>
+  } @else if (!error()) {
+    <div class="skeleton" aria-busy="true"></div>
+  }
+} @else {
+  @if (errors()) {
+    <div class="rows">
+      @for (e of errorList(); track e.id) {
+        <div class="entry">
+          <button
+            type="button"
+            class="row entry-row"
+            [attr.aria-expanded]="openId() === e.id"
+            (click)="toggle(e.id)"
+          >
+            <span class="cell-mono">{{ e.time | date: 'MMM d, y · HH:mm' }}</span>
+            <span class="cell-main">
+              <span class="cell-title">{{ e.action || '—' }}</span>
+              <span class="cell-sub">{{ e.error }}</span>
+            </span>
+            <span class="labels"><span class="status status--failed">Error</span></span>
+          </button>
+          @if (openId() === e.id && e.details) {
+            <div class="details">
+              <pre class="sent">{{ e.details }}</pre>
+            </div>
+          }
+        </div>
+      } @empty {
+        <p class="small">No errors in this period.</p>
+      }
+    </div>
+  } @else if (!error()) {
+    <div class="skeleton" aria-busy="true"></div>
+  }
+}

@@ -6,6 +6,7 @@
 //   - every other action answers once: { ok, data } or { ok: false, error }
 //   GET ?action=…&… for public reads (services, blog)
 // The guard decides who may come in; the door's plugins decide what it can do.
+// The admin door records every change it makes in AuditLog (core/audit.js).
 // Actions are plain handlers (caller, data, env, body), or objects:
 //   { public: true, run }  no login at all (service list, blog, applying)
 //   { guest: true, run }   a visitor's guest id is enough
@@ -17,6 +18,7 @@ import { ApiError, log } from './app.js';
 import { allowed, identify } from './guard.js';
 import { actionsOf, loadPlugins } from './loader.js';
 import { actionRoutes } from './chat-actions.js';
+import { audited } from './audit.js';
 import {
   answer,
   deleteConversation,
@@ -101,7 +103,9 @@ export function door(side, modules, options = {}) {
       // ---------- Everything else ----------
       try {
         const plugins = await loadPlugins(side, modules);
-        const own = { ...chatRoutes(side), ...actionsOf(plugins, side) };
+        const table = { ...chatRoutes(side), ...actionsOf(plugins, side) };
+        // Admin changes are recorded (core/audit.js), from buttons and chat alike
+        const own = side === 'admin' ? audited(table) : table;
         // Actions the chat proposed run through this same table on Confirm
         const routes = { ...own, ...actionRoutes(side, own) };
         const route = routes[body.action];

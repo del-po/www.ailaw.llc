@@ -3,7 +3,8 @@
   <h1 class="title">Clients</h1>
   <p class="lead">
     {{ total() }} clients, {{ verified() }} verified. Verify a client after checking their passport:
-    they can then order every service. A suspended client can't use their account.
+    they can then order every service. A suspended client can't use their account. Notes are for AI
+    Law only.
   </p>
 </section>
 
@@ -102,6 +103,14 @@
                 Link account
               </button>
             }
+            <button
+              type="button"
+              class="action"
+              [disabled]="busyId() === client.ClientID"
+              (click)="notesId.set(notesId() === client.ClientID ? null : client.ClientID)"
+            >
+              Notes
+            </button>
             @if (canSuspend(client)) {
               <button
                 type="button"
@@ -121,6 +130,41 @@
             {{ client.IDNumber ? ' · ID ' + client.IDNumber : '' }}
             {{ client.Address ? ' · ' + client.Address : '' }}
           </p>
+        }
+
+        @if (client.Notes && notesId() !== client.ClientID) {
+          <p class="cell-sub identity notes">Note: {{ client.Notes }}</p>
+        }
+
+        @if (notesId() === client.ClientID) {
+          <div class="editor">
+            <h2 class="block-title">
+              Internal notes on {{ client.DisplayName || client.ClientID }}
+            </h2>
+            <p class="small">For AI Law only: the client never sees these.</p>
+            <textarea
+              #notes
+              class="area"
+              rows="5"
+              maxlength="5000"
+              [value]="client.Notes"
+            ></textarea>
+            <div class="editor-actions">
+              <button
+                type="button"
+                class="btn"
+                [disabled]="busyId() === client.ClientID"
+                (click)="saveNotes(client, notes)"
+              >
+                <app-shape name="bar-notch">{{
+                  busyId() === client.ClientID ? 'Saving…' : 'Save notes'
+                }}</app-shape>
+              </button>
+              <button type="button" class="btn btn--light" (click)="notesId.set(null)">
+                <app-shape name="bar-notch">Cancel</app-shape>
+              </button>
+            </div>
+          </div>
         }
 
         @if (linkingId() === client.ClientID) {

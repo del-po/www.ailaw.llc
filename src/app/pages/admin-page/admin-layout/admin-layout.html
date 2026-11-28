@@ -5,67 +5,61 @@
       <span class="brand-name">Admin</span>
     </a>
 
-    <!-- ---------- Chat ---------- -->
-    <nav class="block" aria-label="Chat">
-      <div class="block-head">
-        <a
-          class="item item--main"
-          routerLink="/admin"
-          routerLinkActive="is-active"
-          [routerLinkActiveOptions]="{ exact: true }"
-        >
-          Chat
-        </a>
-        <button type="button" class="new" (click)="newChat()" aria-label="New chat">+</button>
-      </div>
-      @for (c of chat.conversations().slice(0, 8); track c.id) {
-        <button
-          type="button"
-          class="talk"
-          [class.is-active]="c.id === chat.activeId()"
-          (click)="openChat(c.id)"
-        >
-          {{ c.title || 'New chat' }}
-        </button>
-      }
-    </nav>
+    <!-- ---------- Admin Assistant (the /chat page) ---------- -->
+    <a class="assistant" routerLink="/chat">
+      <span class="assistant-tag">Admin Assistant</span>
+      <span class="assistant-text">Tell it what to do</span>
+    </a>
 
     <!-- ---------- Sections ---------- -->
     <nav class="block" aria-label="Sections">
-      <p class="list-title">Work</p>
-      @for (section of sections; track section.link) {
-        <a class="item" [routerLink]="section.link" routerLinkActive="is-active">
-          <span>{{ section.label }}</span>
-          @if (count(section)) {
-            <span class="badge" [attr.aria-label]="count(section) + ' waiting'">{{
-              count(section)
-            }}</span>
-          }
-        </a>
+      @for (section of sections; track section.label) {
+        @if (section.link) {
+          <a
+            class="item"
+            [routerLink]="section.link"
+            routerLinkActive="is-active"
+            [routerLinkActiveOptions]="{ exact: section.link === '/admin' }"
+          >
+            <span>{{ section.label }}</span>
+            @if (!section.ready) {
+              <span class="soon">Soon</span>
+            } @else if (count(section)) {
+              <span class="badge" [attr.aria-label]="count(section) + ' waiting'">{{
+                count(section)
+              }}</span>
+            }
+          </a>
+        } @else {
+          <p class="item item--head">{{ section.label }}</p>
+        }
+        @for (child of section.children ?? []; track child.link) {
+          <a class="item item--child" [routerLink]="child.link" routerLinkActive="is-active">
+            <span>{{ child.label }}</span>
+            @if (count(child)) {
+              <span class="badge" [attr.aria-label]="count(child) + ' waiting'">{{
+                count(child)
+              }}</span>
+            }
+          </a>
+        }
       }
     </nav>
 
-    <!-- ---------- Profile menu ---------- -->
+    <!-- ---------- Administrator ---------- -->
     <div class="me">
-      <button
-        type="button"
-        class="me-open"
-        (click)="menuOpen.set(!menuOpen())"
-        [attr.aria-expanded]="menuOpen()"
-      >
+      <div class="me-who">
         <span class="avatar" aria-hidden="true">{{ name().charAt(0) }}</span>
         <span class="me-text">
           <span class="me-name">{{ name() }}</span>
-          <span class="me-code">{{ auth.profile()?.ClientID }}</span>
+          <span class="me-code">{{ auth.profile()?.ClientID }} · Administrator</span>
         </span>
-      </button>
-      @if (menuOpen()) {
-        <div class="me-menu">
-          <a class="me-link" routerLink="/profile/settings">Settings</a>
-          <a class="me-link" routerLink="/">Back to the website</a>
-          <button type="button" class="me-link" (click)="signOut()">Log out</button>
-        </div>
-      }
+      </div>
+      <div class="me-links">
+        <a class="me-link" routerLink="/profile/settings">Settings</a>
+        <a class="me-link" routerLink="/">Website</a>
+        <button type="button" class="me-link me-link--out" (click)="signOut()">Log out</button>
+      </div>
     </div>
   </aside>
 

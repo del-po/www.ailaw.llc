@@ -6,6 +6,10 @@ import {
   AdminPostRow,
   AdminServiceInput,
   AdminServiceRow,
+  AuditEntry,
+  Dashboard,
+  ErrorEntry,
+  Period,
   Upload,
 } from '../models/admin';
 import {
@@ -109,10 +113,32 @@ export class AdminService {
     return this.call('admin:unverifyClient', { clientId });
   }
 
+  // AI Law's internal notes on a client, never shown to the client
+  setClientNotes(clientId: string, notes: string): Promise<Profile> {
+    return this.call('admin:setClientNotes', { clientId, notes });
+  }
+
   // Joins a website login (userId) to an existing client without one; the
   // record the sign-up made is merged into it
   linkAccount(clientId: string, userId: string): Promise<Profile> {
     return this.call('admin:linkAccount', { clientId, userId });
+  }
+
+  // ---------- Dashboard, audit log, errors ----------
+
+  dashboard(period: Period): Promise<Dashboard> {
+    return this.call('admin:dashboard', period);
+  }
+
+  // Admin changes, newest first; via: only the panel's or the chat's
+  auditLog(
+    filters: Period & { query?: string; via?: 'panel' | 'chat'; failed?: boolean; limit?: number },
+  ): Promise<AuditEntry[]> {
+    return this.call('admin:audit', filters);
+  }
+
+  errorLog(filters: Period & { query?: string; limit?: number }): Promise<ErrorEntry[]> {
+    return this.call('admin:logs', filters);
   }
 
   // ---------- Review ----------

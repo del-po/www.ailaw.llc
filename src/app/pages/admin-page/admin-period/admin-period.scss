@@ -1,0 +1,51 @@
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin period filter: quick periods and two days
+// ==========================================================
+
+@include admin-filters;
+
+.period {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.day {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.day-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.day input {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  background: var(--card-bg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text);
+  color-scheme: light dark;
+
+  &:focus {
+    border-color: rgb(var(--yellow));
+    outline: none;
+  }
+}

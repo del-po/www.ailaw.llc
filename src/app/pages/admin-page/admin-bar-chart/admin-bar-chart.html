@@ -1,0 +1,65 @@
+<figure class="chart">
+  <figcaption class="chart-head">
+    <span class="chart-title">{{ title() }}</span>
+    <span class="chart-total">{{ format()(total()) }}</span>
+  </figcaption>
+
+  <div class="plot" (mouseleave)="hovered.set(null)">
+    <svg
+      [attr.viewBox]="'0 0 ' + width + ' ' + height"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <line
+        class="base"
+        x1="0"
+        [attr.y1]="height - 0.5"
+        [attr.x2]="width"
+        [attr.y2]="height - 0.5"
+      />
+      @for (b of bars(); track b.label; let i = $index) {
+        @if (b.path) {
+          <path class="bar" [class.is-hovered]="hovered() === i" [attr.d]="b.path" />
+        }
+        <!-- The whole column answers to the mouse, not just the bar -->
+        <rect
+          class="hit"
+          [attr.x]="i * b.step"
+          y="0"
+          [attr.width]="b.step"
+          [attr.height]="height"
+          (mouseenter)="hovered.set(i)"
+        />
+      }
+    </svg>
+
+    @if (tip(); as t) {
+      <div class="tip" [style.left.%]="t.left">
+        <span class="tip-label">{{ t.label }}</span>
+        <span class="tip-value">{{ format()(t.value) }}</span>
+      </div>
+    }
+  </div>
+
+  <div class="ticks" aria-hidden="true">
+    @for (t of ticks(); track t.label) {
+      <span class="tick" [style.left.%]="t.left">{{ t.label }}</span>
+    }
+  </div>
+
+  <table class="visually-hidden">
+    <caption>
+      {{
+        title()
+      }}
+    </caption>
+    <tbody>
+      @for (p of points(); track p.label) {
+        <tr>
+          <th scope="row">{{ p.label }}</th>
+          <td>{{ format()(p.value) }}</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</figure>

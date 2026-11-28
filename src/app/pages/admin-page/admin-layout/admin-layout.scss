@@ -2,20 +2,11 @@
 @use 'page' as *;
 
 // ==========================================================
-// Admin Workspace: sidebar (chat, sections, profile menu) and the main
-// area, like the lawyers' Workspace
+// Admin Control Panel: sidebar (Admin Assistant, sections, the
+// administrator with Log out) and the main area
 // ==========================================================
 
 @include page-theme;
-
-// Solid copies of the see-through page colours, for the menu that floats
-:host {
-  --menu-bg: color-mix(in srgb, rgb(var(--grey)) 40%, white);
-}
-
-:host-context(body.dark) {
-  --menu-bg: rgb(var(--black));
-}
 
 .workspace {
   display: grid;
@@ -69,30 +60,41 @@
   font-size: 28px;
 }
 
+.assistant {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid rgb(var(--yellow));
+  text-decoration: none;
+  color: var(--text);
+  transition: background-color var(--ease);
+
+  &:hover {
+    background: rgb(var(--yellow));
+    color: rgb(var(--black));
+  }
+}
+
+.assistant-tag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.assistant-text {
+  font-size: 13px;
+}
+
 .block {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.block-head {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.list-title {
-  margin-bottom: 6px;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-// A section, or the chat: text with what is waiting on the right
+// A section: its name, with what is waiting on the right
 .item {
   display: flex;
   align-items: center;
@@ -117,6 +119,31 @@
   }
 }
 
+.item--head {
+  margin-top: 10px;
+  color: var(--text-muted);
+  font-size: 10px;
+  letter-spacing: 2px;
+
+  &:hover {
+    background: none;
+  }
+}
+
+.item--child {
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 1px solid var(--line);
+  font-size: 11px;
+}
+
+// A section still being built
+.soon {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  color: var(--text-muted);
+}
+
 .badge {
   min-width: 20px;
   padding: 0 6px;
@@ -127,54 +154,22 @@
   text-align: center;
 }
 
-.new {
-  width: 30px;
-  height: 30px;
-  border: 1px solid var(--line);
-  font-family: var(--font-mono);
-  font-size: 16px;
-
-  &:hover {
-    border-color: var(--text);
-  }
-}
-
-// One past conversation
-.talk {
-  overflow: hidden;
-  padding: 5px 10px;
-  font-size: 13px;
-  text-align: left;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  color: var(--text-muted);
-
-  &:hover,
-  &.is-active {
-    color: var(--text);
-  }
-
-  &.is-active {
-    box-shadow: inset 2px 0 0 rgb(var(--yellow));
-  }
-}
-
-// ---------- Profile menu ----------
+// ---------- Administrator ----------
 
 .me {
-  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   margin-top: auto;
   padding-top: 16px;
   border-top: 1px solid var(--line);
 }
 
-.me-open {
+.me-who {
   display: grid;
   grid-template-columns: 36px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
-  width: 100%;
-  text-align: left;
 }
 
 .avatar {
@@ -208,29 +203,29 @@
   color: var(--text-muted);
 }
 
-.me-menu {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 0;
-  right: 0;
+.me-links {
   display: flex;
-  flex-direction: column;
-  padding: 6px;
-  border: 1px solid var(--card-border);
-  background: var(--menu-bg);
-  box-shadow: 0 8px 24px rgb(0 0 0 / 0.12);
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .me-link {
-  padding: 8px 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
   font-family: var(--font-mono);
-  font-size: 12px;
-  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   text-decoration: none;
   color: var(--text);
 
   &:hover {
-    background: var(--line);
+    border-color: var(--text);
+  }
+
+  &--out {
+    margin-left: auto;
   }
 }
 

@@ -14,6 +14,8 @@
 //                              passport / ID number / address; a client
 //                              without an account gets a permanent folder
 //   admin:unverifyClient       back to user (with an account) or guest
+//   admin:setClientNotes       AI Law's internal notes on a client (never
+//                              shown to the client)
 // Folders: clients/users/ID-… - Name or clients/verified/ID-… - Name; the
 // folder moves between the two when the type changes.
 //   admin:linkAccount          joins a login to an existing client (e.g. a
@@ -300,6 +302,16 @@ async function unverifyClient(caller, data) {
   return toProfile({ ...client, ...changes });
 }
 
+// ---------- Internal notes ----------
+
+async function setClientNotes(data) {
+  const client = await clientById(cleanKey(data.clientId));
+  if (!client) throw new ApiError('CLIENT_NOT_FOUND');
+  const changes = { notes: cleanText(data.notes, 5000, 'INVALID_NOTES'), updatedAt: now() };
+  await db.doc('Clients/' + client.id).update(changes);
+  return toProfile({ ...client, ...changes });
+}
+
 // ---------- Joining a login to an existing client ----------
 
 // target: the existing client (no login yet); the login's own record (made
@@ -403,6 +415,7 @@ export default {
       'admin:verifyClient': (caller, data) => verifyClient(caller, data),
       'admin:unverifyClient': (caller, data) => unverifyClient(caller, data),
       'admin:linkAccount': (caller, data) => linkAccount(data),
+      'admin:setClientNotes': (caller, data) => setClientNotes(data),
     },
   },
   tools,

@@ -1,38 +1,143 @@
 <section class="head">
   <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
   <h1 class="title">Dashboard</h1>
-  <p class="lead">The site at a glance.</p>
+  <p class="lead">The whole business at a glance, for the period you choose.</p>
 </section>
+
+<app-admin-period [(period)]="period" />
 
 @if (error()) {
   <p class="message" role="alert">{{ error() }}</p>
 }
 
-<div class="tiles">
-  @for (tile of tiles(); track tile.label) {
-    <a class="tile" [routerLink]="tile.link">
-      <app-shape name="square-cut">
-        <span class="tile-body">
-          <span class="tile-value">{{ tile.value }}</span>
-          <span class="tile-label">{{ tile.label }}</span>
-        </span>
-      </app-shape>
-    </a>
-  }
-</div>
-
-<section class="sections" aria-label="Admin sections">
-  <div class="rows">
-    @for (section of sections; track section.link) {
-      <a class="row section" [routerLink]="section.link">
-        <span class="cell-main">
-          <span class="cell-title">{{ section.label }}</span>
-          <span class="cell-sub">{{ section.text }}</span>
-        </span>
-        @if (!section.ready) {
-          <span class="status">Soon</span>
-        }
-      </a>
+@if (data(); as d) {
+  <div class="tiles" [class.is-loading]="loading()">
+    @for (tile of tiles(); track tile.label) {
+      @if (tile.link) {
+        <a class="tile" [class.is-alert]="tile.alert" [routerLink]="tile.link">
+          <ng-container *ngTemplateOutlet="body; context: { $implicit: tile }" />
+        </a>
+      } @else {
+        <div class="tile tile--still" [class.is-alert]="tile.alert">
+          <ng-container *ngTemplateOutlet="body; context: { $implicit: tile }" />
+        </div>
+      }
     }
   </div>
-</section>
+
+  <ng-template #body let-tile>
+    <app-shape name="square-cut">
+      <span class="tile-body">
+        <span class="tile-value">{{ tile.value }}</span>
+        <span class="tile-label">{{ tile.label }}</span>
+        @if (tile.sub) {
+          <span class="tile-sub">{{ tile.sub }}</span>
+        }
+      </span>
+    </app-shape>
+  </ng-template>
+
+  <div class="charts">
+    <app-admin-bar-chart [title]="'Orders placed · by ' + d.series.unit" [points]="orderPoints()" />
+    <app-admin-bar-chart
+      [title]="'Revenue received · ' + currency() + ' · by ' + d.series.unit"
+      [points]="revenuePoints()"
+      [format]="money"
+    />
+  </div>
+
+  <div class="columns">
+    <!-- ---------- Orders by status ---------- -->
+    <section class="panel" aria-labelledby="by-status">
+      <h2 id="by-status" class="block-title">Orders by status · all time</h2>
+      <ul class="status-bars">
+        @for (s of statuses(); track s.label) {
+          <li class="status-bar">
+            <span class="status-name">{{ s.label }}</span>
+            <span class="status-track"
+              ><span class="status-fill" [style.width.%]="s.width"></span
+            ></span>
+            <span class="status-value">{{ s.value }}</span>
+          </li>
+        }
+      </ul>
+    </section>
+
+    <!-- ---------- Delayed workflows ---------- -->
+    <section class="panel" aria-labelledby="stuck">
+      <h2 id="stuck" class="block-title">Delayed workflows</h2>
+      @if (d.stuck.list.length) {
+        <div class="rows">
+          @for (s of d.stuck.list; track s.orderNumber + s.step) {
+            <a class="row line" routerLink="/admin/orders">
+              <span class="cell-main">
+                <span class="cell-title">{{ s.orderNumber }} · {{ s.step }}</span>
+                <span class="cell-sub"
+                  >{{ s.service }} · {{ s.owner === 'lawyer' ? 'lawyer' : 'AI' }} · waiting since
+                  {{ s.since | date: 'MMM d' }}</span
+                >
+              </span>
+            </a>
+          }
+        </div>
+      } @else {
+        <p class="small">
+          Nothing is stuck. Every step has moved in the last {{ d.stuck.days }} days.
+        </p>
+      }
+    </section>
+  </div>
+
+  <div class="columns">
+    <!-- ---------- Recent activity ---------- -->
+    <section class="panel" aria-labelledby="recent">
+      <div class="panel-head">
+        <h2 id="recent" class="block-title">Recent administrative activity</h2>
+        <a class="action" routerLink="/admin/logs">All activity</a>
+      </div>
+      @if (d.recent.length) {
+        <div class="rows">
+          @for (a of d.recent; track a.id) {
+            <div class="row line">
+              <span class="cell-main">
+                <span class="cell-title" [class.is-failed]="!a.ok">
+                  {{ actionLabel(a.action) }}{{ a.ok ? '' : ' · failed' }}
+                </span>
+                <span class="cell-sub"
+                  >{{ a.time | date: 'MMM d, HH:mm' }} · {{ a.who }} · {{ a.via
+                  }}{{ targetLabel(a) ? ' · ' + targetLabel(a) : '' }}</span
+                >
+              </span>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="small">No changes recorded yet.</p>
+      }
+    </section>
+
+    <!-- ---------- Errors ---------- -->
+    <section class="panel" aria-labelledby="errors">
+      <div class="panel-head">
+        <h2 id="errors" class="block-title">Latest system errors</h2>
+        <a class="action" routerLink="/admin/logs" [queryParams]="{ tab: 'errors' }">All errors</a>
+      </div>
+      @if (d.errors.latest.length) {
+        <div class="rows">
+          @for (e of d.errors.latest; track e.time + e.action) {
+            <div class="row line">
+              <span class="cell-main">
+                <span class="cell-title">{{ e.action }}</span>
+                <span class="cell-sub">{{ e.time | date: 'MMM d, HH:mm' }} · {{ e.error }}</span>
+              </span>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="small">No errors in this period.</p>
+      }
+    </section>
+  </div>
+} @else if (!error()) {
+  <div class="skeleton" aria-busy="true"></div>
+}

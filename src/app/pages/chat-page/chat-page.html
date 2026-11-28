@@ -79,6 +79,26 @@
       <app-header class="site-header" />
     </header>
 
+    <!-- ---------- Admin Assistant banner (administrators only) ---------- -->
+    @if (isAdmin()) {
+      <div class="admin-banner" [class.is-off]="!adminMode()" role="status">
+        <span class="admin-banner-tag">{{ adminMode() ? 'Admin Assistant' : 'Client view' }}</span>
+        <span class="admin-banner-text">
+          @if (adminMode()) {
+            Runs the admin system: changes ask you to confirm, and every change is recorded.
+          } @else {
+            You see the chat as clients do.
+          }
+        </span>
+        <span class="admin-banner-links">
+          <button type="button" class="admin-banner-link" (click)="toggleView()">
+            {{ adminMode() ? 'Client view' : 'Admin Assistant' }}
+          </button>
+          <a class="admin-banner-link" routerLink="/admin">Control Panel</a>
+        </span>
+      </div>
+    }
+
     @if (!chatting()) {
       <!-- ---------- Start screen ---------- -->
       <section class="start">
@@ -107,6 +127,10 @@
 
         @if (!loggedIn()) {
           <a class="login-btn" routerLink="/login">Log in <span aria-hidden="true">↗</span></a>
+        } @else if (adminMode()) {
+          <a class="login-btn" routerLink="/admin"
+            >Control Panel <span aria-hidden="true">↗</span></a
+          >
         } @else {
           <a class="login-btn" routerLink="/profile"
             >My profile <span aria-hidden="true">↗</span></a
@@ -117,16 +141,26 @@
           <div class="card-wrap">
             <button type="button" class="card card--ai" (click)="focusInput()">
               <app-icon class="card-icon" name="chat-pixel" />
-              <span class="card-label">Talk to AI</span>
+              <span class="card-label">{{
+                adminMode() ? 'Give an instruction' : 'Talk to AI'
+              }}</span>
               <app-icon class="card-arrow" name="arrow-right" />
             </button>
           </div>
           <div class="card-wrap card-wrap--dark">
-            <a class="card card--lawyer" routerLink="/services">
-              <app-icon class="card-icon" name="lawyer-pixel" />
-              <span class="card-label">Talk to a lawyer</span>
-              <app-icon class="card-arrow" name="arrow-right" />
-            </a>
+            @if (adminMode()) {
+              <a class="card card--lawyer" routerLink="/admin">
+                <app-icon class="card-icon" name="sidebar" />
+                <span class="card-label">Control Panel</span>
+                <app-icon class="card-arrow" name="arrow-right" />
+              </a>
+            } @else {
+              <a class="card card--lawyer" routerLink="/services">
+                <app-icon class="card-icon" name="lawyer-pixel" />
+                <span class="card-label">Talk to a lawyer</span>
+                <app-icon class="card-arrow" name="arrow-right" />
+              </a>
+            }
           </div>
         </div>
       </section>
@@ -325,9 +359,20 @@
         </div>
       }
 
-      <app-chat-input [(text)]="draft" [disabled]="chat.busy()" (submitted)="submit($event)" />
+      <app-chat-input
+        [(text)]="draft"
+        [placeholder]="adminMode() ? 'Ask or tell the Admin Assistant…' : 'Ask a legal question…'"
+        [disabled]="chat.busy()"
+        (submitted)="submit($event)"
+      />
 
-      <p class="disclaimer">Even AI Law can make mistakes, so double-check it.</p>
+      <p class="disclaimer">
+        @if (adminMode()) {
+          Nothing changes until you press Confirm on the card.
+        } @else {
+          Even AI Law can make mistakes, so double-check it.
+        }
+      </p>
     </div>
   </div>
 </div>

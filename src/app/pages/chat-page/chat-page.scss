@@ -162,6 +162,67 @@
   min-width: 0;
 }
 
+// ---------- Admin Assistant banner ----------
+
+.admin-banner {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin: 16px var(--side-pad) 0;
+  padding: 10px 16px;
+  border: 1px solid rgb(var(--yellow));
+  background: var(--card-bg);
+  backdrop-filter: blur(8px);
+  font-size: 13px;
+
+  &.is-off {
+    border-color: var(--line);
+  }
+}
+
+.admin-banner-tag {
+  padding: 2px 8px;
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+
+  .is-off & {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--text-muted);
+  }
+}
+
+.admin-banner-text {
+  flex: 1;
+  min-width: 200px;
+  color: var(--text-muted);
+}
+
+.admin-banner-links {
+  display: flex;
+  gap: 14px;
+}
+
+.admin-banner-link {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--yellow));
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+  color: var(--text);
+  white-space: nowrap;
+}
+
 // Sidebar toggle only exists on screens where the sidebar is hidden
 .sidebar-toggle {
   display: none;

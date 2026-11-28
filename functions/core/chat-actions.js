@@ -71,7 +71,8 @@ export function actionRoutes(side, routes) {
           if (!route) throw new ApiError('UNKNOWN_ACTION');
           if (!caller.signedIn && !route.guest) throw new ApiError('AUTH_REQUIRED');
           const run = typeof route === 'function' ? route : route.run;
-          const result = await run(caller, a.data || {}, env, body);
+          // meta tells the audit log the change came from the chat
+          const result = await run(caller, a.data || {}, env, body, { via: 'chat', chatActionId: a.ref.id });
           // Only a short, plain copy of the result is kept
           const kept = JSON.parse(JSON.stringify(result ?? null) || 'null');
           await a.ref.update({ status: 'done', result: kept, doneAt: now() });

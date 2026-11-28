@@ -199,45 +199,28 @@ export const routes: Routes = [
 
   { path: 'bio', loadComponent: () => import('./pages/bio-page/bio-page').then((m) => m.BioPage) },
 
-  // Admin (owner only)
+  // Admin Control Panel (owner only). The admin chat is the /chat page,
+  // which shows the Admin Assistant to admins.
   {
     path: 'admin',
     canMatch: [adminGuard],
     loadComponent: () =>
       import('./pages/admin-page/admin-layout/admin-layout').then((m) => m.AdminLayout),
     children: [
-      // The admin Workspace opens on the chat
       {
         path: '',
-        loadComponent: () =>
-          import('./pages/admin-page/admin-chat-page/admin-chat-page').then((m) => m.AdminChatPage),
-      },
-      {
-        path: 'overview',
         loadComponent: () =>
           import('./pages/admin-page/admin-dashboard-page/admin-dashboard-page').then(
             (m) => m.AdminDashboardPage,
           ),
       },
-      {
-        path: 'services',
-        loadComponent: () =>
-          import('./pages/admin-page/admin-services-page/admin-services-page').then(
-            (m) => m.AdminServicesPage,
-          ),
-      },
+      // The old address of the dashboard
+      { path: 'overview', redirectTo: '' },
       {
         path: 'clients',
         loadComponent: () =>
           import('./pages/admin-page/admin-clients-page/admin-clients-page').then(
             (m) => m.AdminClientsPage,
-          ),
-      },
-      {
-        path: 'lawyers',
-        loadComponent: () =>
-          import('./pages/admin-page/admin-lawyers-page/admin-lawyers-page').then(
-            (m) => m.AdminLawyersPage,
           ),
       },
       {
@@ -248,10 +231,24 @@ export const routes: Routes = [
           ),
       },
       {
-        path: 'declarations',
+        path: 'review',
         loadComponent: () =>
-          import('./pages/admin-page/admin-declarations-page/admin-declarations-page').then(
-            (m) => m.AdminDeclarationsPage,
+          import('./pages/admin-page/admin-review-page/admin-review-page').then(
+            (m) => m.AdminReviewPage,
+          ),
+      },
+      {
+        path: 'services',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-services-page/admin-services-page').then(
+            (m) => m.AdminServicesPage,
+          ),
+      },
+      {
+        path: 'lawyers',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-lawyers-page/admin-lawyers-page').then(
+            (m) => m.AdminLawyersPage,
           ),
       },
       {
@@ -260,12 +257,23 @@ export const routes: Routes = [
           import('./pages/admin-page/admin-blog-page/admin-blog-page').then((m) => m.AdminBlogPage),
       },
       {
-        path: 'review',
+        path: 'logs',
         loadComponent: () =>
-          import('./pages/admin-page/admin-review-page/admin-review-page').then(
-            (m) => m.AdminReviewPage,
+          import('./pages/admin-page/admin-logs-page/admin-logs-page').then((m) => m.AdminLogsPage),
+      },
+      {
+        path: 'declarations',
+        loadComponent: () =>
+          import('./pages/admin-page/admin-declarations-page/admin-declarations-page').then(
+            (m) => m.AdminDeclarationsPage,
           ),
       },
+      // Sections still being built
+      ...['documents', 'content', 'ai', 'communications', 'settings'].map((path) => ({
+        path,
+        loadComponent: () =>
+          import('./pages/admin-page/admin-soon/admin-soon').then((m) => m.AdminSoon),
+      })),
     ],
   },
 

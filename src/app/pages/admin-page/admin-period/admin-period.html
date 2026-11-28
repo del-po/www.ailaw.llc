@@ -1,0 +1,29 @@
+<div class="period" role="group" aria-label="Period">
+  <div class="presets">
+    @for (p of presets; track p.days) {
+      <button
+        type="button"
+        class="filter"
+        [class.is-active]="preset() === p.days"
+        [attr.aria-pressed]="preset() === p.days"
+        (click)="pick(p.days)"
+      >
+        {{ p.label }}
+      </button>
+    }
+  </div>
+  <label class="day">
+    <span class="day-label">From</span>
+    <input
+      #from
+      type="date"
+      [value]="period().from"
+      [max]="period().to"
+      (change)="setDay('from', from.value)"
+    />
+  </label>
+  <label class="day">
+    <span class="day-label">To</span>
+    <input #to type="date" [value]="period().to" (change)="setDay('to', to.value)" />
+  </label>
+</div>

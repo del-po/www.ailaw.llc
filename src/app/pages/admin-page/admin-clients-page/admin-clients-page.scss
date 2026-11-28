@@ -52,6 +52,11 @@
   margin: -6px 0 12px;
 }
 
+// Internal notes keep their own line breaks
+.notes {
+  white-space: pre-line;
+}
+
 .labels,
 .actions {
   display: flex;
