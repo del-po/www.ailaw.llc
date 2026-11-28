@@ -1,0 +1,1 @@
+function r(e){let o=Uint8Array.from(atob(e.data),a=>a.charCodeAt(0)),n=URL.createObjectURL(new Blob([o],{type:e.mimeType})),t=document.createElement(`a`);t.href=n,t.download=e.name,t.click(),setTimeout(()=>URL.revokeObjectURL(n),1e4)}export{r as t};
