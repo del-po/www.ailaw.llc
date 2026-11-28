@@ -301,12 +301,13 @@ export const routes: Routes = [
             (m) => m.AdminSettingsPage,
           ),
       },
-      // Sections still being built
-      ...['content'].map((path) => ({
-        path,
+      {
+        path: 'content',
         loadComponent: () =>
-          import('./pages/admin-page/admin-soon/admin-soon').then((m) => m.AdminSoon),
-      })),
+          import('./pages/admin-page/admin-content-page/admin-content-page').then(
+            (m) => m.AdminContentPage,
+          ),
+      },
     ],
   },
 

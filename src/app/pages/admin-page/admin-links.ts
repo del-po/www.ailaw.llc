@@ -5,7 +5,7 @@ import { authErrorMessage } from '../../core/services/auth-errors';
 // the sidebar shows next to it (see AdminLayout.counts); `children` are
 // shown under it (Review under Orders, each special service under Special
 // Services). A section without a link is only a heading for its children.
-// `ready: false` opens the "coming soon" page (AdminSoon).
+// `ready: false` marks a section still being built ("Soon" in the sidebar).
 export type AdminCount = 'declarations' | 'orders' | 'review' | 'lawyers';
 
 export interface AdminSection {
@@ -63,7 +63,7 @@ export const ADMIN_SECTIONS: AdminSection[] = [
   {
     label: 'Content',
     link: '/admin/content',
-    ready: false,
+    ready: true,
     text: 'The website’s text: homepage, About, contacts, FAQs, announcements and policies.',
   },
   { label: 'Blog', link: '/admin/blog', ready: true, text: 'Write, publish and manage articles.' },

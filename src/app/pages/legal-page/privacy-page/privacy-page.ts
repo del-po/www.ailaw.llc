@@ -1,6 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { RouterLink } from '@angular/router';
+import { ContentService } from '../../../core/services/content.service';
 import { Header } from '../../../shared/components/header/header';
 import { Footer } from '../../../shared/components/footer/footer';
 
@@ -12,6 +13,9 @@ import { Footer } from '../../../shared/components/footer/footer';
   styleUrl: './privacy-page.scss',
 })
 export class PrivacyPage {
+  // Published text replaces the page below (Admin Panel → Content)
+  protected readonly content = inject(ContentService);
+
   constructor() {
     inject(Title).setTitle('Privacy Policy | AI Law');
     inject(Meta).updateTag({

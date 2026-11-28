@@ -475,3 +475,28 @@ export interface SystemChanges {
   notifications?: { lawyerTasksEmail?: string };
   platform?: Partial<SystemSettings['platform']>;
 }
+
+// ---------- Content (content:…) ----------
+
+// One edited block of the website's text; value types follow content-blocks.ts
+export interface ContentRecord {
+  key: string;
+  type: string;
+  markdown: string[];
+  draft: unknown;
+  published: unknown;
+  // A draft that differs from what the site shows
+  changed: boolean;
+  draftAt: string;
+  draftBy: string;
+  publishedAt: string;
+  publishedBy: string;
+}
+
+export interface ContentVersion {
+  id: string;
+  savedAt: string;
+  publishedAt: string;
+  by: string;
+  value: unknown;
+}

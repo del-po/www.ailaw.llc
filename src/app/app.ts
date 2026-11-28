@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from './core/services/auth.service';
+import { Announcement } from './shared/components/announcement/announcement';
 import { ThemeService } from './core/services/theme.service';
 
 // Pages a lawyer may still open: their Workspace, signing in and out, and the legal pages
@@ -9,7 +10,7 @@ const STAFF_PAGES =
   /^\/(workspace|login|forgot-password|reset-password|verify-email|auth\/action|privacy|terms)(\/|\?|#|$)/;
 
 @Component({
-  imports: [RouterOutlet],
+  imports: [RouterOutlet, Announcement],
   selector: 'app-root',
   styleUrl: './app.scss',
   templateUrl: './app.html',

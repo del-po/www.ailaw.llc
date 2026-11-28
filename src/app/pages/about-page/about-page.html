@@ -6,12 +6,7 @@
     <section class="intro">
       <div class="code" aria-hidden="true"><span class="code-tag">About</span></div>
       <h1 class="title">AI Law</h1>
-      <p class="lead">
-        AI Law is a forward-thinking Georgian law firm dedicated to modernizing the legal
-        experience. We offer comprehensive legal counsel across a wide spectrum of practice areas,
-        from high-stakes litigation and corporate transactions to intricate tax and accounting
-        matters, complemented by expert legal document drafting.
-      </p>
+      <p class="lead">{{ content.text('about.lead') }}</p>
     </section>
 
     <!-- ---------- Principles ---------- -->
@@ -19,7 +14,7 @@
       <h2 class="section-title" id="principles-title">Our practice is built on three principles</h2>
 
       <div class="principles">
-        @for (item of principles; track item.title; let i = $index) {
+        @for (item of principles(); track $index; let i = $index) {
           <app-shape class="principle" name="card-corner">
             <div class="principle-body">
               <span class="principle-num">0{{ i + 1 }}</span>
@@ -33,15 +28,19 @@
 
     <!-- ---------- Fixed prices ---------- -->
     <section class="section split" aria-labelledby="model-title">
-      <h2 class="section-title" id="model-title">Legal products, not billable hours</h2>
+      <h2 class="section-title" id="model-title">{{ content.text('about.model', 'title') }}</h2>
       <div class="text">
-        <p>
-          This ambition drives us to innovate beyond the traditional legal model. Instead of billing
-          by the hour, we offer our expertise through clearly defined legal products. This
-          product-based approach ensures absolute transparency, predictable costs, and exceptional
-          value, giving our clients peace of mind.
-        </p>
-        <p>We invite you to discover a new standard in legal services.</p>
+        @if (content.published('about.model')) {
+          <div class="rich" [innerHTML]="content.text('about.model', 'textHtml')"></div>
+        } @else {
+          <p>
+            This ambition drives us to innovate beyond the traditional legal model. Instead of
+            billing by the hour, we offer our expertise through clearly defined legal products. This
+            product-based approach ensures absolute transparency, predictable costs, and exceptional
+            value, giving our clients peace of mind.
+          </p>
+          <p>We invite you to discover a new standard in legal services.</p>
+        }
         <a class="btn" routerLink="/services">
           <app-shape name="bar-notch">See our services</app-shape>
         </a>
@@ -50,26 +49,103 @@
 
     <!-- ---------- Social content (videos to be embedded here) ---------- -->
     <section class="section split" aria-labelledby="social-title">
-      <h2 class="section-title" id="social-title">From our channels</h2>
+      <h2 class="section-title" id="social-title">{{ content.text('about.channels', 'title') }}</h2>
       <div class="text">
-        <p>
-          Some of the content we create for our social media platforms is designed to be
-          interesting, entertaining, and hopefully educational. Follow us to see it as it comes out.
-        </p>
+        @if (content.published('about.channels')) {
+          <div class="rich" [innerHTML]="content.text('about.channels', 'textHtml')"></div>
+        } @else {
+          <p>
+            Some of the content we create for our social media platforms is designed to be
+            interesting, entertaining, and hopefully educational. Follow us to see it as it comes
+            out.
+          </p>
+        }
         <app-social class="social" />
       </div>
     </section>
 
     <!-- ---------- Founder ---------- -->
     <section class="section split" aria-labelledby="founder-title">
-      <h2 class="section-title" id="founder-title">The founder</h2>
+      <h2 class="section-title" id="founder-title">{{ content.text('about.founder', 'title') }}</h2>
       <div class="text">
-        <p>
-          To learn more about our founder,
-          <a class="link" routerLink="/bio">read his story</a>.
-        </p>
+        @if (content.published('about.founder')) {
+          <div class="rich" [innerHTML]="content.text('about.founder', 'textHtml')"></div>
+        } @else {
+          <p>
+            To learn more about our founder,
+            <a class="link" routerLink="/bio">read his story</a>.
+          </p>
+        }
       </div>
     </section>
+
+    <!-- ---------- Contacts (once published in Content) ---------- -->
+    @if (contacts(); as c) {
+      <section class="section split" aria-labelledby="contacts-title">
+        <h2 class="section-title" id="contacts-title">Contact us</h2>
+        <dl class="text contacts">
+          @if (c.email) {
+            <div class="contact">
+              <dt>Email</dt>
+              <dd>
+                <a class="link" [href]="'mailto:' + c.email">{{ c.email }}</a>
+              </dd>
+            </div>
+          }
+          @if (c.phone) {
+            <div class="contact">
+              <dt>Phone</dt>
+              <dd>
+                <a class="link" [href]="tel(c.phone)">{{ c.phone }}</a>
+              </dd>
+            </div>
+          }
+          @if (c.address) {
+            <div class="contact">
+              <dt>Address</dt>
+              <dd>{{ c.address }}</dd>
+            </div>
+          }
+          @if (c.hours) {
+            <div class="contact">
+              <dt>Hours</dt>
+              <dd>{{ c.hours }}</dd>
+            </div>
+          }
+          @if (c.telegram) {
+            <div class="contact">
+              <dt>Telegram</dt>
+              <dd>
+                <a class="link" [href]="c.telegram" target="_blank" rel="noopener">Write to us</a>
+              </dd>
+            </div>
+          }
+          @if (c.whatsapp) {
+            <div class="contact">
+              <dt>WhatsApp</dt>
+              <dd>
+                <a class="link" [href]="c.whatsapp" target="_blank" rel="noopener">Write to us</a>
+              </dd>
+            </div>
+          }
+        </dl>
+      </section>
+    }
+
+    <!-- ---------- FAQ (once published in Content) ---------- -->
+    @if (faq().length) {
+      <section class="section split" aria-labelledby="faq-title">
+        <h2 class="section-title" id="faq-title">Questions</h2>
+        <div class="text faq">
+          @for (q of faq(); track $index) {
+            <details class="faq-item">
+              <summary class="faq-question">{{ q.question }}</summary>
+              <div class="rich" [innerHTML]="q.answerHtml"></div>
+            </details>
+          }
+        </div>
+      </section>
+    }
   </main>
 
   <app-footer />

@@ -1,0 +1,89 @@
+// ==========================================================
+// Announcement bar: a see-through card at the bottom of every page
+// ==========================================================
+
+:host {
+  position: fixed;
+  left: 50%;
+  bottom: 20px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(720px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border: 1px solid rgb(var(--yellow));
+  background: color-mix(in srgb, rgb(var(--white)) 82%, transparent);
+  backdrop-filter: blur(12px);
+  color: rgb(var(--black));
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 8px 28px rgb(0 0 0 / 0.14);
+  pointer-events: auto;
+
+  &--preview {
+    border-color: rgb(var(--black));
+  }
+}
+
+:host-context(body.dark) .bar {
+  background: color-mix(in srgb, rgb(var(--black)) 82%, transparent);
+  color: rgb(var(--white));
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+
+  // The text arrives as HTML, outside this component's own styles
+  ::ng-deep {
+    p {
+      margin: 0;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: underline;
+      text-decoration-color: rgb(var(--yellow));
+      text-decoration-thickness: 2px;
+    }
+  }
+}
+
+.tag {
+  padding: 2px 8px;
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.link {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: rgb(var(--yellow));
+  text-decoration-thickness: 2px;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.close {
+  width: 28px;
+  height: 28px;
+  font-size: 20px;
+  line-height: 1;
+  color: inherit;
+}

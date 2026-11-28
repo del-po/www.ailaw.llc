@@ -23,7 +23,7 @@ const audit = () => db.collection('AuditLog');
 
 // Reads by name: "…:list", "…:get", "adminListOrders" and the like
 const READ =
-  /(^|:)(list|get|search|versions|preview|test|usage|mistakes|counts|tasks|clients|lawyers|my|dashboard|audit|logs|status)$|^adminList|^adminGet|^listUsers$/i;
+  /(^|:)(list|get|search|versions|preview|drafts|test|usage|mistakes|counts|tasks|clients|lawyers|my|dashboard|audit|logs|status)$|^adminList|^adminGet|^listUsers$/i;
 
 function isRead(action, data) {
   // The admin's own conversations (renaming, deleting) aren't platform changes
@@ -65,6 +65,9 @@ async function targetOf(action, data = {}) {
     }
     if (action.startsWith('comms:') && data.conversationId) {
       return { kind: 'conversation', id: data.conversationId, ref: db.doc('Chat/' + data.conversationId) };
+    }
+    if (action.startsWith('content:') && data.key) {
+      return { kind: 'content', id: data.key, ref: db.doc('Content/' + data.key) };
     }
     if (action.startsWith('files:')) {
       return { kind: 'file', id: data.path || [data.folder, data.file?.name || data.name].filter(Boolean).join('/'), ref: null };

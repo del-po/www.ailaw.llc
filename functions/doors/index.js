@@ -35,6 +35,7 @@ import systemDesk from '../plugins/system-desk/index.js';
 import assignments from '../plugins/assignments/index.js';
 import blog from '../plugins/blog/index.js';
 import catalogue from '../plugins/catalogue/index.js';
+import content from '../plugins/content/index.js';
 import documents from '../plugins/documents/index.js';
 import lawyerProfile from '../plugins/lawyer-profile/index.js';
 import lawyerVerification from '../plugins/lawyer-verification/index.js';
@@ -44,7 +45,7 @@ import declarations, { handleUpdate } from '../plugins/small-business-declaratio
 import { setWebhook } from '../plugins/small-business-declarations/telegram-api.js';
 import taskDesk from '../plugins/task-desk/index.js';
 
-const CLIENT = [accounts, catalogue, ordering, myOrders, documents, blog, declarations];
+const CLIENT = [accounts, catalogue, ordering, myOrders, documents, blog, content, declarations];
 const LAWYER = [lawyerVerification, assignments, lawyerProfile];
 const ADMIN = [
   accounts,
@@ -55,6 +56,7 @@ const ADMIN = [
   orderDesk,
   fileDesk,
   blog,
+  content,
   declarations,
   adminAssistant,
   adminInsights,

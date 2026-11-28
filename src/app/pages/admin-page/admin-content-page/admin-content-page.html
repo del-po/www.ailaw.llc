@@ -1,0 +1,240 @@
+<section class="head">
+  <div class="code" aria-hidden="true"><span class="code-tag">Admin</span></div>
+  <h1 class="title">Content</h1>
+  <p class="lead">
+    The website’s text. Edit a block as a draft, preview it, then publish it; a block nobody has
+    published shows the text the site was written with. Layouts and styles stay in the code.
+  </p>
+</section>
+
+@if (error()) {
+  <p class="message" role="alert">{{ error() }}</p>
+}
+@if (notice()) {
+  <p class="message message--ok" role="status">{{ notice() }}</p>
+}
+
+<div class="split">
+  <!-- ---------- Blocks ---------- -->
+  <nav class="blocks" aria-label="Text blocks">
+    @for (g of groups(); track g.page) {
+      <p class="group">{{ g.page }}</p>
+      @for (b of g.blocks; track b.key) {
+        <button type="button" class="block" [class.is-open]="openKey() === b.key" (click)="open(b)">
+          <span class="block-name">{{ b.label }}</span>
+          @switch (loaded() ? state(b) : 'site') {
+            @case ('draft') {
+              <span class="status status--draft">Draft</span>
+            }
+            @case ('published') {
+              <span class="status status--active">Published</span>
+            }
+            @default {
+              <span class="status">Site text</span>
+            }
+          }
+        </button>
+      }
+    }
+  </nav>
+
+  <!-- ---------- One block ---------- -->
+  <section class="editor-area" aria-label="Edit">
+    @if (block(); as b) {
+      <div class="editor">
+        <h2 class="block-title">{{ b.page }} · {{ b.label }}</h2>
+        @if (b.hint) {
+          <p class="small">{{ b.hint }}</p>
+        }
+        @if (record(); as r) {
+          <p class="small">
+            @if (r.publishedAt) {
+              Published {{ r.publishedAt | date: 'MMM d, y, HH:mm' }} by {{ r.publishedBy }}.
+            } @else {
+              Not published: the site shows its own text.
+            }
+            @if (r.changed) {
+              The draft ({{ r.draftAt | date: 'MMM d, HH:mm' }}) isn’t published yet.
+            }
+          </p>
+        }
+
+        @switch (b.type) {
+          @case ('text') {
+            <textarea
+              #t
+              class="area"
+              rows="4"
+              [value]="str(value())"
+              (input)="setText(t.value)"
+            ></textarea>
+          }
+          @case ('markdown') {
+            <textarea
+              #t
+              class="area area--long"
+              rows="24"
+              [value]="str(value())"
+              (input)="setText(t.value)"
+            ></textarea>
+            <p class="small">
+              Markdown: **bold**, *italic*, “- ” for a list, [text](https://…) or [text](/terms) for
+              a link.
+            </p>
+          }
+          @case ('fields') {
+            <div class="grid">
+              @for (f of b.fields ?? []; track f.key) {
+                @if (f.kind === 'check') {
+                  <label class="check wide">
+                    <input
+                      #c
+                      type="checkbox"
+                      [checked]="fields()[f.key] === true"
+                      (change)="setField(f.key, c.checked)"
+                    />
+                    <span>{{ f.label }}</span>
+                  </label>
+                } @else if (f.kind === 'markdown' || f.kind === 'long') {
+                  <label class="field wide">
+                    <span class="field-label"
+                      >{{ f.label }}{{ f.kind === 'markdown' ? ' · Markdown' : '' }}</span
+                    >
+                    <textarea
+                      #x
+                      class="area"
+                      rows="5"
+                      [value]="str(fields()[f.key])"
+                      (input)="setField(f.key, x.value)"
+                    ></textarea>
+                  </label>
+                } @else {
+                  <label class="field">
+                    <span class="field-label">{{ f.label }}</span>
+                    <app-shape class="field-box" name="field">
+                      <input #i [value]="str(fields()[f.key])" (input)="setField(f.key, i.value)" />
+                    </app-shape>
+                  </label>
+                }
+              }
+            </div>
+          }
+          @case ('list') {
+            <ol class="items">
+              @for (item of items(); track $index; let n = $index, first = $first, last = $last) {
+                <li class="item">
+                  <div class="item-head">
+                    <span class="item-no">{{ n + 1 }}</span>
+                    @if (!b.fixed) {
+                      <span class="item-tools">
+                        <button
+                          type="button"
+                          class="action"
+                          [disabled]="first"
+                          (click)="moveItem(n, -1)"
+                          aria-label="Move up"
+                        >
+                          ↑
+                        </button>
+                        <button
+                          type="button"
+                          class="action"
+                          [disabled]="last"
+                          (click)="moveItem(n, 1)"
+                          aria-label="Move down"
+                        >
+                          ↓
+                        </button>
+                        <button type="button" class="action" (click)="removeItem(n)">Remove</button>
+                      </span>
+                    }
+                  </div>
+                  @for (f of b.fields ?? []; track f.key) {
+                    <label class="field">
+                      <span class="field-label"
+                        >{{ f.label }}{{ f.kind === 'markdown' ? ' · Markdown' : '' }}</span
+                      >
+                      @if (f.kind === 'markdown' || f.kind === 'long') {
+                        <textarea
+                          #x
+                          class="area"
+                          rows="3"
+                          [value]="str(item[f.key])"
+                          (input)="setItem(n, f.key, x.value)"
+                        ></textarea>
+                      } @else {
+                        <app-shape class="field-box" name="field">
+                          <input
+                            #i
+                            [value]="str(item[f.key])"
+                            (input)="setItem(n, f.key, i.value)"
+                          />
+                        </app-shape>
+                      }
+                    </label>
+                  }
+                </li>
+              } @empty {
+                <li class="small">Nothing yet.</li>
+              }
+            </ol>
+            @if (!b.fixed) {
+              <button type="button" class="action add" (click)="addItem()">+ Add</button>
+            }
+          }
+        }
+
+        <div class="editor-actions">
+          <button type="button" class="btn" [disabled]="busy()" (click)="publish()">
+            <app-shape name="bar-notch">Publish</app-shape>
+          </button>
+          <button type="button" class="btn btn--light" [disabled]="busy()" (click)="saveDraft()">
+            <app-shape name="bar-notch">Save draft</app-shape>
+          </button>
+        </div>
+        <div class="tools">
+          <button type="button" class="action" (click)="showPreview()">Preview here</button>
+          <button type="button" class="action" [disabled]="busy()" (click)="previewOnSite()">
+            Preview on the site
+          </button>
+          <button type="button" class="action" (click)="showVersions()">Versions</button>
+          @if (record()?.changed) {
+            <button type="button" class="action" [disabled]="busy()" (click)="discard()">
+              Discard draft
+            </button>
+          }
+          @if (record()?.published !== null && record()?.published !== undefined) {
+            <button type="button" class="action" [disabled]="busy()" (click)="unpublish()">
+              Unpublish
+            </button>
+          }
+        </div>
+
+        @if (preview(); as html) {
+          <div class="preview" [innerHTML]="html"></div>
+        }
+
+        @if (versions(); as list) {
+          <div class="versions">
+            <h3 class="block-title">Published before</h3>
+            @for (v of list; track v.id) {
+              <div class="version">
+                <span class="cell-mono"
+                  >{{ v.publishedAt | date: 'MMM d, y, HH:mm' }} · replaced
+                  {{ v.savedAt | date: 'MMM d, y' }} by {{ v.by || '—' }}</span
+                >
+                <button type="button" class="action" [disabled]="busy()" (click)="restore(v)">
+                  Make it the draft
+                </button>
+              </div>
+            } @empty {
+              <p class="small">Nothing yet: each time you publish, the text before is kept here.</p>
+            }
+          </div>
+        }
+      </div>
+    } @else {
+      <p class="small">Choose a block to edit it.</p>
+    }
+  </section>
+</div>

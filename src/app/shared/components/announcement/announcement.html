@@ -1,0 +1,13 @@
+@if (content.previewing()) {
+  <div class="bar bar--preview" role="status">
+    <span class="tag">Preview</span>
+    <span class="text">You see the drafts from Admin Panel → Content. Visitors don’t.</span>
+    <button type="button" class="link" (click)="content.exitPreview()">Leave the preview</button>
+  </div>
+}
+@if (message(); as m) {
+  <aside class="bar" aria-label="Announcement">
+    <div class="text" [innerHTML]="m.html"></div>
+    <button type="button" class="close" aria-label="Close" (click)="close(m.publishedAt)">×</button>
+  </aside>
+}

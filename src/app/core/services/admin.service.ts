@@ -12,6 +12,8 @@ import {
   AiUsage,
   AiVersion,
   AuditEntry,
+  ContentRecord,
+  ContentVersion,
   ConversationDetail,
   ConversationRow,
   Dashboard,
@@ -273,6 +275,52 @@ export class AdminService {
   // Moves it to the trash folder
   deleteFile(path: string): Promise<unknown> {
     return this.call('files:delete', { path });
+  }
+
+  // ---------- Content (the website's text) ----------
+
+  contentBlocks(): Promise<ContentRecord[]> {
+    return this.call('content:list');
+  }
+
+  // As the site would show it: Markdown as HTML
+  previewContent(
+    type: string,
+    markdown: string[],
+    value: unknown,
+  ): Promise<{ value: unknown; html?: string }> {
+    return this.call('content:preview', { type, markdown, value });
+  }
+
+  saveContentDraft(
+    key: string,
+    type: string,
+    markdown: string[],
+    value: unknown,
+  ): Promise<ContentRecord> {
+    return this.call('content:saveDraft', { key, type, markdown, value });
+  }
+
+  publishContent(key: string): Promise<ContentRecord> {
+    return this.call('content:publish', { key });
+  }
+
+  // The site shows its own text again
+  unpublishContent(key: string): Promise<ContentRecord> {
+    return this.call('content:unpublish', { key });
+  }
+
+  discardContentDraft(key: string): Promise<ContentRecord> {
+    return this.call('content:discard', { key });
+  }
+
+  contentVersions(key: string): Promise<ContentVersion[]> {
+    return this.call('content:versions', { key });
+  }
+
+  // An earlier published text becomes the draft
+  restoreContent(key: string, versionId: string): Promise<ContentRecord> {
+    return this.call('content:restore', { key, versionId });
   }
 
   // ---------- AI Management ----------

@@ -75,22 +75,25 @@
   font-size: 15px;
   line-height: 1.7;
 
-  :is(h2, h3, h4) {
-    margin: 1.2em 0 0.4em;
-    font-family: var(--font-display);
-  }
+  // The text arrives as HTML, outside this component's own styles
+  ::ng-deep {
+    :is(h2, h3, h4) {
+      margin: 1.2em 0 0.4em;
+      font-family: var(--font-display);
+    }
 
-  :is(p, ul, ol, blockquote) {
-    margin-bottom: 0.8em;
-  }
+    :is(p, ul, ol, blockquote) {
+      margin-bottom: 0.8em;
+    }
 
-  :is(ul, ol) {
-    padding-left: 1.4em;
-  }
+    :is(ul, ol) {
+      padding-left: 1.4em;
+    }
 
-  a {
-    text-decoration: underline;
-    text-decoration-color: rgb(var(--yellow));
+    a {
+      text-decoration: underline;
+      text-decoration-color: rgb(var(--yellow));
+    }
   }
 }
 

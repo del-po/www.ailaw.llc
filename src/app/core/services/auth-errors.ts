@@ -121,6 +121,10 @@ const MESSAGES: Record<string, string> = {
   ORDERING_PAUSED: 'New orders are paused for the moment. Please try again later.',
   PUBLISH_TIME_REQUIRED: 'Choose when the article should appear.',
   INVALID_INPUT: 'Type something first.',
+  INVALID_CONTENT: 'Some text is too long or has characters that can’t be saved.',
+  INVALID_CONTENT_KEY: 'This block isn’t known.',
+  CONTENT_NOT_FOUND: 'Save a draft of this block first.',
+  NOTHING_TO_PUBLISH: 'Save a draft first, then publish it.',
   AI_NOT_CONFIGURED: 'This AI provider has no key connected.',
   AI_UNAVAILABLE: 'The AI is unavailable right now. Try again in a minute.',
 };

@@ -9,6 +9,7 @@ import {
   viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { ContentService } from '../../core/services/content.service';
 import { ThemeService } from '../../core/services/theme.service';
 import { IconName } from '../../shared/kit/icon/icons';
 import { ThemeSwitch } from '../../shared/components/theme-switch/theme-switch';
@@ -42,6 +43,7 @@ const TBILISI_OFFSET = 4 * 60 * 60 * 1000;
 })
 export class HomePage {
   private readonly theme = inject(ThemeService);
+  protected readonly content = inject(ContentService);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -72,35 +74,23 @@ export class HomePage {
 
   // ---------- Intro slides ----------
 
-  protected readonly slides: Slide[] = [
-    {
-      title: '24/7 Online',
-      tag: 'Always available',
-      text: 'Access professional legal assistance anytime, with round-the-clock availability whenever you need us.',
-      link: '/chat',
-      cta: 'Start chat',
-    },
-    {
-      title: 'Top Quality',
-      tag: 'Expertise + AI',
-      text: 'We bring together exceptional legal expertise and advanced technology to deliver outstanding legal services.',
-      link: '/services',
-      cta: 'Our services',
-    },
-    {
-      title: 'Fair Prices',
-      tag: 'Fixed prices',
-      text: 'We believe quality legal services should be accessible to everyone, offering professional assistance at competitive prices.',
-      link: '/services',
-      cta: 'See prices',
-    },
-  ];
+  // Their texts are edited in Admin Panel → Content (home.slides); the links stay here
+  private readonly slideLinks = ['/chat', '/services', '/services'];
+  protected readonly slides = computed<Slide[]>(() =>
+    this.content.items('home.slides').map((item, i) => ({
+      title: String(item['title'] ?? ''),
+      tag: String(item['tag'] ?? ''),
+      text: String(item['text'] ?? ''),
+      cta: String(item['cta'] ?? ''),
+      link: this.slideLinks[i] ?? '/services',
+    })),
+  );
 
   protected readonly currentSlide = signal(0);
-  protected readonly slide = computed(() => this.slides[this.currentSlide()]);
+  protected readonly slide = computed(() => this.slides()[this.currentSlide()] ?? this.slides()[0]);
 
   protected showSlide(index: number): void {
-    this.currentSlide.set((index + this.slides.length) % this.slides.length);
+    this.currentSlide.set((index + this.slides().length) % this.slides().length);
   }
 
   // Fired when the active progress segment finishes filling

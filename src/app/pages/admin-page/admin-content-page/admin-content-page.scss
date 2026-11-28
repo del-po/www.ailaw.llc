@@ -1,0 +1,191 @@
+@use 'mixins' as *;
+@use '../admin-shared' as *;
+
+// ==========================================================
+// Admin Content
+// ==========================================================
+
+@include admin-page;
+@include admin-editor;
+
+.small {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+// The blocks on the left, the one being edited on the right
+.split {
+  display: grid;
+  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(16px, 2.4vw, 32px);
+}
+
+.blocks {
+  position: sticky;
+  top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.group {
+  margin: 14px 0 4px;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border-left: 3px solid transparent;
+  font-size: 14px;
+  text-align: left;
+  transition: background-color var(--ease);
+
+  &:hover {
+    background: var(--card-bg);
+  }
+
+  &.is-open {
+    border-left-color: rgb(var(--yellow));
+    background: var(--card-bg);
+  }
+}
+
+.editor-area {
+  min-width: 0;
+}
+
+.area--long {
+  min-height: 420px;
+  font-size: 13px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+}
+
+.item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.item-no {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  background: rgb(var(--yellow));
+  color: rgb(var(--black));
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.item-tools,
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.add {
+  align-self: flex-start;
+}
+
+.preview,
+.versions {
+  padding: 16px 20px;
+  border-left: 3px solid rgb(var(--yellow));
+  background: var(--card-bg);
+}
+
+.preview {
+  max-height: 520px;
+  overflow-y: auto;
+  font-size: 15px;
+  line-height: 1.7;
+
+  // The text arrives as HTML, outside this component's own styles
+  ::ng-deep {
+    :is(h2, h3) {
+      margin: 1em 0 0.4em;
+      font-family: var(--font-display);
+    }
+
+    :is(p, ul, ol) {
+      margin-bottom: 0.7em;
+    }
+
+    :is(ul, ol) {
+      padding-left: 1.3em;
+    }
+
+    a {
+      text-decoration: underline;
+      text-decoration-color: rgb(var(--yellow));
+    }
+
+    .preview-item {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--line);
+    }
+  }
+}
+
+.versions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.version {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+// ==========================================================
+// Responsive (largest → smallest)
+// ==========================================================
+
+@include below(tablet-wide) {
+  .split {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .blocks {
+    position: static;
+  }
+}
